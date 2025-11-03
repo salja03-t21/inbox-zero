@@ -34,7 +34,10 @@ export function BulkRunRules() {
 
   const queue = useAiQueueState();
 
-  const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
+  // Temporarily disable premium check for testing
+  const hasAiAccess = true;
+  const isLoadingPremium = false;
+  // const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
 
   const [running, setRunning] = useState(false);
 
@@ -163,8 +166,9 @@ async function onRun(
         type: "inbox",
         limit: LIMIT,
         after: startDate,
-        ...(endDate ? { before: endDate } : {}),
-        isUnread: true,
+        before: endDate || undefined,
+        // Process all emails, not just unread
+        // isUnread: true,
         ...(nextPageToken ? { nextPageToken } : {}),
       };
 

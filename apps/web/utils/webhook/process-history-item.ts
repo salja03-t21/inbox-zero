@@ -12,6 +12,12 @@ import type { EmailProvider } from "@/utils/email/types";
 import type { RuleWithActions } from "@/utils/types";
 import type { EmailAccountWithAI } from "@/utils/llms/types";
 import type { Logger } from "@/utils/logger";
+import { detectMeetingTrigger } from "@/utils/meetings/detect-meeting-trigger";
+import { aiParseMeetingRequest } from "@/utils/meetings/parse-meeting-request";
+import { getEmailForLLM } from "@/utils/get-email-from-message";
+import { findMeetingAvailability } from "@/utils/meetings/find-availability";
+import { createMeetingLink } from "@/utils/meetings/create-meeting-link";
+import { createCalendarEvent } from "@/utils/meetings/create-calendar-event";
 
 export type SharedProcessHistoryOptions = {
   provider: EmailProvider;
@@ -19,7 +25,7 @@ export type SharedProcessHistoryOptions = {
   hasAutomationRules: boolean;
   hasAiAccess: boolean;
   emailAccount: EmailAccountWithAI &
-    Pick<EmailAccount, "autoCategorizeSenders">;
+    Pick<EmailAccount, "autoCategorizeSenders" | "meetingSchedulerEnabled">;
   logger: Logger;
 };
 
@@ -136,6 +142,114 @@ export async function processHistoryItem(
     }
 
     const isOutbound = provider.isSentMessage(parsedMessage);
+
+    // Check for meeting triggers (works for both sent messages and emails to yourself)
+    const meetingTrigger = detectMeetingTrigger({
+      subject: parsedMessage.headers.subject,
+      textBody: parsedMessage.textPlain,
+      htmlBody: parsedMessage.textHtml,
+      fromEmail: extractEmailAddress(parsedMessage.headers.from),
+      userEmail,
+      isSent: isOutbound,
+    });
+
+    if (meetingTrigger.isTriggered) {
+      logger.info("Meeting trigger detected", {
+        triggerType: meetingTrigger.triggerType,
+        isSentEmail: meetingTrigger.isSentEmail,
+      });
+
+      // Check if meeting scheduler is enabled
+      if (!emailAccount.meetingSchedulerEnabled) {
+        logger.info("Meeting scheduler disabled, skipping");
+        // Continue to process other parts of the email
+      } else {
+        // Parse meeting request details using AI
+        try {
+          const emailForLLM = getEmailForLLM(parsedMessage);
+          const meetingDetails = await aiParseMeetingRequest({
+            email: emailForLLM,
+            emailAccount,
+            userEmail,
+          });
+
+          logger.info("Meeting request parsed", {
+            attendeeCount: meetingDetails.attendees.length,
+            title: meetingDetails.title,
+            provider: meetingDetails.preferredProvider,
+            isUrgent: meetingDetails.isUrgent,
+          });
+
+          // Check availability across all calendars
+          const availability = await findMeetingAvailability({
+            emailAccountId,
+            meetingRequest: meetingDetails,
+          });
+
+          logger.info("Meeting availability checked", {
+            timezone: availability.timezone,
+            requestedSlotsCount: availability.requestedTimes.length,
+            suggestedSlotsCount: availability.suggestedTimes.length,
+            hasConflicts: availability.hasConflicts,
+          });
+
+          // Select time slot - prefer requested times, fall back to suggestions
+          const timeSlot =
+            availability.requestedTimes[0] || availability.suggestedTimes[0];
+
+          if (!timeSlot) {
+            logger.warn("No available time slots found for meeting");
+          } else {
+            // Generate meeting link (Phase 4)
+            try {
+              const meetingLink = await createMeetingLink({
+                emailAccountId,
+                subject: meetingDetails.title,
+                startDateTime: timeSlot.start,
+                endDateTime: timeSlot.endISO,
+                preferredProvider: meetingDetails.preferredProvider,
+              });
+
+              logger.info("Meeting link created", {
+                provider: meetingLink.provider,
+                joinUrl: meetingLink.joinUrl,
+                startTime: timeSlot.startISO,
+                endTime: timeSlot.endISO,
+              });
+
+              // Create calendar event (Phase 5)
+              try {
+                const calendarEvent = await createCalendarEvent({
+                  emailAccountId,
+                  meetingDetails,
+                  startDateTime: timeSlot.start,
+                  endDateTime: timeSlot.endISO,
+                  meetingLink,
+                  timezone: availability.timezone,
+                });
+
+                logger.info("Calendar event created", {
+                  eventId: calendarEvent.eventId,
+                  eventUrl: calendarEvent.eventUrl,
+                  provider: calendarEvent.provider,
+                });
+
+                // TODO: Phase 6 implementation
+                // - Send confirmation email to attendees
+              } catch (calendarError) {
+                logger.error("Failed to create calendar event", {
+                  error: calendarError,
+                });
+              }
+            } catch (error) {
+              logger.error("Failed to create meeting link", { error });
+            }
+          }
+        } catch (error) {
+          logger.error("Error parsing meeting request", { error });
+        }
+      }
+    }
 
     if (isOutbound) {
       await handleOutboundMessage({
