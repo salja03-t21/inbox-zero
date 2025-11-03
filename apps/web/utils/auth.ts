@@ -27,6 +27,23 @@ import prisma from "@/utils/prisma";
 
 const logger = createScopedLogger("auth");
 
+// Helper function to check if an email domain is allowed
+function isEmailDomainAllowed(email: string): boolean {
+  const allowedDomains = env.ALLOWED_EMAIL_DOMAINS;
+
+  // If no allowed domains are configured, allow all
+  if (!allowedDomains || allowedDomains.length === 0) {
+    return true;
+  }
+
+  const emailDomain = email.split("@")[1]?.toLowerCase();
+  if (!emailDomain) {
+    return false;
+  }
+
+  return allowedDomains.some((domain) => domain.toLowerCase() === emailDomain);
+}
+
 export const betterAuthConfig = betterAuth({
   advanced: {
     database: {
@@ -145,6 +162,15 @@ async function handleSignIn({
   user: User;
   isNewUser: boolean;
 }) {
+  // Check if email domain is allowed
+  if (user.email && !isEmailDomainAllowed(user.email)) {
+    logger.warn("Sign-in attempt from unauthorized domain", {
+      email: user.email,
+      domain: user.email.split("@")[1],
+    });
+    throw new Error("DomainNotAllowed");
+  }
+
   if (isNewUser && user.email) {
     const loops = async () => {
       const account = await prisma.account
