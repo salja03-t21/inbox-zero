@@ -81,6 +81,7 @@ export default async function CleanPage(props: {
               attachment: searchParams.skipAttachment === "true",
             }}
             reuseSettings={false}
+            showPreview={true}
           />
         );
 
