@@ -293,37 +293,69 @@ function parseNaturalLanguageTime(text: string, timezone: string): Date | null {
   if (meridiem === "pm" && hours < 12) hours += 12;
   if (meridiem === "am" && hours === 12) hours = 0;
 
-  // Determine the date
-  let targetDate: Date;
+  // Determine the date components (year, month, day)
+  let year: number;
+  let month: number;
+  let day: number;
 
   if (lowerText.includes("tomorrow")) {
-    targetDate = addDays(startOfDay(now), 1);
+    const tomorrow = addDays(startOfDay(now), 1);
+    year = tomorrow.getFullYear();
+    month = tomorrow.getMonth();
+    day = tomorrow.getDate();
   } else if (lowerText.includes("today")) {
-    targetDate = startOfDay(now);
+    const today = startOfDay(now);
+    year = today.getFullYear();
+    month = today.getMonth();
+    day = today.getDate();
   } else if (lowerText.includes("next week")) {
-    targetDate = addDays(startOfDay(now), 7);
+    const nextWeek = addDays(startOfDay(now), 7);
+    year = nextWeek.getFullYear();
+    month = nextWeek.getMonth();
+    day = nextWeek.getDate();
   } else if (lowerText.includes("monday")) {
-    targetDate = getNextDayOfWeek(now, 1);
+    const targetDate = getNextDayOfWeek(now, 1);
+    year = targetDate.getFullYear();
+    month = targetDate.getMonth();
+    day = targetDate.getDate();
   } else if (lowerText.includes("tuesday")) {
-    targetDate = getNextDayOfWeek(now, 2);
+    const targetDate = getNextDayOfWeek(now, 2);
+    year = targetDate.getFullYear();
+    month = targetDate.getMonth();
+    day = targetDate.getDate();
   } else if (lowerText.includes("wednesday")) {
-    targetDate = getNextDayOfWeek(now, 3);
+    const targetDate = getNextDayOfWeek(now, 3);
+    year = targetDate.getFullYear();
+    month = targetDate.getMonth();
+    day = targetDate.getDate();
   } else if (lowerText.includes("thursday")) {
-    targetDate = getNextDayOfWeek(now, 4);
+    const targetDate = getNextDayOfWeek(now, 4);
+    year = targetDate.getFullYear();
+    month = targetDate.getMonth();
+    day = targetDate.getDate();
   } else if (lowerText.includes("friday")) {
-    targetDate = getNextDayOfWeek(now, 5);
+    const targetDate = getNextDayOfWeek(now, 5);
+    year = targetDate.getFullYear();
+    month = targetDate.getMonth();
+    day = targetDate.getDate();
   } else if (lowerText.includes("saturday")) {
-    targetDate = getNextDayOfWeek(now, 6);
+    const targetDate = getNextDayOfWeek(now, 6);
+    year = targetDate.getFullYear();
+    month = targetDate.getMonth();
+    day = targetDate.getDate();
   } else if (lowerText.includes("sunday")) {
-    targetDate = getNextDayOfWeek(now, 0);
+    const targetDate = getNextDayOfWeek(now, 0);
+    year = targetDate.getFullYear();
+    month = targetDate.getMonth();
+    day = targetDate.getDate();
   } else {
     // Try parsing as a date (e.g., "Jan 15", "January 15", "15 Jan")
     const dateMatch = lowerText.match(
       /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})/i,
     );
     if (dateMatch) {
-      const month = dateMatch[1];
-      const day = Number.parseInt(dateMatch[2]);
+      const monthStr = dateMatch[1];
+      const dayNum = Number.parseInt(dateMatch[2]);
       const monthNames = [
         "jan",
         "feb",
@@ -338,25 +370,33 @@ function parseNaturalLanguageTime(text: string, timezone: string): Date | null {
         "nov",
         "dec",
       ];
-      const monthIndex = monthNames.findIndex((m) => month.startsWith(m));
+      const monthIndex = monthNames.findIndex((m) => monthStr.startsWith(m));
       if (monthIndex >= 0) {
-        targetDate = new Date(now.getFullYear(), monthIndex, day);
+        const targetDate = new Date(now.getFullYear(), monthIndex, dayNum);
         // If the date is in the past, assume next year
         if (isBefore(targetDate, now)) {
-          targetDate = new Date(now.getFullYear() + 1, monthIndex, day);
+          year = now.getFullYear() + 1;
+        } else {
+          year = now.getFullYear();
         }
+        month = monthIndex;
+        day = dayNum;
       } else {
         return null;
       }
     } else {
       // Default to tomorrow if can't parse the date
-      targetDate = addDays(startOfDay(now), 1);
+      const tomorrow = addDays(startOfDay(now), 1);
+      year = tomorrow.getFullYear();
+      month = tomorrow.getMonth();
+      day = tomorrow.getDate();
     }
   }
 
   // Create the final date with time in the specified timezone
-  const result = new TZDate(targetDate, timezone);
-  result.setHours(hours, minutes, 0, 0);
+  // Use TZDate constructor with year, month, day, hour, minute components
+  // This ensures the date is created in the target timezone without conversion
+  const result = new TZDate(year, month, day, hours, minutes, 0, 0, timezone);
 
   return result;
 }
