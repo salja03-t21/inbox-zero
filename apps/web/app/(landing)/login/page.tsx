@@ -29,6 +29,10 @@ export default async function AuthenticationPage(props: {
     }
   }
 
+  const enableGoogleAuth = env.ENABLE_GOOGLE_AUTH;
+  const enableMicrosoftAuth = env.ENABLE_MICROSOFT_AUTH;
+  const enableSSOAuth = env.ENABLE_SSO_AUTH;
+
   return (
     <div className="flex h-screen flex-col justify-center text-foreground">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
@@ -40,7 +44,11 @@ export default async function AuthenticationPage(props: {
         </div>
         <div className="mt-4">
           <Suspense>
-            <LoginForm />
+            <LoginForm
+              enableGoogleAuth={enableGoogleAuth}
+              enableMicrosoftAuth={enableMicrosoftAuth}
+              enableSSOAuth={enableSSOAuth}
+            />
           </Suspense>
         </div>
 
@@ -82,6 +90,16 @@ export default async function AuthenticationPage(props: {
 
 function ErrorAlert({ error }: { error: string }) {
   if (error === "RequiresReconsent") return null;
+
+  if (error === "DomainNotAllowed") {
+    return (
+      <AlertBasic
+        variant="destructive"
+        title="Access Restricted"
+        description="Your email domain is not authorized to access this application. Please contact your administrator if you believe this is an error."
+      />
+    );
+  }
 
   if (error === "OAuthAccountNotLinked") {
     return (
