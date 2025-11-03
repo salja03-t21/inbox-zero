@@ -1,25 +1,16 @@
-import type { Metadata } from "next";
-import { HeroHome } from "@/app/(landing)/home/Hero";
-import { BasicLayout } from "@/components/layouts/BasicLayout";
-import { FeaturesHome } from "@/app/(landing)/home/Features";
-import { Privacy } from "@/app/(landing)/home/Privacy";
-import { Testimonials } from "@/app/(landing)/home/Testimonials";
-import { PricingLazy } from "@/app/(app)/premium/PricingLazy";
-import { FAQs } from "@/app/(landing)/home/FAQs";
-import { CTA } from "@/app/(landing)/home/CTA";
+import { redirect } from "next/navigation";
+import { auth } from "@/utils/auth";
+import { WELCOME_PATH } from "@/utils/config";
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export default async function Home() {
+  // Check if user is already authenticated
+  const session = await auth();
 
-export default function Home() {
-  return (
-    <BasicLayout>
-      <HeroHome />
-      <FeaturesHome />
-      <Testimonials />
-      <PricingLazy className="pb-32" />
-      <Privacy />
-      <FAQs />
-      <CTA />
-    </BasicLayout>
-  );
+  if (session?.user) {
+    // If authenticated, redirect to app
+    redirect(WELCOME_PATH);
+  }
+
+  // If not authenticated, redirect to login page
+  redirect("/login");
 }
