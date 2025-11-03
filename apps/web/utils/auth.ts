@@ -28,11 +28,16 @@ import prisma from "@/utils/prisma";
 const logger = createScopedLogger("auth");
 
 // Helper function to check if an email domain is allowed
-function isEmailDomainAllowed(email: string): boolean {
-  const allowedDomains = env.ALLOWED_EMAIL_DOMAINS;
+// Exported for testing purposes
+export function isEmailDomainAllowed(
+  email: string,
+  allowedDomains?: string[],
+): boolean {
+  // Use provided domains or fall back to env config
+  const domains = allowedDomains ?? env.ALLOWED_EMAIL_DOMAINS;
 
   // If no allowed domains are configured, allow all
-  if (!allowedDomains || allowedDomains.length === 0) {
+  if (!domains || domains.length === 0) {
     return true;
   }
 
@@ -41,7 +46,7 @@ function isEmailDomainAllowed(email: string): boolean {
     return false;
   }
 
-  return allowedDomains.some((domain) => domain.toLowerCase() === emailDomain);
+  return domains.some((domain) => domain.toLowerCase() === emailDomain);
 }
 
 export const betterAuthConfig = betterAuth({
