@@ -273,6 +273,12 @@ When adding new environment variables:
 
 ## Important Notes
 
+### Git Repository Safety
+- **CRITICAL**: This is a fork of the upstream repository
+- Always verify with `git remote -v` before committing
+- Commits should ONLY go to `origin` (salja03-t21/inbox-zero), NEVER to `upstream` (elie222/inbox-zero)
+- Never commit or push to upstream unless explicitly instructed
+
 ### Authentication
 - Uses Better Auth with `withAuth` and `withEmailAccount` middleware
 - Server actions automatically receive auth context
