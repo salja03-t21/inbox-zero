@@ -279,6 +279,11 @@ When adding new environment variables:
 - Commits should ONLY go to `origin` (salja03-t21/inbox-zero), NEVER to `upstream` (elie222/inbox-zero)
 - Never commit or push to upstream unless explicitly instructed
 
+### Data Safety
+- **CRITICAL**: Always check with the user before destroying ANY volume data
+- Never run `docker volume rm`, `docker compose down -v`, or `prisma migrate reset` without explicit permission
+- This applies to both local development and production databases
+
 ### Authentication
 - Uses Better Auth with `withAuth` and `withEmailAccount` middleware
 - Server actions automatically receive auth context
