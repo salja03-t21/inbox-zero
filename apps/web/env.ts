@@ -123,9 +123,21 @@ export const env = createEnv({
       .transform((value) => value?.split(",").map((d) => d.trim())),
 
     // Authentication providers
-    ENABLE_GOOGLE_AUTH: z.coerce.boolean().optional().default(true),
-    ENABLE_MICROSOFT_AUTH: z.coerce.boolean().optional().default(true),
-    ENABLE_SSO_AUTH: z.coerce.boolean().optional().default(true),
+    ENABLE_GOOGLE_AUTH: z
+      .string()
+      .optional()
+      .default("true")
+      .transform((val) => val === "true"),
+    ENABLE_MICROSOFT_AUTH: z
+      .string()
+      .optional()
+      .default("true")
+      .transform((val) => val === "true"),
+    ENABLE_SSO_AUTH: z
+      .string()
+      .optional()
+      .default("true")
+      .transform((val) => val === "true"),
 
     // license
     LICENSE_1_SEAT_VARIANT_ID: z.coerce.number().optional(),
