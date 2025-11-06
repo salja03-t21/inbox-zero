@@ -7,6 +7,11 @@ export type EmailActionStatsResponse = Awaited<
 >;
 
 async function getEmailActionStats({ userEmail }: { userEmail: string }) {
+  // Return empty result if Tinybird is not configured
+  if (!getEmailActionsByDay) {
+    return { result: [] };
+  }
+
   const result = (
     await getEmailActionsByDay({ ownerEmail: userEmail })
   ).data.map((d) => ({
