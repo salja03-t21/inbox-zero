@@ -1090,7 +1090,21 @@ export class OutlookProvider implements EmailProvider {
         request = request.skipToken(options.pageToken);
       }
 
+      logger.info("Executing Graph API request", {
+        endpoint,
+        filter,
+        maxResults: options.maxResults || 50,
+        hasPageToken: !!options.pageToken,
+      });
+
       const response = await request.get();
+
+      logger.info("Microsoft Graph API response", {
+        messageCount: response.value?.length || 0,
+        hasNextLink: !!response["@odata.nextLink"],
+        nextLinkUrl: response["@odata.nextLink"],
+        responseKeys: Object.keys(response),
+      });
 
       // Sort messages by receivedDateTime if we filtered by fromEmail (since we couldn't use orderby)
       let sortedMessages = response.value;
