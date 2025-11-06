@@ -52,15 +52,15 @@ ssh $SERVER_USER@$SERVER "
         git init && 
         git remote add origin https://github.com/salja03-t21/inbox-zero.git ; 
     fi && 
+    echo '  Fetching updates...' && 
+    git fetch origin && 
     echo '  Stashing local config files...' && 
     git add -A 2>/dev/null || true && 
     git stash push -u -m 'Local config files' 2>/dev/null || true && 
-    echo '  Fetching updates...' && 
-    git fetch origin && 
     echo '  Checking out $BRANCH...' && 
-    git checkout $BRANCH 2>/dev/null || git checkout -b $BRANCH origin/$BRANCH && 
+    git checkout -f $BRANCH 2>/dev/null || git checkout -b $BRANCH origin/$BRANCH && 
     echo '  Pulling latest code...' && 
-    git pull origin $BRANCH && 
+    git reset --hard origin/$BRANCH && 
     echo '  Current commit:' && 
     git log --oneline -1"
 
