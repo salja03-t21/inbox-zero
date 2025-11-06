@@ -85,7 +85,6 @@ export const getPreviewEmailsAction = actionClient
         const messages = await getOutlookMessages(outlook, {
           query: "",
           maxResults: PREVIEW_RUN_COUNT,
-          after: subDays(new Date(), daysOld),
         });
 
         return messages.messages.map((message) => ({
