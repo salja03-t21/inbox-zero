@@ -26,10 +26,12 @@ export const getPreviewEmailsAction = actionClient
     const emailAccount = await prisma.emailAccount.findUnique({
       where: { id: emailAccountId },
       include: {
-        tokens: true,
         account: {
           select: {
             provider: true,
+            access_token: true,
+            refresh_token: true,
+            expires_at: true,
           },
         },
       },
@@ -39,7 +41,7 @@ export const getPreviewEmailsAction = actionClient
       throw new Error("Email account not found");
     }
 
-    if (!emailAccount.tokens) {
+    if (!emailAccount.account.access_token) {
       throw new Error("No account tokens found");
     }
 
@@ -49,9 +51,9 @@ export const getPreviewEmailsAction = actionClient
     try {
       if (isGmail) {
         const gmail = await getGmailClientWithRefresh({
-          accessToken: emailAccount.tokens.access_token,
-          refreshToken: emailAccount.tokens.refresh_token,
-          expiresAt: emailAccount.tokens.expires_at,
+          accessToken: emailAccount.account.access_token!,
+          refreshToken: emailAccount.account.refresh_token!,
+          expiresAt: emailAccount.account.expires_at,
           emailAccountId: emailAccount.id,
         });
 
@@ -70,9 +72,9 @@ export const getPreviewEmailsAction = actionClient
         }));
       } else {
         const outlook = await getOutlookClientWithRefresh({
-          accessToken: emailAccount.tokens.access_token,
-          refreshToken: emailAccount.tokens.refresh_token,
-          expiresAt: emailAccount.tokens.expires_at || null,
+          accessToken: emailAccount.account.access_token!,
+          refreshToken: emailAccount.account.refresh_token!,
+          expiresAt: emailAccount.account.expires_at || null,
           emailAccountId: emailAccount.id,
         });
 
