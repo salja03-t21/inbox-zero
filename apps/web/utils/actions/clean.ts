@@ -306,6 +306,7 @@ export const changeKeepToDoneAction = actionClient
           await emailProvider.labelMessage({
             messageId: threadId,
             labelId: actionLabel.id,
+            labelName: actionLabel.name,
           });
         }
       }
