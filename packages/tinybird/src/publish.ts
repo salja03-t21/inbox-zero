@@ -11,16 +11,27 @@ const tinybirdEmailAction = z.object({
 
 export type TinybirdEmailAction = z.infer<typeof tinybirdEmailAction>;
 
-export const publishEmailAction = tb.buildIngestEndpoint({
-  datasource: "email_action",
-  event: tinybirdEmailAction,
-});
+// Build ingest endpoint only if Tinybird client is initialized
+const publishEmailAction = tb
+  ? tb.buildIngestEndpoint({
+      datasource: "email_action",
+      event: tinybirdEmailAction,
+    })
+  : null;
 
-// Helper functions for specific actions
+// Helper functions for specific actions - skip if Tinybird not configured
 export const publishArchive = (params: Omit<TinybirdEmailAction, "action">) => {
+  if (!publishEmailAction) {
+    // Tinybird not configured, skip publishing
+    return Promise.resolve();
+  }
   return publishEmailAction({ ...params, action: "archive" });
 };
 
 export const publishDelete = (params: Omit<TinybirdEmailAction, "action">) => {
+  if (!publishEmailAction) {
+    // Tinybird not configured, skip publishing
+    return Promise.resolve();
+  }
   return publishEmailAction({ ...params, action: "delete" });
 };
