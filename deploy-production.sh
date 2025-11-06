@@ -45,15 +45,17 @@ ssh $SERVER_USER@$SERVER "mkdir -p $DEPLOY_PATH && sudo mkdir -p $VOLUMES_PATH/{
 
 # Step 3: Initialize/update git repository on server
 echo "📦 Updating code on server..."
-ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && 
+ssh $SERVER_USER@$SERVER "
+    mkdir -p $DEPLOY_PATH && cd $DEPLOY_PATH && 
     if [ ! -d .git ]; then 
-        echo '  Cloning repository...'; 
-        git clone https://github.com/salja03-t21/inbox-zero.git . ; 
+        echo '  Initializing git repository...'; 
+        git init && 
+        git remote add origin https://github.com/salja03-t21/inbox-zero.git ; 
     fi && 
     echo '  Fetching updates...' && 
     git fetch origin && 
     echo '  Checking out $BRANCH...' && 
-    git checkout $BRANCH && 
+    git checkout $BRANCH 2>/dev/null || git checkout -b $BRANCH origin/$BRANCH && 
     echo '  Pulling latest code...' && 
     git pull origin $BRANCH && 
     echo '  Current commit:' && 
