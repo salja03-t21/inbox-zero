@@ -106,9 +106,10 @@ export const betterAuthConfig = betterAuth({
     microsoft: {
       clientId: env.MICROSOFT_CLIENT_ID || "",
       clientSecret: env.MICROSOFT_CLIENT_SECRET || "",
-      scope: [...OUTLOOK_SCOPES],
+      scope: [...OUTLOOK_SCOPES, "offline_access"],
       tenantId: "common",
-      prompt: "consent",
+      // Only prompt for consent on first login, not every time
+      prompt: "select_account",
       disableIdTokenSignIn: true,
     },
   },
