@@ -172,13 +172,16 @@ async function onRun(
   const LIMIT = 25;
 
   let aborted = false;
+  const seenThreadIds = new Set<string>(); // Track processed threads to avoid duplicates
 
   function abort() {
     aborted = true;
   }
 
   async function run() {
-    for (let i = 0; i < 100; i++) {
+    // Cursor-based pagination: loop until no more pages or aborted
+    // No hard limit - processes all threads in date range
+    while (!aborted) {
       const query: ThreadsQuery = {
         type: "inbox",
         limit: LIMIT,
@@ -224,9 +227,15 @@ async function onRun(
 
       const threadsWithoutPlan = data.threads.filter((t) => !t.plan);
 
-      incrementThreadsQueued(threadsWithoutPlan.length);
+      // Deduplicate: filter out threads we've already seen
+      const newThreads = threadsWithoutPlan.filter(
+        (t) => !seenThreadIds.has(t.id),
+      );
+      newThreads.forEach((t) => seenThreadIds.add(t.id));
 
-      runAiRules(emailAccountId, threadsWithoutPlan, false);
+      incrementThreadsQueued(newThreads.length);
+
+      runAiRules(emailAccountId, newThreads, false);
 
       if (!nextPageToken || aborted) break;
 
