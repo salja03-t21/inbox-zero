@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/login" },
 };
 
+// Force dynamic rendering so env vars are read at runtime
+export const dynamic = "force-dynamic";
+
 export default async function AuthenticationPage(props: {
   searchParams?: Promise<Record<string, string>>;
 }) {
