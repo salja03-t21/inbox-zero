@@ -116,6 +116,29 @@ export const env = createEnv({
     USE_BACKUP_MODEL: z.coerce.boolean().optional().default(false),
     HEALTH_API_KEY: z.string().optional(),
 
+    // Access control
+    ALLOWED_EMAIL_DOMAINS: z
+      .string()
+      .optional()
+      .transform((value) => value?.split(",").map((d) => d.trim())),
+
+    // Authentication providers
+    ENABLE_GOOGLE_AUTH: z
+      .string()
+      .optional()
+      .default("true")
+      .transform((val) => val === "true"),
+    ENABLE_MICROSOFT_AUTH: z
+      .string()
+      .optional()
+      .default("true")
+      .transform((val) => val === "true"),
+    ENABLE_SSO_AUTH: z
+      .string()
+      .optional()
+      .default("true")
+      .transform((val) => val === "true"),
+
     // license
     LICENSE_1_SEAT_VARIANT_ID: z.coerce.number().optional(),
     LICENSE_3_SEAT_VARIANT_ID: z.coerce.number().optional(),

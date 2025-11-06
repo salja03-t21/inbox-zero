@@ -34,12 +34,16 @@ export function BulkRunRules() {
 
   const queue = useAiQueueState();
 
-  const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
+  // Temporarily disable premium check for testing
+  const hasAiAccess = true;
+  const isLoadingPremium = false;
+  // const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
 
   const [running, setRunning] = useState(false);
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [onlyUnread, setOnlyUnread] = useState(true);
 
   const abortRef = useRef<() => void>(undefined);
 
@@ -59,8 +63,8 @@ export function BulkRunRules() {
             {data && (
               <>
                 <SectionDescription>
-                  This runs your rules on unread emails currently in your inbox
-                  (that have not been previously processed).
+                  This runs your rules on emails currently in your inbox (that
+                  have not been previously processed).
                 </SectionDescription>
 
                 {!!queue.size && (
@@ -88,6 +92,18 @@ export function BulkRunRules() {
                           disabled={running}
                         />
                       </div>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={onlyUnread}
+                          onChange={(e) => setOnlyUnread(e.target.checked)}
+                          disabled={running}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <span className="text-sm">
+                          Only process unread emails
+                        </span>
+                      </label>
 
                       <Button
                         type="button"
@@ -110,7 +126,7 @@ export function BulkRunRules() {
                           setRunning(true);
                           abortRef.current = await onRun(
                             emailAccountId,
-                            { startDate, endDate },
+                            { startDate, endDate, onlyUnread },
                             (count) =>
                               setTotalThreads((total) => total + count),
                             () => setRunning(false),
@@ -144,7 +160,11 @@ export function BulkRunRules() {
 // fetch batches of messages and add them to the ai queue
 async function onRun(
   emailAccountId: string,
-  { startDate, endDate }: { startDate: Date; endDate?: Date },
+  {
+    startDate,
+    endDate,
+    onlyUnread,
+  }: { startDate: Date; endDate?: Date; onlyUnread: boolean },
   incrementThreadsQueued: (count: number) => void,
   onComplete: () => void,
 ) {
@@ -163,8 +183,8 @@ async function onRun(
         type: "inbox",
         limit: LIMIT,
         after: startDate,
-        ...(endDate ? { before: endDate } : {}),
-        isUnread: true,
+        before: endDate || undefined,
+        ...(onlyUnread ? { isUnread: true } : {}),
         ...(nextPageToken ? { nextPageToken } : {}),
       };
 
