@@ -33,7 +33,6 @@ services:
     image: postgres:16-alpine
     container_name: inbox-zero-postgres
     restart: unless-stopped
-    user: "70:70"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-inboxzero}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
@@ -52,7 +51,6 @@ services:
     image: redis:7-alpine
     container_name: inbox-zero-redis
     restart: unless-stopped
-    user: "999:999"
     command: redis-server --appendonly yes
     volumes:
       - /mnt/nfs/inbox-zero/redis:/data
