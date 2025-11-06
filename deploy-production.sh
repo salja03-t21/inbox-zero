@@ -39,9 +39,9 @@ LATEST_COMMIT=$(git rev-parse --short HEAD)
 echo "📌 Deploying commit: $LATEST_COMMIT"
 echo ""
 
-# Step 2: Create directories on server
+# Step 2: Create directories on server (if they don't exist)
 echo "📁 Ensuring directories exist on server..."
-ssh $SERVER_USER@$SERVER "mkdir -p $DEPLOY_PATH && sudo mkdir -p $VOLUMES_PATH/{postgres,redis,app-data} && sudo chown -R $SERVER_USER:$SERVER_USER $VOLUMES_PATH && sudo chmod -R 755 $VOLUMES_PATH/postgres"
+ssh $SERVER_USER@$SERVER "mkdir -p $DEPLOY_PATH && sudo mkdir -p $VOLUMES_PATH/{postgres,redis,app-data}"
 
 # Step 3: Initialize/update git repository on server
 echo "📦 Updating code on server..."
