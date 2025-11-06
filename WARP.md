@@ -273,11 +273,33 @@ When adding new environment variables:
 
 ## Important Notes
 
-### Git Repository Safety
+### Git Repository Safety & Branching Model
 - **CRITICAL**: This is a fork of the upstream repository
 - Always verify with `git remote -v` before committing
 - Commits should ONLY go to `origin` (salja03-t21/inbox-zero), NEVER to `upstream` (elie222/inbox-zero)
 - Never commit or push to upstream unless explicitly instructed
+
+#### Branch Structure
+This fork uses a **feature branch workflow** for maintainability:
+
+- **`main`**: Mirrors `upstream/main` exactly - always kept clean and in sync with elie222/inbox-zero
+- **`feature/*`**: Long-lived feature branches containing custom functionality:
+  - `feature/outlook-deep-clean` - Outlook-specific deep clean functionality
+  - `feature/meeting-scheduler` - Email-triggered meeting scheduling
+  - `feature/prompt-injection-defense` - Security hardening for AI prompts
+  - `feature/documentation` - WARP.md and documentation updates
+  - `feature/deployment-setup` - Docker/Traefik production deployment configs
+  - `feature/auth-issues` - Authentication fixes and improvements
+- **`production`**: Integration branch for deployment = `main` + all feature branches
+- **`backup/main-pre-feature-split-YYYY-MM-DD`**: Safety backup before branch restructuring
+
+#### Workflow Safety Rules
+1. **Never push to upstream** - Only push to `origin` (your fork)
+2. **Force pushes** are allowed ONLY on:
+   - `main` (when syncing with upstream)
+   - `feature/*` branches (after rebasing)
+   - Use `--force-with-lease` to prevent accidental overwrites
+3. **Deploy from `production`** - Never deploy from `main` or feature branches directly
 
 ### Data Safety
 - **CRITICAL**: Always check with the user before destroying ANY volume data
@@ -332,6 +354,70 @@ Users are prompted to re-consent Microsoft permissions on each login. This needs
 
 ### Auth Provider Buttons
 Setting `ENABLE_GOOGLE_AUTH=false` and `ENABLE_SSO_AUTH=false` in .env doesn't hide the buttons because the login page is statically generated. The page needs to be forced to dynamic rendering. The env vars ARE correctly read at runtime in the container.
+
+## Ongoing Maintenance: Syncing with Upstream
+
+### Weekly/As-Needed Update Process
+
+To pull latest changes from upstream while preserving your custom features:
+
+**Step 1: Sync `main` with upstream**
+```bash
+git switch main
+git fetch upstream --prune
+git pull --ff-only upstream main
+git push origin main
+```
+
+**Step 2: Rebase each feature branch onto updated `main`**
+```bash
+for branch in feature/outlook-deep-clean feature/meeting-scheduler feature/prompt-injection-defense feature/documentation feature/deployment-setup feature/auth-issues
+do
+  git switch ${branch}
+  git fetch origin
+  git rebase main
+  # If conflicts: fix files, then:
+  # git add -A && git rebase --continue
+  git push --force-with-lease origin ${branch}
+done
+```
+
+**Step 3: Rebuild `production` with latest changes**
+```bash
+git switch production
+git fetch origin
+git reset --hard origin/main  # Start fresh from updated main
+
+# Cherry-pick all feature commits in order
+# (This recreates production from scratch with latest main + features)
+git cherry-pick origin/feature/documentation
+git cherry-pick origin/feature/deployment-setup  
+git cherry-pick origin/feature/prompt-injection-defense
+git cherry-pick origin/feature/outlook-deep-clean
+git cherry-pick origin/feature/meeting-scheduler
+git cherry-pick origin/feature/auth-issues
+
+# Validate before deploying
+pnpm install && pnpm build && pnpm test
+
+git push --force-with-lease origin production
+```
+
+**Step 4: Deploy updated production**
+```bash
+# SSH to production server and pull latest
+ssh user@192.168.3.2
+cd ~/docker/inbox-zero
+git fetch origin
+git checkout production
+git pull origin production
+docker-compose up -d --build
+```
+
+### Tips
+- **Rerere**: Git's `rerere` (reuse recorded resolution) is enabled - it remembers how you resolved conflicts
+- **Tag releases**: Tag production deployments: `git tag -a prod-$(date +%Y%m%d) -m "Release notes" && git push origin --tags`
+- **Upstreaming features**: To contribute a feature back to upstream, create a clean PR branch from your feature branch
 
 ## Useful Links
 
