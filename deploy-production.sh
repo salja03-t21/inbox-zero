@@ -41,7 +41,7 @@ echo ""
 
 # Step 2: Create directories on server
 echo "📁 Ensuring directories exist on server..."
-ssh $SERVER_USER@$SERVER "mkdir -p $DEPLOY_PATH && sudo mkdir -p $VOLUMES_PATH/{postgres,redis,app-data} && sudo chown -R $SERVER_USER:$SERVER_USER $VOLUMES_PATH"
+ssh $SERVER_USER@$SERVER "mkdir -p $DEPLOY_PATH && sudo mkdir -p $VOLUMES_PATH/{postgres,redis,app-data} && sudo chown -R $SERVER_USER:$SERVER_USER $VOLUMES_PATH && sudo chmod -R 755 $VOLUMES_PATH/postgres"
 
 # Step 3: Initialize/update git repository on server
 echo "📦 Updating code on server..."
