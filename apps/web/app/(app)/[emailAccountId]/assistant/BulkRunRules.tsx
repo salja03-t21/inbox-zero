@@ -227,6 +227,7 @@ export async function onRun(
       await sleep(threadsWithoutPlan.length ? 5000 : 2000);
     }
 
+    // Fetching is done, but AI queue may still be processing
     onComplete(aborted);
   }
 

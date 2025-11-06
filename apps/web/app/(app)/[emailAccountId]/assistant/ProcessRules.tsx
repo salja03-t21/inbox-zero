@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useRef, useMemo } from "react";
+import { useCallback, useState, useRef, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { parseAsBoolean, useQueryState } from "nuqs";
@@ -129,9 +129,22 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
 
   // Bulk processing state
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkFetchingDone, setBulkFetchingDone] = useState(false);
   const [bulkDiscovered, setBulkDiscovered] = useState(0);
   const [bulkProcessed, setBulkProcessed] = useState(0);
   const bulkAbortRef = useRef<(() => void) | undefined>(undefined);
+
+  // Auto-complete when fetching is done and queue is empty
+  useEffect(() => {
+    if (isBulkProcessing && bulkFetchingDone && queue.size === 0) {
+      // All done!
+      setIsBulkProcessing(false);
+      setBulkFetchingDone(false);
+      toastSuccess({
+        description: `Completed! Processed ${bulkProcessed} emails.`,
+      });
+    }
+  }, [isBulkProcessing, bulkFetchingDone, queue.size, bulkProcessed]);
 
   // Merge existing rules with results
   const allResults = useMemo(() => {
@@ -254,10 +267,10 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
     onComplete: (aborted: boolean) => void;
   }) => {
     setIsBulkProcessing(true);
+    setBulkFetchingDone(false);
     setBulkDiscovered(0);
     setBulkProcessed(0);
 
-    let processedCount = 0;
     bulkAbortRef.current = await bulkOnRun(
       emailAccountId,
       {
@@ -267,17 +280,16 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
       },
       {
         onDiscovered: (count) => setBulkDiscovered((total) => total + count),
-        onProcessed: (count) => {
-          processedCount += count;
-          setBulkProcessed((total) => total + count);
-        },
+        onProcessed: (count) => setBulkProcessed((total) => total + count),
       },
       (aborted: boolean) => {
-        setIsBulkProcessing(false);
-        if (!aborted) {
-          toastSuccess({
-            description: `Completed! Queued ${processedCount} emails for processing.`,
-          });
+        if (aborted) {
+          // User cancelled
+          setIsBulkProcessing(false);
+          setBulkFetchingDone(false);
+        } else {
+          // Fetching done, but queue may still be processing
+          setBulkFetchingDone(true);
         }
       },
     );
@@ -287,6 +299,8 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
 
   const handleBulkCancel = () => {
     bulkAbortRef.current?.();
+    setIsBulkProcessing(false);
+    setBulkFetchingDone(false);
     toastSuccess({
       description: "Processing cancelled.",
     });
