@@ -338,8 +338,57 @@ The two-way sync between database rules and prompt files is a known complexity d
 - Hosted on Docker server at `192.168.3.2`
 - Docker Compose files at `~/docker/inbox-zero`
 - Persistent volumes at `/mnt/nfs/inbox-zero`
-- Uses Cloudflared tunnel for external access
+- Uses Traefik for reverse proxy and SSL
 - Local Redis for caching, Upstash for queues
+
+### Production Deployment Process
+
+**Automated Deployment Script:**
+```bash
+./deploy-production.sh
+```
+
+The deployment script handles:
+1. Verifying you're on the `production` branch
+2. Pushing latest changes to origin
+3. Pulling code on server
+4. Backing up existing `docker-compose.yml` with timestamp
+5. Copying `docker-compose.prod.yml` → `docker-compose.yml`
+6. Copying `.env` configuration
+7. Building Docker image with correct `NEXT_PUBLIC_BASE_URL`
+8. Starting containers
+9. Running database migrations
+
+**Important Notes:**
+- The production server uses `docker-compose.yml` (not `docker-compose.prod.yml`) to start containers
+- `docker-compose.prod.yml` is the SOURCE OF TRUTH for production configuration
+- The deployment script automatically copies `docker-compose.prod.yml` to `docker-compose.yml` on the server
+- To modify production Docker config, edit `docker-compose.prod.yml` in the repo, commit, and redeploy
+- Old `docker-compose.yml` files are backed up with timestamps before being replaced
+
+**Manual Deployment (if script fails):**
+```bash
+# SSH to server
+ssh james@192.168.3.2
+cd ~/docker/inbox-zero
+
+# Pull latest code
+git fetch origin
+git checkout production
+git pull origin production
+
+# Backup and update docker-compose
+cp docker-compose.yml docker-compose.yml.backup-$(date +%Y%m%d-%H%M%S)
+cp docker-compose.prod.yml docker-compose.yml
+
+# Build and restart
+docker compose down
+docker compose build --build-arg NEXT_PUBLIC_BASE_URL=https://iz.salsven.com
+docker compose up -d
+
+# Run migrations
+docker compose exec -T app pnpm --filter=web prisma migrate deploy
+```
 
 ## Premium Features
 

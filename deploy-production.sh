@@ -67,6 +67,10 @@ ssh $SERVER_USER@$SERVER "
 # Step 4: Copy environment file and docker-compose
 echo "⚙️  Copying configuration files..."
 scp apps/web/.env.production $SERVER_USER@$SERVER:$DEPLOY_PATH/.env
+
+# Backup existing docker-compose.yml and copy prod version
+echo "📋 Updating docker-compose configuration..."
+ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && if [ -f docker-compose.yml ]; then cp docker-compose.yml docker-compose.yml.backup-\$(date +%Y%m%d-%H%M%S); fi"
 scp docker-compose.prod.yml $SERVER_USER@$SERVER:$DEPLOY_PATH/docker-compose.yml
 
 # Step 5: Copy tunnel credentials for Cloudflare (from laptop to server routing)
