@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getGmailClientWithRefresh } from "@/utils/gmail/client";
 import { getOutlookClientWithRefresh } from "@/utils/outlook/client";
 import { isGoogleProvider } from "@/utils/email/provider-types";
-import { getMessages as getGmailMessages } from "@/utils/gmail/message";
+import { queryBatchMessages as getGmailMessages } from "@/utils/gmail/message";
 import { getMessages as getOutlookMessages } from "@/utils/outlook/message";
 import { PREVIEW_RUN_COUNT } from "@/app/(app)/[emailAccountId]/clean/consts";
 import { subDays } from "date-fns";
@@ -59,18 +59,18 @@ export const getPreviewEmailsAction = actionClient
           emailAccountId: emailAccount.id,
         });
 
-        const messages = await getGmailMessages(gmail, {
+        const result = await getGmailMessages(gmail, {
           query: `in:inbox after:${after}`,
           maxResults: PREVIEW_RUN_COUNT,
         });
 
-        return messages.messages.map((message) => ({
+        return result.messages.map((message) => ({
           id: message.id || "",
           threadId: message.threadId || "",
           snippet: message.snippet || "",
-          from: message.parsedMessage.headers.from || "",
-          subject: message.parsedMessage.headers.subject || "",
-          date: message.parsedMessage.headers.date || "",
+          from: message.headers?.from || "",
+          subject: message.headers?.subject || "",
+          date: message.headers?.date || "",
         }));
       } else {
         const outlook = await getOutlookClientWithRefresh({
