@@ -42,11 +42,26 @@ export const GET = withEmailProvider(async (request) => {
   });
 
   try {
+    logger.info("Fetching threads", {
+      limit: query.limit,
+      hasNextPageToken: !!query.nextPageToken,
+      after: query.after,
+      before: query.before,
+      isUnread: query.isUnread,
+    });
+
     const threads = await getThreads({
       query,
       emailAccountId,
       emailProvider,
     });
+
+    logger.info("Threads fetched", {
+      threadCount: threads.threads.length,
+      hasNextPageToken: !!threads.nextPageToken,
+      threadsWithPlan: threads.threads.filter((t) => t.plan).length,
+    });
+
     return NextResponse.json(threads);
   } catch (error) {
     logger.error("Error fetching threads", { error, emailAccountId });
