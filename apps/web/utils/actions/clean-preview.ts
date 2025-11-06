@@ -53,7 +53,9 @@ export const getPreviewEmailsAction = actionClient
         const gmail = await getGmailClientWithRefresh({
           accessToken: emailAccount.account.access_token!,
           refreshToken: emailAccount.account.refresh_token!,
-          expiresAt: emailAccount.account.expires_at,
+          expiresAt: emailAccount.account.expires_at
+            ? Math.floor(emailAccount.account.expires_at.getTime() / 1000)
+            : null,
           emailAccountId: emailAccount.id,
         });
 
@@ -74,7 +76,9 @@ export const getPreviewEmailsAction = actionClient
         const outlook = await getOutlookClientWithRefresh({
           accessToken: emailAccount.account.access_token!,
           refreshToken: emailAccount.account.refresh_token!,
-          expiresAt: emailAccount.account.expires_at || null,
+          expiresAt: emailAccount.account.expires_at
+            ? Math.floor(emailAccount.account.expires_at.getTime() / 1000)
+            : null,
           emailAccountId: emailAccount.id,
         });
 
