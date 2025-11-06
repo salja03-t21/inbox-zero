@@ -12,6 +12,7 @@ import {
   redirectWithError,
   RedirectError,
 } from "./oauth-callback-helpers";
+import { env } from "@/env";
 
 /**
  * Unified handler for calendar OAuth callbacks
@@ -46,7 +47,7 @@ export async function handleCalendarCallback(
     // Step 3: Update redirect URL to include emailAccountId
     const finalRedirectUrl = buildCalendarRedirectUrl(
       emailAccountId,
-      request.nextUrl.origin,
+      env.NEXT_PUBLIC_BASE_URL,
     );
 
     // Step 4: Verify user owns this email account
@@ -125,7 +126,7 @@ export async function handleCalendarCallback(
     logger.error("Error in calendar callback", { error });
 
     // Try to build a redirect URL, fallback to /calendars
-    const errorRedirectUrl = new URL("/calendars", request.nextUrl.origin);
+    const errorRedirectUrl = new URL("/calendars", env.NEXT_PUBLIC_BASE_URL);
     return redirectWithError(
       errorRedirectUrl,
       "connection_failed",

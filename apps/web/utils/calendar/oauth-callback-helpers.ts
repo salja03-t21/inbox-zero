@@ -6,6 +6,7 @@ import { parseOAuthState } from "@/utils/oauth/state";
 import { auth } from "@/utils/auth";
 import { prefixPath } from "@/utils/path";
 import type { Logger } from "@/utils/logger";
+import { env } from "@/env";
 import type {
   OAuthCallbackValidation,
   CalendarOAuthState,
@@ -23,7 +24,7 @@ export async function validateOAuthCallback(
   const receivedState = searchParams.get("state");
   const storedState = request.cookies.get(CALENDAR_STATE_COOKIE_NAME)?.value;
 
-  const redirectUrl = new URL("/calendars", request.nextUrl.origin);
+  const redirectUrl = new URL("/calendars", env.NEXT_PUBLIC_BASE_URL);
   const response = NextResponse.redirect(redirectUrl);
 
   response.cookies.delete(CALENDAR_STATE_COOKIE_NAME);
