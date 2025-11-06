@@ -82,3 +82,4 @@ coverage
 # Memory bank (Cline AI documentation)
 memory-bank/
 .env.production
+deploy.log
