@@ -1,0 +1,84 @@
+version: '3.9'
+
+services:
+  app:
+    image: inbox-zero:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+      args:
+        NEXT_PUBLIC_BASE_URL: https://iz.salsven.com
+    container_name: inbox-zero-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - inbox-zero-network
+      - ai_network
+    volumes:
+      - /mnt/nfs/inbox-zero/app-data:/app/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.inbox-zero.rule=Host(`iz.salsven.com`)"
+      - "traefik.http.routers.inbox-zero.entrypoints=https"
+      - "traefik.http.routers.inbox-zero.tls=true"
+      - "traefik.http.routers.inbox-zero.tls.certresolver=cloudflare"
+      - "traefik.http.services.inbox-zero.loadbalancer.server.port=3000"
+      - "traefik.docker.network=ai_network"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: inbox-zero-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-inboxzero}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-inboxzero}
+    volumes:
+      - /mnt/nfs/inbox-zero/postgres:/var/lib/postgresql/data
+    networks:
+      - inbox-zero-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inboxzero}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: inbox-zero-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - /mnt/nfs/inbox-zero/redis:/data
+    networks:
+      - inbox-zero-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  serverless-redis-http:
+    image: hiett/serverless-redis-http:latest
+    container_name: inbox-zero-redis-http
+    restart: unless-stopped
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${UPSTASH_REDIS_TOKEN:-local-redis-token}
+      SRH_CONNECTION_STRING: redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - inbox-zero-network
+
+networks:
+  inbox-zero-network:
+    name: inbox-zero-network
+    driver: bridge
+  ai_network:
+    external: true
+    name: ai_network

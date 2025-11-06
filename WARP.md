@@ -313,7 +313,7 @@ The two-way sync between database rules and prompt files is a known complexity d
 
 ### Production Instance
 - Domain: `iz.salsven.com`
-- Hosted on Docker server at `192.168.3.124`
+- Hosted on Docker server at `192.168.3.2`
 - Docker Compose files at `~/docker/inbox-zero`
 - Persistent volumes at `/mnt/nfs/inbox-zero`
 - Uses Cloudflared tunnel for external access
