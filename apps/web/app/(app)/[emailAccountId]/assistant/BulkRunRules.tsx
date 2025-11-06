@@ -1,19 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { HistoryIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionDescription } from "@/components/Typography";
-import type { ThreadsResponse } from "@/app/api/threads/route";
-import type { ThreadsQuery } from "@/app/api/threads/validation";
 import { LoadingContent } from "@/components/LoadingContent";
-import { runAiRules } from "@/utils/queue/email-actions";
-import { sleep } from "@/utils/sleep";
-import { toastError, toastSuccess } from "@/components/Toast";
+import { toastError } from "@/components/Toast";
 import { PremiumAlertWithData, usePremium } from "@/components/PremiumAlert";
 import { SetDateDropdown } from "@/app/(app)/[emailAccountId]/assistant/SetDateDropdown";
 import { useThreads } from "@/hooks/useThreads";
-import { useAiQueueState } from "@/store/ai-queue";
+import type { ThreadsResponse } from "@/app/api/threads/route";
+import type { ThreadsQuery } from "@/app/api/threads/validation";
+import { runAiRules } from "@/utils/queue/email-actions";
+import { sleep } from "@/utils/sleep";
+import { fetchWithAccount } from "@/utils/fetch";
 import {
   Dialog,
   DialogContent,
@@ -21,40 +21,32 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useAccount } from "@/providers/EmailAccountProvider";
-import { fetchWithAccount } from "@/utils/fetch";
 
-export function BulkRunRules() {
-  const { emailAccountId } = useAccount();
-
+export function BulkRunRules({
+  onStart,
+}: {
+  onStart?: (params: {
+    startDate: Date;
+    endDate?: Date;
+    onlyUnread: boolean;
+    onDiscovered: (count: number) => void;
+    onProcessed: (count: number) => void;
+    onComplete: (aborted: boolean) => void;
+  }) => (() => void) | Promise<() => void>;
+}) {
   const [isOpen, setIsOpen] = useState(false);
 
   const { data, isLoading, error } = useThreads({ type: "inbox" });
 
-  const queue = useAiQueueState();
-
   const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
-
-  const [running, setRunning] = useState(false);
-  const [totalDiscovered, setTotalDiscovered] = useState(0);
-  const [totalProcessed, setTotalProcessed] = useState(0);
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [onlyUnread, setOnlyUnread] = useState(true);
 
-  const abortRef = useRef<() => void>(undefined);
-
-  // Prevent dialog from closing while processing
-  const handleOpenChange = (open: boolean) => {
-    if (!running) {
-      setIsOpen(open);
-    }
-  };
-
   return (
     <div>
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button type="button" variant="outline" Icon={HistoryIcon}>
             Bulk Process Emails
@@ -73,17 +65,6 @@ export function BulkRunRules() {
                   ERROR status).
                 </SectionDescription>
 
-                {running && (
-                  <div className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 dark:border-blue-800 dark:bg-blue-950">
-                    <SectionDescription className="mt-0">
-                      Discovered: {totalDiscovered} emails
-                      <br />
-                      Queued for processing: {totalProcessed}
-                      <br />
-                      Processing: {queue.size} remaining in queue
-                    </SectionDescription>
-                  </div>
-                )}
                 <LoadingContent loading={isLoadingPremium}>
                   {hasAiAccess ? (
                     <div className="flex flex-col space-y-2">
@@ -92,13 +73,11 @@ export function BulkRunRules() {
                           onChange={setStartDate}
                           value={startDate}
                           placeholder="Set start date"
-                          disabled={running}
                         />
                         <SetDateDropdown
                           onChange={setEndDate}
                           value={endDate}
                           placeholder="Set end date (optional)"
-                          disabled={running}
                         />
                       </div>
                       <label className="flex items-center space-x-2">
@@ -106,7 +85,6 @@ export function BulkRunRules() {
                           type="checkbox"
                           checked={onlyUnread}
                           onChange={(e) => setOnlyUnread(e.target.checked)}
-                          disabled={running}
                           className="h-4 w-4 rounded border-gray-300"
                         />
                         <span className="text-sm">
@@ -116,8 +94,7 @@ export function BulkRunRules() {
 
                       <Button
                         type="button"
-                        disabled={running || !startDate || !emailAccountId}
-                        loading={running}
+                        disabled={!startDate}
                         onClick={async () => {
                           if (!startDate) {
                             toastError({
@@ -125,55 +102,25 @@ export function BulkRunRules() {
                             });
                             return;
                           }
-                          if (!emailAccountId) {
-                            toastError({
-                              description:
-                                "Email account ID is missing. Please refresh the page.",
-                            });
-                            return;
-                          }
-                          setRunning(true);
-                          setTotalDiscovered(0);
-                          setTotalProcessed(0);
 
-                          let processedCount = 0;
-                          abortRef.current = await onRun(
-                            emailAccountId,
-                            { startDate, endDate, onlyUnread },
-                            {
-                              onDiscovered: (count) =>
-                                setTotalDiscovered((total) => total + count),
-                              onProcessed: (count) => {
-                                processedCount += count;
-                                setTotalProcessed((total) => total + count);
-                              },
-                            },
-                            (aborted: boolean) => {
-                              setRunning(false);
-                              if (!aborted) {
-                                toastSuccess({
-                                  description: `Completed! Queued ${processedCount} emails for processing.`,
-                                });
-                              }
-                            },
-                          );
+                          // Close dialog immediately
+                          setIsOpen(false);
+
+                          // Call parent's onStart if provided
+                          if (onStart) {
+                            onStart({
+                              startDate,
+                              endDate,
+                              onlyUnread,
+                              onDiscovered: () => {},
+                              onProcessed: () => {},
+                              onComplete: () => {},
+                            });
+                          }
                         }}
                       >
                         Process Emails
                       </Button>
-                      {running && (
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            abortRef.current?.();
-                            toastSuccess({
-                              description: "Processing cancelled.",
-                            });
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      )}
                     </div>
                   ) : (
                     <PremiumAlertWithData />
@@ -189,7 +136,7 @@ export function BulkRunRules() {
 }
 
 // fetch batches of messages and add them to the ai queue
-async function onRun(
+export async function onRun(
   emailAccountId: string,
   {
     startDate,
