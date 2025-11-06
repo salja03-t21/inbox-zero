@@ -325,6 +325,14 @@ Many features require premium tier. To test premium features locally:
 1. Set `ADMINS=your@email.com` in `.env`
 2. Visit `http://localhost:3000/admin` to upgrade yourself
 
+## Known Issues
+
+### Microsoft OAuth Re-consent Required
+Users are prompted to re-consent Microsoft permissions on each login. This needs investigation - likely related to session storage or token refresh configuration in Better Auth.
+
+### Auth Provider Buttons
+Setting `ENABLE_GOOGLE_AUTH=false` and `ENABLE_SSO_AUTH=false` in .env doesn't hide the buttons because the login page is statically generated. The page needs to be forced to dynamic rendering. The env vars ARE correctly read at runtime in the container.
+
 ## Useful Links
 
 - Production: https://www.getinboxzero.com
