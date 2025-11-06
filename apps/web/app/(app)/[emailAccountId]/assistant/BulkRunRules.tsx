@@ -162,7 +162,14 @@ export async function onRun(
   async function run() {
     // Cursor-based pagination: loop until no more pages or aborted
     // No hard limit - processes all threads in date range
+    let pageCount = 0;
     while (!aborted) {
+      pageCount++;
+      console.log(
+        `[BulkProcess] Fetching page ${pageCount}, nextPageToken:`,
+        nextPageToken || "(first page)",
+      );
+
       const query: ThreadsQuery = {
         type: "inbox",
         limit: LIMIT,
@@ -205,6 +212,10 @@ export async function onRun(
       }
 
       nextPageToken = data.nextPageToken || "";
+      console.log(
+        `[BulkProcess] Page ${pageCount}: fetched ${data.threads.length} threads, nextPageToken:`,
+        nextPageToken || "(none - last page)",
+      );
 
       const threadsWithoutPlan = data.threads.filter((t) => !t.plan);
 
@@ -213,6 +224,9 @@ export async function onRun(
         (t) => !seenThreadIds.has(t.id),
       );
       newThreads.forEach((t) => seenThreadIds.add(t.id));
+      console.log(
+        `[BulkProcess] Page ${pageCount}: ${threadsWithoutPlan.length} without plan, ${newThreads.length} new to process`,
+      );
 
       // Track: discovered = all fetched, processed = those queued for AI
       callbacks.onDiscovered(data.threads.length);
@@ -220,7 +234,12 @@ export async function onRun(
 
       runAiRules(emailAccountId, newThreads, false);
 
-      if (!nextPageToken || aborted) break;
+      if (!nextPageToken || aborted) {
+        console.log(
+          `[BulkProcess] Stopping: ${aborted ? "aborted" : "no more pages"}`,
+        );
+        break;
+      }
 
       // avoid gmail api rate limits
       // ai takes longer anyway
