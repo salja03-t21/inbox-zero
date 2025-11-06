@@ -77,7 +77,7 @@ scp ~/.cloudflared/inbox-zero-prod-config.yml $SERVER_USER@$SERVER:~/.cloudflare
 
 # Step 6: Build and start services
 echo "🐳 Building and starting Docker containers..."
-ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose pull && docker compose build --build-arg NEXT_PUBLIC_BASE_URL=https://iz.salsven.com && docker compose up -d"
+ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose build --build-arg NEXT_PUBLIC_BASE_URL=https://iz.salsven.com && docker compose up -d"
 
 # Step 7: Wait for services to be ready
 echo "⏳ Waiting for services to start..."
