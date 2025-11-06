@@ -1086,8 +1086,15 @@ export class OutlookProvider implements EmailProvider {
         request = request.orderby("receivedDateTime DESC");
       }
 
+      // Handle pagination token - can be either $skiptoken or numeric $skip value
       if (options.pageToken) {
-        request = request.skipToken(options.pageToken);
+        // Try to parse as number for $skip, otherwise use as $skiptoken
+        const skipNum = Number.parseInt(options.pageToken, 10);
+        if (!Number.isNaN(skipNum)) {
+          request = request.skip(skipNum);
+        } else {
+          request = request.skipToken(options.pageToken);
+        }
       }
 
       logger.info("Executing Graph API request", {
@@ -1095,6 +1102,7 @@ export class OutlookProvider implements EmailProvider {
         filter,
         maxResults: options.maxResults || 50,
         hasPageToken: !!options.pageToken,
+        pageToken: options.pageToken,
       });
 
       const response = await request.get();
@@ -1199,13 +1207,38 @@ export class OutlookProvider implements EmailProvider {
           };
         });
 
+      // Extract nextPageToken from @odata.nextLink
+      // Microsoft Graph returns a full URL with $skip parameter for pagination
+      let nextPageToken: string | undefined;
+      if (response["@odata.nextLink"]) {
+        try {
+          const nextUrl = new URL(response["@odata.nextLink"]);
+          // Try $skiptoken first (used in some Graph API endpoints)
+          nextPageToken = nextUrl.searchParams.get("$skiptoken") || undefined;
+          // Fall back to $skip if $skiptoken not present
+          if (!nextPageToken) {
+            const skipValue = nextUrl.searchParams.get("$skip");
+            if (skipValue) {
+              nextPageToken = skipValue;
+            }
+          }
+        } catch (error) {
+          logger.warn("Failed to parse nextLink URL", {
+            nextLink: response["@odata.nextLink"],
+            error,
+          });
+        }
+      }
+
+      logger.info("Returning pagination result", {
+        threadCount: threads.length,
+        hasNextPageToken: !!nextPageToken,
+        nextPageToken,
+      });
+
       return {
         threads,
-        nextPageToken: response["@odata.nextLink"]
-          ? new URL(response["@odata.nextLink"]).searchParams.get(
-              "$skiptoken",
-            ) || undefined
-          : undefined,
+        nextPageToken,
       };
     } catch (error) {
       logger.error("getThreadsWithQuery failed", {
