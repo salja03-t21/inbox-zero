@@ -28,18 +28,16 @@ export function BulkRunRules() {
   const { emailAccountId } = useAccount();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [totalThreads, setTotalThreads] = useState(0);
 
   const { data, isLoading, error } = useThreads({ type: "inbox" });
 
   const queue = useAiQueueState();
 
-  // Temporarily disable premium check for testing
-  const hasAiAccess = true;
-  const isLoadingPremium = false;
-  // const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
+  const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
 
   const [running, setRunning] = useState(false);
+  const [totalDiscovered, setTotalDiscovered] = useState(0);
+  const [totalProcessed, setTotalProcessed] = useState(0);
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
@@ -63,15 +61,19 @@ export function BulkRunRules() {
             {data && (
               <>
                 <SectionDescription>
-                  This runs your rules on emails currently in your inbox (that
-                  have not been previously processed).
+                  This runs your rules on emails in your inbox that have not
+                  been successfully processed (excludes emails with SKIPPED or
+                  ERROR status).
                 </SectionDescription>
 
-                {!!queue.size && (
-                  <div className="rounded-md border border-green-200 bg-green-50 px-2 py-1.5 dark:border-green-800 dark:bg-green-950">
+                {running && (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 dark:border-blue-800 dark:bg-blue-950">
                     <SectionDescription className="mt-0">
-                      Progress: {totalThreads - queue.size}/{totalThreads}{" "}
-                      emails completed
+                      Discovered: {totalDiscovered} emails
+                      <br />
+                      Queued for processing: {totalProcessed}
+                      <br />
+                      Processing: {queue.size} remaining in queue
                     </SectionDescription>
                   </div>
                 )}
@@ -124,12 +126,20 @@ export function BulkRunRules() {
                             return;
                           }
                           setRunning(true);
+                          setTotalDiscovered(0);
+                          setTotalProcessed(0);
                           abortRef.current = await onRun(
                             emailAccountId,
                             { startDate, endDate, onlyUnread },
-                            (count) =>
-                              setTotalThreads((total) => total + count),
-                            () => setRunning(false),
+                            {
+                              onDiscovered: (count) =>
+                                setTotalDiscovered((total) => total + count),
+                              onProcessed: (count) =>
+                                setTotalProcessed((total) => total + count),
+                            },
+                            () => {
+                              setRunning(false);
+                            },
                           );
                         }}
                       >
@@ -165,7 +175,10 @@ async function onRun(
     endDate,
     onlyUnread,
   }: { startDate: Date; endDate?: Date; onlyUnread: boolean },
-  incrementThreadsQueued: (count: number) => void,
+  callbacks: {
+    onDiscovered: (count: number) => void;
+    onProcessed: (count: number) => void;
+  },
   onComplete: () => void,
 ) {
   let nextPageToken = "";
@@ -186,7 +199,7 @@ async function onRun(
         type: "inbox",
         limit: LIMIT,
         after: startDate,
-        before: endDate || undefined,
+        ...(endDate ? { before: endDate } : {}),
         ...(onlyUnread ? { isUnread: true } : {}),
         ...(nextPageToken ? { nextPageToken } : {}),
       };
@@ -233,7 +246,9 @@ async function onRun(
       );
       newThreads.forEach((t) => seenThreadIds.add(t.id));
 
-      incrementThreadsQueued(newThreads.length);
+      // Track: discovered = all fetched, processed = those queued for AI
+      callbacks.onDiscovered(data.threads.length);
+      callbacks.onProcessed(newThreads.length);
 
       runAiRules(emailAccountId, newThreads, false);
 
