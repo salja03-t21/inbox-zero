@@ -9,7 +9,7 @@ import type { ThreadsQuery } from "@/app/api/threads/validation";
 import { LoadingContent } from "@/components/LoadingContent";
 import { runAiRules } from "@/utils/queue/email-actions";
 import { sleep } from "@/utils/sleep";
-import { toastError } from "@/components/Toast";
+import { toastError, toastSuccess } from "@/components/Toast";
 import { PremiumAlertWithData, usePremium } from "@/components/PremiumAlert";
 import { SetDateDropdown } from "@/app/(app)/[emailAccountId]/assistant/SetDateDropdown";
 import { useThreads } from "@/hooks/useThreads";
@@ -45,9 +45,16 @@ export function BulkRunRules() {
 
   const abortRef = useRef<() => void>(undefined);
 
+  // Prevent dialog from closing while processing
+  const handleOpenChange = (open: boolean) => {
+    if (!running) {
+      setIsOpen(open);
+    }
+  };
+
   return (
     <div>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>
           <Button type="button" variant="outline" Icon={HistoryIcon}>
             Bulk Process Emails
@@ -128,17 +135,26 @@ export function BulkRunRules() {
                           setRunning(true);
                           setTotalDiscovered(0);
                           setTotalProcessed(0);
+
+                          let processedCount = 0;
                           abortRef.current = await onRun(
                             emailAccountId,
                             { startDate, endDate, onlyUnread },
                             {
                               onDiscovered: (count) =>
                                 setTotalDiscovered((total) => total + count),
-                              onProcessed: (count) =>
-                                setTotalProcessed((total) => total + count),
+                              onProcessed: (count) => {
+                                processedCount += count;
+                                setTotalProcessed((total) => total + count);
+                              },
                             },
-                            () => {
+                            (aborted: boolean) => {
                               setRunning(false);
+                              if (!aborted) {
+                                toastSuccess({
+                                  description: `Completed! Queued ${processedCount} emails for processing.`,
+                                });
+                              }
                             },
                           );
                         }}
@@ -148,7 +164,12 @@ export function BulkRunRules() {
                       {running && (
                         <Button
                           variant="outline"
-                          onClick={() => abortRef.current?.()}
+                          onClick={() => {
+                            abortRef.current?.();
+                            toastSuccess({
+                              description: "Processing cancelled.",
+                            });
+                          }}
                         >
                           Cancel
                         </Button>
@@ -179,7 +200,7 @@ async function onRun(
     onDiscovered: (count: number) => void;
     onProcessed: (count: number) => void;
   },
-  onComplete: () => void,
+  onComplete: (aborted: boolean) => void,
 ) {
   let nextPageToken = "";
   const LIMIT = 25;
@@ -259,7 +280,7 @@ async function onRun(
       await sleep(threadsWithoutPlan.length ? 5000 : 2000);
     }
 
-    onComplete();
+    onComplete(aborted);
   }
 
   run();
