@@ -22,6 +22,20 @@ export function extractLLMErrorInfo(error: unknown): LLMErrorInfo {
   if (APICallError.isInstance(error)) {
     statusCode = error.statusCode;
     errorMessage = error.message;
+    // For Bad Request errors, try to get more details from responseBody
+    if (statusCode === 400) {
+      try {
+        const responseBody =
+          typeof error.responseBody === "string"
+            ? error.responseBody
+            : JSON.stringify(error.responseBody);
+        if (responseBody) {
+          errorMessage = `${errorMessage} | Response: ${responseBody}`;
+        }
+      } catch {
+        // Ignore if can't stringify
+      }
+    }
   } else if (RetryError.isInstance(error)) {
     statusCode = 429; // RetryError typically means rate limit
     errorMessage = error.message;
