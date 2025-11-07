@@ -170,9 +170,9 @@ export async function createMeetingAction({
   // Step 3: Create meeting link
   const meetingLink = await createMeetingLink({
     emailAccountId,
-    startTime: meetingDetails.startTime,
-    endTime: endDateTime.toISOString(),
-    attendees: meetingDetails.attendees,
+    subject: meetingDetails.title,
+    startDateTime,
+    endDateTime: endDateTime.toISOString(),
   });
 
   logger.info("Created meeting link", {
