@@ -71,11 +71,21 @@ function selectModel(
     case Provider.OPEN_AI: {
       const modelName = aiModel || Model.GPT_4O;
       const baseURL = aiBaseUrl || env.OPENAI_BASE_URL;
+      const apiKey = aiApiKey || env.OPENAI_API_KEY;
+
+      logger.info("Creating OpenAI model", {
+        modelName,
+        baseURL,
+        apiKeyLength: apiKey?.length || 0,
+        hasCustomBaseUrl: !!aiBaseUrl,
+        hasCustomApiKey: !!aiApiKey,
+      });
+
       return {
         provider: Provider.OPEN_AI,
         modelName,
         model: createOpenAI({
-          apiKey: aiApiKey || env.OPENAI_API_KEY,
+          apiKey,
           baseURL,
         })(modelName),
         backupModel: getBackupModel(aiApiKey),

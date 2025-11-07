@@ -268,7 +268,21 @@ async function handleError(
   label: string,
   modelName: string,
 ) {
-  logger.error("Error in LLM call", { error, userEmail, label, modelName });
+  logger.error("Error in LLM call", {
+    error,
+    userEmail,
+    label,
+    modelName,
+    errorMessage: error instanceof Error ? error.message : String(error),
+    errorName: error instanceof Error ? error.name : typeof error,
+    errorStack: error instanceof Error ? error.stack : undefined,
+    // @ts-ignore - Log additional properties if they exist
+    statusCode: error?.statusCode,
+    // @ts-ignore
+    responseBody: error?.responseBody,
+    // @ts-ignore
+    url: error?.url,
+  });
 
   if (APICallError.isInstance(error)) {
     if (isIncorrectOpenAIAPIKeyError(error)) {
