@@ -82,6 +82,7 @@ model User {
   aiProvider    String?
   aiModel       String?
   aiApiKey      String?
+  aiBaseUrl     String?
   webhookSecret String?
 
   // referral system

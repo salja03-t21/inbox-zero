@@ -48,6 +48,7 @@ export const env = createEnv({
       .default("google/gemini-2.5-flash"),
 
     OPENAI_API_KEY: z.string().optional(),
+    OPENAI_BASE_URL: z.string().url().optional(),
     ANTHROPIC_API_KEY: z.string().optional(),
     BEDROCK_ACCESS_KEY: z.string().optional(),
     BEDROCK_SECRET_KEY: z.string().optional(),
