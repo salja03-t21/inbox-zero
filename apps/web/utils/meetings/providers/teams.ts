@@ -81,9 +81,29 @@ export async function createTeamsMeeting(
       },
     };
   } catch (error) {
-    logger.error("Failed to create Teams meeting", { error });
+    // Extract detailed error information
+    const errorDetails: Record<string, any> = {
+      errorType: error?.constructor?.name || typeof error,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    };
+
+    // Try to extract Microsoft Graph API error details
+    if (error && typeof error === "object") {
+      const graphError = error as any;
+      if (graphError.statusCode)
+        errorDetails.statusCode = graphError.statusCode;
+      if (graphError.code) errorDetails.code = graphError.code;
+      if (graphError.body)
+        errorDetails.responseBody = JSON.stringify(graphError.body).slice(
+          0,
+          500,
+        );
+    }
+
+    logger.error("Failed to create Teams meeting", errorDetails);
     throw new Error(
-      `Failed to create Teams meeting: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to create Teams meeting: ${errorDetails.message} (${errorDetails.code || "Unknown"})`,
     );
   }
 }
