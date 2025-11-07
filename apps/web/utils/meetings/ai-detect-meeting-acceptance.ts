@@ -52,14 +52,24 @@ export async function aiDetectMeetingAcceptance({
     messageCount: threadMessages.length,
   });
 
-  const threadContent = threadMessages
+  // Limit to most recent 10 messages to avoid token limits and timeouts
+  const recentMessages = threadMessages.slice(0, 10);
+
+  const threadContent = recentMessages
     .map((msg, index) => {
       const sender = msg.from === userEmail ? "You" : msg.from;
+      // Truncate very long message content
+      const content = (msg.content || "").slice(0, 2000);
       return `Message ${index + 1} from ${sender}:
 Subject: ${msg.subject || ""}
-${msg.content || ""}`;
+${content}`;
     })
     .join("\n\n---\n\n");
+
+  logger.info("Thread content prepared", {
+    messageCount: recentMessages.length,
+    contentLength: threadContent.length,
+  });
 
   const system = `You are an AI assistant that analyzes email threads to detect when someone has accepted or confirmed a meeting time.
 
@@ -110,12 +120,24 @@ Analyze this thread and determine if the most recent message accepts/confirms a 
   });
 
   try {
-    const result = await generateObject({
+    logger.info("Starting AI call for meeting acceptance detection");
+
+    // Add timeout wrapper
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("AI call timed out after 60 seconds")),
+        60_000,
+      ),
+    );
+
+    const aiPromise = generateObject({
       ...modelOptions,
       system,
       prompt,
       schema: meetingAcceptanceSchema,
     });
+
+    const result = (await Promise.race([aiPromise, timeoutPromise])) as any;
 
     logger.info("Meeting acceptance detection result", {
       isMeetingAcceptance: result.object.isMeetingAcceptance,
@@ -125,12 +147,15 @@ Analyze this thread and determine if the most recent message accepts/confirms a 
 
     return result.object;
   } catch (error) {
-    logger.error("Failed to detect meeting acceptance", { error });
+    logger.error("Failed to detect meeting acceptance", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return {
       isMeetingAcceptance: false,
       agreedDateTime: null,
       duration: null,
-      reasoning: "Error during AI analysis",
+      reasoning: `Error during AI analysis: ${error instanceof Error ? error.message : "Unknown error"}`,
     };
   }
 }
