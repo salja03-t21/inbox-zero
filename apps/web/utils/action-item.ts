@@ -153,6 +153,7 @@ export const actionInputs: Record<
       },
     ],
   },
+  [ActionType.CREATE_MEETING]: { fields: [] },
 };
 
 export function getActionFields(fields: Action | ExecutedAction | undefined) {
@@ -279,6 +280,8 @@ export function sanitizeActionFields(
         url: action.url ?? null,
       };
     }
+    case ActionType.CREATE_MEETING:
+      return base;
     default:
       // biome-ignore lint/correctness/noSwitchDeclarations: intentional exhaustive check
       const exhaustiveCheck: never = action.type;

@@ -59,17 +59,19 @@ Guidelines:
 
   const prompt = `Parse this date/time expression: "${naturalLanguage}"`;
 
+  const { openai } = await import("@ai-sdk/openai");
+
   const generateObject = createGenerateObject({
     userEmail: "system",
     label: "Parse datetime",
     modelOptions: {
-      model: "gpt-4o-mini", // Use fast model for simple parsing
+      model: openai("gpt-4o-mini"),
       temperature: 0,
     },
   });
 
   const result = await generateObject({
-    model: "gpt-4o-mini",
+    model: openai("gpt-4o-mini"),
     temperature: 0,
     system,
     prompt,

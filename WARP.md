@@ -2,6 +2,14 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
+## Memory Usage
+
+**IMPORTANT**: When starting a new conversation or after a conversation summary, always search memory for relevant project context:
+- Use memory search with project tag: `project:inbox-zero`
+- Search for relevant topics like: deployment, typescript, testing, architecture, etc.
+- Memory contains critical decisions, workflows, and lessons learned from previous sessions
+- This ensures continuity across sessions and prevents repeating past mistakes
+
 ## Project Overview
 
 Inbox Zero is an open-source AI-powered email assistant that helps users manage their inbox efficiently. It's built as a monorepo using Turborepo with the main application being a Next.js 15 web app.
@@ -138,7 +146,12 @@ pnpm format-and-lint:fix
 
 # Run lint only
 pnpm lint
+
+# CRITICAL: Type check before production deployment
+cd apps/web && pnpm prisma generate && pnpm tsc --noEmit
 ```
+
+**IMPORTANT**: Always run local TypeScript compilation (`pnpm tsc --noEmit`) before deploying to production. This catches type errors early and prevents failed production builds. Local development does not use Docker, so this is the only way to verify TypeScript correctness before pushing.
 
 ## Architecture Deep Dive
 

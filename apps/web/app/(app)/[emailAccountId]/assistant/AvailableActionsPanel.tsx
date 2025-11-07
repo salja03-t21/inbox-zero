@@ -21,6 +21,7 @@ const actionNames: Record<ActionType, string> = {
   [ActionType.SEND_EMAIL]: "Send email",
   [ActionType.CALL_WEBHOOK]: "Call webhook",
   [ActionType.DIGEST]: "Add to digest",
+  [ActionType.CREATE_MEETING]: "Create meeting",
 };
 
 const actionTooltips: Partial<Record<ActionType, string>> = {
@@ -28,6 +29,8 @@ const actionTooltips: Partial<Record<ActionType, string>> = {
     "For developers: trigger external integrations by sending email data to a custom URL",
   [ActionType.DIGEST]:
     "Group emails together and receive them as a daily summary",
+  [ActionType.CREATE_MEETING]:
+    "Automatically create calendar events when meeting acceptances are detected in emails",
 };
 
 export function AvailableActionsPanel() {

@@ -7,15 +7,26 @@ import prisma from "@/utils/prisma";
 import type { EmailProvider } from "@/utils/email/types";
 import type { ExecutedRule } from "@prisma/client";
 import type { EmailForAction } from "@/utils/ai/types";
-import type { EmailAccountWithAI } from "@/utils/llms/types";
 
 const logger = createScopedLogger("ai-actions/create-meeting");
 
 export interface CreateMeetingArgs {
+  id?: string;
   // Optional: Override meeting duration in minutes
   duration?: number | null;
   // Optional: Override meeting title
   title?: string | null;
+  // Action fields (not used but required for type compatibility)
+  label?: string | null;
+  subject?: string | null;
+  content?: string | null;
+  to?: string | null;
+  cc?: string | null;
+  bcc?: string | null;
+  url?: string | null;
+  folderName?: string | null;
+  folderId?: string | null;
+  delayInMinutes?: number | null;
 }
 
 /**
@@ -23,7 +34,7 @@ export interface CreateMeetingArgs {
  *
  * This action:
  * 1. Uses AI to detect if the email thread contains meeting acceptance/confirmation
- * 2. Parses the agreed meeting details (time, attendees, etc.)
+ * 2. Parses the agreed meeting details (time, attendees, agenda, etc.)
  * 3. Creates a meeting link (Teams/Google Meet/Zoom based on user preference)
  * 4. Creates a calendar event with the meeting link
  * 5. Sends calendar invitations to attendees
@@ -56,17 +67,24 @@ export async function createMeetingAction({
     messageId: email.id,
   });
 
-  // Get email account with AI config
+  // Get email account with user and account info for AI
   const emailAccount = await prisma.emailAccount.findUnique({
     where: { id: emailAccountId },
     include: {
       user: {
-        include: {
+        select: {
           aiProvider: true,
           aiModel: true,
+          aiApiKey: true,
+          aiBaseUrl: true,
+          timeZone: true,
         },
       },
-      account: true,
+      account: {
+        select: {
+          provider: true,
+        },
+      },
     },
   });
 
@@ -79,8 +97,17 @@ export async function createMeetingAction({
 
   // Step 1: Use AI to detect if this is a meeting acceptance
   const acceptanceResult = await aiDetectMeetingAcceptance({
-    emailAccount: emailAccount as EmailAccountWithAI,
+    emailAccount: {
+      id: emailAccount.id,
+      email: emailAccount.email,
+      about: emailAccount.about,
+      user: emailAccount.user,
+      account: emailAccount.account,
+      userId: emailAccount.userId,
+      multiRuleSelectionEnabled: emailAccount.multiRuleSelectionEnabled,
+    },
     threadMessages: threadMessages.map((msg) => ({
+      id: msg.id,
       from: msg.headers.from,
       to: msg.headers.to || "",
       subject: msg.headers.subject,
@@ -110,6 +137,7 @@ export async function createMeetingAction({
   const meetingDetails = await parseMeetingRequest({
     emailAccountId,
     threadMessages: threadMessages.map((msg) => ({
+      id: msg.id,
       from: msg.headers.from,
       to: msg.headers.to || "",
       subject: msg.headers.subject,
@@ -143,7 +171,6 @@ export async function createMeetingAction({
   // Step 3: Create meeting link
   const meetingLink = await createMeetingLink({
     emailAccountId,
-    title: meetingDetails.title,
     startTime: meetingDetails.startTime,
     endTime: endDateTime.toISOString(),
     attendees: meetingDetails.attendees,
@@ -155,13 +182,24 @@ export async function createMeetingAction({
   });
 
   // Step 4: Create calendar event
+  // Convert our ParsedMeetingWithTime to ParsedMeetingRequest format
   const calendarEvent = await createCalendarEvent({
     emailAccountId,
-    meetingDetails,
+    meetingDetails: {
+      title: meetingDetails.title,
+      location: null,
+      attendees: meetingDetails.attendees,
+      dateTimePreferences: [],
+      durationMinutes: meetingDetails.duration,
+      agenda: meetingDetails.agenda,
+      preferredProvider: null,
+      notes: meetingDetails.notes,
+      isUrgent: false,
+    },
     startDateTime,
     endDateTime: endDateTime.toISOString(),
     meetingLink,
-    timezone: meetingDetails.timezone || "UTC",
+    timezone: meetingDetails.timezone,
   });
 
   logger.info("Calendar event created successfully", {

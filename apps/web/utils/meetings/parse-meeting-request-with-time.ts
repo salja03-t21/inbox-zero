@@ -47,12 +47,19 @@ export async function parseMeetingRequest({
     where: { id: emailAccountId },
     include: {
       user: {
-        include: {
+        select: {
           aiProvider: true,
           aiModel: true,
+          aiApiKey: true,
+          aiBaseUrl: true,
+          timeZone: true,
         },
       },
-      account: true,
+      account: {
+        select: {
+          provider: true,
+        },
+      },
     },
   });
 
@@ -72,7 +79,15 @@ export async function parseMeetingRequest({
   // Parse meeting details using AI
   const meetingDetails = await aiParseMeetingRequest({
     email: latestMessage,
-    emailAccount: emailAccount as EmailAccountWithAI,
+    emailAccount: {
+      id: emailAccount.id,
+      email: emailAccount.email,
+      about: emailAccount.about,
+      user: emailAccount.user,
+      account: emailAccount.account,
+      userId: emailAccount.userId,
+      multiRuleSelectionEnabled: emailAccount.multiRuleSelectionEnabled,
+    },
     userEmail,
   });
 
