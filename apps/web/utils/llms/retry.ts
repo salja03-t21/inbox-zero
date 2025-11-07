@@ -108,7 +108,10 @@ export async function withLLMRetry<T>(
           errorMessage: errorInfo.errorMessage.slice(0, 200),
         });
         // Wrap in AbortError to stop p-retry from retrying
-        throw new AbortError(error);
+        // AbortError expects the original error, not the p-retry context
+        throw new AbortError(
+          error instanceof Error ? error : new Error(String(error)),
+        );
       }
 
       const delayMs = calculateLLMRetryDelay(errorInfo, error.attemptNumber);
