@@ -38,10 +38,12 @@ DETAILED CRITERIA:
 - IMPORTANT: In multi-person threads, track the USER'S specific commitments even if other people are having separate conversations
 - CRITICAL: If the user asked a clarifying question AND got an answer BUT still has a pending commitment/deliverable, it's TO_REPLY (not AWAITING_REPLY) - the answered question was just to help complete the commitment
 
-**EXCLUDE from TO_REPLY:**
-- Meeting confirmations or acceptances (phrases like "let's meet at", "see you at", "I'll be there", "confirmed for", "works for me")
+**DO NOT classify as TO_REPLY if:**
+- Meeting confirmations or acceptances (phrases like "let's meet at", "see you at", "I'll be there", "confirmed for", "works for me", "that works")
 - Emails where scheduling/calendar coordination has been completed
 - Calendar invites that have been accepted
+
+**AWAITING_REPLY**: Waiting for the other person to take action or respond. Use this when:
 - The user asked a question and is still waiting for an answer
 - The user requested information/action and is still waiting for it to be delivered
 - Someone ELSE promised to do something and hasn't done it yet
