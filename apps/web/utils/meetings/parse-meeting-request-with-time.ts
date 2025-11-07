@@ -52,7 +52,6 @@ export async function parseMeetingRequest({
           aiModel: true,
           aiApiKey: true,
           aiBaseUrl: true,
-          timeZone: true,
         },
       },
       account: {
@@ -67,8 +66,8 @@ export async function parseMeetingRequest({
     throw new Error("Email account not found");
   }
 
-  // Get user's timezone
-  const timezone = emailAccount.user.timeZone || "UTC";
+  // Get user's timezone (default to UTC since not stored on User model)
+  const timezone = "UTC";
 
   // Use the most recent message for AI parsing
   const latestMessage = threadMessages[threadMessages.length - 1];

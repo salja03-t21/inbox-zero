@@ -77,7 +77,6 @@ export async function createMeetingAction({
           aiModel: true,
           aiApiKey: true,
           aiBaseUrl: true,
-          timeZone: true,
         },
       },
       account: {
