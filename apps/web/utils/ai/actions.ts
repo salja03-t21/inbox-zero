@@ -6,6 +6,7 @@ import type { EmailProvider } from "@/utils/email/types";
 import { enqueueDigestItem } from "@/utils/digest/index";
 import { filterNullProperties } from "@/utils";
 import { labelMessageAndSync } from "@/utils/label.server";
+import { createMeetingAction } from "@/utils/ai/actions/create-meeting";
 
 const logger = createScopedLogger("ai-actions");
 
@@ -64,6 +65,8 @@ export const runActionFunction = async (options: {
       return digest(opts);
     case ActionType.MOVE_FOLDER:
       return move_folder(opts);
+    case ActionType.CREATE_MEETING:
+      return createMeetingAction(opts);
     default:
       throw new Error(`Unknown action: ${action}`);
   }
