@@ -84,12 +84,12 @@ function selectModel(
       return {
         provider: Provider.OPEN_AI,
         modelName,
+        // Use .chat() to force chat completions API instead of responses API
+        // which is needed for OpenAI-compatible providers like Nebius
         model: createOpenAI({
           apiKey,
           baseURL,
-          // Force compatibility mode for OpenAI-compatible APIs like Nebius
-          compatibility: "strict",
-        })(modelName),
+        }).chat(modelName),
         backupModel: getBackupModel(aiApiKey),
       };
     }
