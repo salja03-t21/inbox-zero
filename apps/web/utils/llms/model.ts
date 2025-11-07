@@ -71,23 +71,13 @@ function selectModel(
     case Provider.OPEN_AI: {
       const modelName = aiModel || Model.GPT_4O;
       const baseURL = aiBaseUrl || env.OPENAI_BASE_URL;
-      // Strip provider prefix if present (for OpenAI-compatible APIs like Nebius)
-      // that provide model names with provider prefixes (e.g., 'openai/gpt-oss-120b', 'Qwen/Qwen3-235B-A22B-Instruct-2507')
-      // Only strip prefix if using a custom base URL
-      const modelId =
-        baseURL && modelName.includes("/")
-          ? modelName
-              .split("/")
-              .slice(1)
-              .join("/") // Remove everything before first /
-          : modelName;
       return {
         provider: Provider.OPEN_AI,
         modelName,
         model: createOpenAI({
           apiKey: aiApiKey || env.OPENAI_API_KEY,
           baseURL,
-        })(modelId),
+        })(modelName),
         backupModel: getBackupModel(aiApiKey),
       };
     }
