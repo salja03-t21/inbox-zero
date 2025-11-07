@@ -71,13 +71,18 @@ function selectModel(
     case Provider.OPEN_AI: {
       const modelName = aiModel || Model.GPT_4O;
       const baseURL = aiBaseUrl || env.OPENAI_BASE_URL;
+      // Strip 'openai/' prefix if present (for OpenAI-compatible APIs like Nebius)
+      // that provide model names with provider prefixes
+      const modelId = modelName.startsWith("openai/")
+        ? modelName.slice(7)
+        : modelName;
       return {
         provider: Provider.OPEN_AI,
         modelName,
         model: createOpenAI({
           apiKey: aiApiKey || env.OPENAI_API_KEY,
           baseURL,
-        })(modelName),
+        })(modelId),
         backupModel: getBackupModel(aiApiKey),
       };
     }
