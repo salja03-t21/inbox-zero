@@ -14,6 +14,7 @@ export type EmailAccountWithAIAndTokens = Prisma.EmailAccountGetPayload<{
         aiProvider: true;
         aiModel: true;
         aiApiKey: true;
+        aiBaseUrl: true;
       };
     };
     account: {
