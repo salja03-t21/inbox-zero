@@ -3,10 +3,8 @@ import {
   addMinutes,
   startOfDay,
   endOfDay,
-  isWithinInterval,
   isBefore,
   isAfter,
-  parse,
   parseISO,
 } from "date-fns";
 import { TZDate } from "@date-fns/tz";
@@ -17,6 +15,36 @@ import type { ParsedMeetingRequest } from "@/utils/meetings/parse-meeting-reques
 import prisma from "@/utils/prisma";
 
 const logger = createScopedLogger("meetings/find-availability");
+
+/**
+ * Get working hours from user settings with fallback defaults
+ */
+export async function getWorkingHours(emailAccountId: string): Promise<{
+  start: number;
+  end: number;
+}> {
+  const acct = await prisma.emailAccount.findUnique({
+    where: { id: emailAccountId },
+    select: {
+      meetingSchedulerWorkingHoursStart: true,
+      meetingSchedulerWorkingHoursEnd: true,
+    },
+  });
+
+  const start = acct?.meetingSchedulerWorkingHoursStart ?? 9;
+  const end = acct?.meetingSchedulerWorkingHoursEnd ?? 17;
+
+  // Validate and clamp working hours
+  if (end <= start || start < 0 || start > 23 || end < 1 || end > 24) {
+    logger.warn("Invalid working hours in settings, using defaults", {
+      start,
+      end,
+    });
+    return { start: 9, end: 17 };
+  }
+
+  return { start, end };
+}
 
 export interface AvailableTimeSlot {
   start: Date;
@@ -72,11 +100,14 @@ export async function findMeetingAvailability({
 
   // If no specific times requested, suggest times for the next 7 days
   if (requestedTimes.length === 0) {
+    const workingHours = await getWorkingHours(emailAccountId);
     const suggestedTimes = await findSuggestedTimes({
       emailAccountId,
       durationMinutes: meetingRequest.durationMinutes,
       daysAhead: 7,
       timezone,
+      workStartHour: workingHours.start,
+      workEndHour: workingHours.end,
     });
 
     return {
@@ -110,12 +141,15 @@ export async function findMeetingAvailability({
   // If all requested times are busy, suggest alternative times
   let suggestedTimes: AvailableTimeSlot[] = [];
   if (hasConflicts) {
+    const workingHours = await getWorkingHours(emailAccountId);
     suggestedTimes = await findSuggestedTimes({
       emailAccountId,
       durationMinutes: meetingRequest.durationMinutes,
       daysAhead: 7,
       timezone,
       preferredStartHour: getPreferredStartHour(requestedTimes),
+      workStartHour: workingHours.start,
+      workEndHour: workingHours.end,
     });
   }
 
@@ -136,14 +170,17 @@ export async function findMeetingAvailability({
 
 /**
  * Find suggested available time slots
+ * Now exported for use in AI calendar availability tool
  */
-async function findSuggestedTimes({
+export async function findSuggestedTimes({
   emailAccountId,
   durationMinutes,
   daysAhead,
   timezone,
   preferredStartHour = 9, // Default to 9 AM
   maxSuggestions = 5,
+  workStartHour = 9,
+  workEndHour = 17,
 }: {
   emailAccountId: string;
   durationMinutes: number;
@@ -151,6 +188,8 @@ async function findSuggestedTimes({
   timezone: string;
   preferredStartHour?: number;
   maxSuggestions?: number;
+  workStartHour?: number;
+  workEndHour?: number;
 }): Promise<AvailableTimeSlot[]> {
   const now = new Date();
   const startDate = startOfDay(now);
@@ -166,9 +205,7 @@ async function findSuggestedTimes({
 
   const suggestions: AvailableTimeSlot[] = [];
 
-  // Working hours: 9 AM to 5 PM by default
-  const workStartHour = 9;
-  const workEndHour = 17;
+  // Working hours are now passed in as parameters from user settings
 
   // Start checking from tomorrow
   let currentDay = addDays(startOfDay(now), 1);
@@ -247,7 +284,7 @@ function parseTimePreferences(
   timezone: string,
 ): AvailableTimeSlot[] {
   const slots: AvailableTimeSlot[] = [];
-  const now = new Date();
+  const _now = new Date();
 
   for (const pref of preferences) {
     try {

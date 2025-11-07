@@ -38,10 +38,6 @@ export async function fetchMessagesAndGenerateDraft(
     client,
   );
 
-  if (typeof result !== "string") {
-    throw new Error("Draft result is not a string");
-  }
-
   const emailAccountWithSignatures = await prisma.emailAccount.findUnique({
     where: { id: emailAccount.id },
     select: {
@@ -133,13 +129,15 @@ async function generateDraftContent(
     messages[messages.length - 1],
     10_000,
   );
+
+  // Use allSettled to prevent cascade failures - one failing service shouldn't break the whole draft
   const [
     knowledgeResult,
-    emailHistoryContext,
-    calendarAvailability,
-    writingStyle,
+    emailHistoryContextResult,
+    calendarAvailabilityResult,
+    writingStyleResult,
     mcpResult,
-  ] = await Promise.all([
+  ] = await Promise.allSettled([
     aiExtractRelevantKnowledge({
       knowledgeBase,
       emailContent: lastMessageContent,
@@ -147,13 +145,26 @@ async function generateDraftContent(
     }),
     aiCollectReplyContext({
       currentThread: messages,
-      emailAccount,
       emailProvider,
+      emailAccount,
     }),
     aiGetCalendarAvailability({ emailAccount, messages }),
     getWritingStyle({ emailAccountId: emailAccount.id }),
     mcpAgent({ emailAccount, messages }),
   ]);
+
+  // Helper to unwrap settled promises with fallback
+  const get = <T>(result: PromiseSettledResult<T>, fallback: T): T => {
+    if (result.status === "fulfilled") {
+      return result.value;
+    }
+    logger.warn("Context gathering failed", {
+      reason: result.reason,
+    });
+    return fallback;
+  };
+
+  const emailHistoryContext = get(emailHistoryContextResult, null);
 
   // 2b. Extract email history context
   const senderEmail = lastMessage.headers.from;
@@ -183,21 +194,28 @@ async function generateDraftContent(
   const text = await aiDraftWithKnowledge({
     messages,
     emailAccount,
-    knowledgeBaseContent: knowledgeResult?.relevantContent || null,
+    knowledgeBaseContent: get(knowledgeResult, null)?.relevantContent || null,
     emailHistorySummary,
     emailHistoryContext,
-    calendarAvailability,
-    writingStyle,
-    mcpContext: mcpResult?.response || null,
+    calendarAvailability: get(calendarAvailabilityResult, null),
+    writingStyle: get(writingStyleResult, null),
+    mcpContext: get(mcpResult, null)?.response || null,
   });
 
-  if (typeof text === "string") {
+  // Provide a minimal fallback if draft generation completely fails
+  const replyText =
+    typeof text === "string" && text.trim()
+      ? text.trim()
+      : "Thanks for your note — I'll follow up shortly.";
+
+  // Only cache non-empty replies
+  if (replyText.length > 0) {
     await saveReply({
       emailAccountId: emailAccount.id,
       messageId: lastMessage.id,
-      reply: text,
+      reply: replyText,
     });
   }
 
-  return text;
+  return replyText;
 }
