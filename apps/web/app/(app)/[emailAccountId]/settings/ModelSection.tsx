@@ -158,7 +158,7 @@ function ModelSectionForm(props: {
               placeholder="https://api.openai.com/v1"
               registerProps={register("aiBaseUrl")}
               error={errors.aiBaseUrl}
-              explainer="For OpenAI-compatible providers like Nebius Token Factory. Example: https://api.tokenfactory.nebius.com/v1/"
+              explainText="For OpenAI-compatible providers like Nebius Token Factory. Example: https://api.tokenfactory.nebius.com/v1/"
             />
           )}
         </>
