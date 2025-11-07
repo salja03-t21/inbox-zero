@@ -25,4 +25,5 @@ export const CALENDAR_SCOPES = [
   "offline_access", // Required for refresh tokens
   "Calendars.Read", // Read user calendars
   "Calendars.ReadWrite", // Read and write user calendars
+  "OnlineMeetings.ReadWrite", // Create and manage Teams meetings
 ] as const;
