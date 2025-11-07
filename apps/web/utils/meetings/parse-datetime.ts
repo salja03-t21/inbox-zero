@@ -61,18 +61,19 @@ Guidelines:
 
   const { openai } = await import("@ai-sdk/openai");
 
+  const modelOptions = {
+    model: openai("gpt-4o-mini"),
+    temperature: 0,
+  };
+
   const generateObject = createGenerateObject({
     userEmail: "system",
     label: "Parse datetime",
-    modelOptions: {
-      model: openai("gpt-4o-mini"),
-      temperature: 0,
-    },
+    modelOptions,
   });
 
   const result = await generateObject({
-    model: openai("gpt-4o-mini"),
-    temperature: 0,
+    ...modelOptions,
     system,
     prompt,
     schema: parsedDateTimeSchema,
