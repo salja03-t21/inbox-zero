@@ -3,10 +3,11 @@ import prisma from "@/utils/prisma";
 import { hasCronSecret, hasPostCronSecret } from "@/utils/cron";
 import { withError } from "@/utils/middleware";
 import { captureException } from "@/utils/error";
+import { hasAiAccess } from "@/utils/premium";
 import { createScopedLogger } from "@/utils/logger";
-import { createManagedOutlookSubscription } from "@/utils/outlook/subscription-manager";
+import { createEmailProvider } from "@/utils/email/provider";
 
-const logger = createScopedLogger("api/outlook/watch/all");
+const logger = createScopedLogger("api/google/watch/all");
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -14,18 +15,14 @@ export const maxDuration = 300;
 async function watchAllEmails() {
   const emailAccounts = await prisma.emailAccount.findMany({
     where: {
-      account: {
-        provider: "microsoft",
+      user: {
+        premium: {
+          OR: [
+            { lemonSqueezyRenewsAt: { gt: new Date() } },
+            { stripeSubscriptionStatus: { in: ["active", "trialing"] } },
+          ],
+        },
       },
-      // TEMPORARILY DISABLED FOR TESTING - All Microsoft accounts included
-      // user: {
-      //   premium: {
-      //     OR: [
-      //       { lemonSqueezyRenewsAt: { gt: new Date() } },
-      //       { stripeSubscriptionStatus: { in: ["active", "trialing"] } },
-      //     ],
-      //   },
-      // },
     },
     select: {
       id: true,
@@ -41,7 +38,6 @@ async function watchAllEmails() {
       user: {
         select: {
           aiApiKey: true,
-          aiBaseUrl: true,
           premium: { select: { tier: true } },
         },
       },
@@ -60,29 +56,35 @@ async function watchAllEmails() {
         email: emailAccount.email,
       });
 
-      // TEMPORARILY DISABLED FOR TESTING - Premium check bypassed
-      // const userHasAiAccess = hasAiAccess(
-      //   emailAccount.user.premium?.tier || null,
-      //   emailAccount.user.aiApiKey,
-      // );
+      const userHasAiAccess = hasAiAccess(
+        emailAccount.user.premium?.tier || null,
+        emailAccount.user.aiApiKey,
+      );
 
-      // if (!userHasAiAccess) {
-      //   logger.info("User does not have access to AI", {
-      //     email: emailAccount.email,
-      //   });
-      //   if (
-      //     emailAccount.watchEmailsExpirationDate &&
-      //     new Date(emailAccount.watchEmailsExpirationDate) < new Date()
-      //   ) {
-      //     await prisma.emailAccount.update({
-      //       where: { email: emailAccount.email },
-      //       data: {
-      //         watchEmailsExpirationDate: null,
-      //         watchEmailsSubscriptionId: null,
-      //       },
-      //     });
-      //   }
+      if (!userHasAiAccess) {
+        logger.info("User does not have access to AI or cold email", {
+          email: emailAccount.email,
+        });
+        if (
+          emailAccount.watchEmailsExpirationDate &&
+          new Date(emailAccount.watchEmailsExpirationDate) < new Date()
+        ) {
+          await prisma.emailAccount.update({
+            where: { email: emailAccount.email },
+            data: { watchEmailsExpirationDate: null },
+          });
+        }
 
+        continue;
+      }
+
+      // if (
+      //   user.watchEmailsExpirationDate &&
+      //   new Date(user.watchEmailsExpirationDate) > addDays(new Date(), 2)
+      // ) {
+      //   console.log(
+      //     `User ${user.email} already has a watchEmailsExpirationDate set to: ${user.watchEmailsExpirationDate}`,
+      //   );
       //   continue;
       // }
 
@@ -96,7 +98,12 @@ async function watchAllEmails() {
         continue;
       }
 
-      await createManagedOutlookSubscription(emailAccount.id);
+      const emailProvider = await createEmailProvider({
+        emailAccountId: emailAccount.id,
+        provider: "google",
+      });
+
+      await emailProvider.watchEmails();
     } catch (error) {
       if (error instanceof Error) {
         const warn = [
@@ -124,7 +131,7 @@ async function watchAllEmails() {
 export const GET = withError(async (request) => {
   if (!hasCronSecret(request)) {
     captureException(
-      new Error("Unauthorized cron request: api/outlook/watch/all"),
+      new Error("Unauthorized cron request: api/google/watch/all"),
     );
     return new Response("Unauthorized", { status: 401 });
   }
@@ -135,7 +142,7 @@ export const GET = withError(async (request) => {
 export const POST = withError(async (request) => {
   if (!(await hasPostCronSecret(request))) {
     captureException(
-      new Error("Unauthorized cron request: api/outlook/watch/all"),
+      new Error("Unauthorized cron request: api/google/watch/all"),
     );
     return new Response("Unauthorized", { status: 401 });
   }
