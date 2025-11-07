@@ -104,34 +104,37 @@ export async function validateWebhookAccount(
     provider: emailAccount.account?.provider,
   });
 
-  if (!premium) {
-    logger.info("Account not premium", {
-      lemonSqueezyRenewsAt: emailAccount.user.premium?.lemonSqueezyRenewsAt,
-      stripeSubscriptionStatus:
-        emailAccount.user.premium?.stripeSubscriptionStatus,
-    });
-    await unwatchEmails({
-      emailAccountId: emailAccount.id,
-      provider,
-      subscriptionId: emailAccount.watchEmailsSubscriptionId,
-    });
-    return { success: false, response: NextResponse.json({ ok: true }) };
-  }
+  // TEMPORARILY DISABLED: Premium check for webhook validation
+  // if (!premium) {
+  //   logger.info("Account not premium", {
+  //     lemonSqueezyRenewsAt: emailAccount.user.premium?.lemonSqueezyRenewsAt,
+  //     stripeSubscriptionStatus:
+  //       emailAccount.user.premium?.stripeSubscriptionStatus,
+  //   });
+  //   await unwatchEmails({
+  //     emailAccountId: emailAccount.id,
+  //     provider,
+  //     subscriptionId: emailAccount.watchEmailsSubscriptionId,
+  //   });
+  //   return { success: false, response: NextResponse.json({ ok: true }) };
+  // }
 
-  const userHasAiAccess = hasAiAccess(premium.tier, emailAccount.user.aiApiKey);
+  // TEMPORARILY DISABLED: AI access check for webhook validation
+  // const userHasAiAccess = hasAiAccess(premium.tier, emailAccount.user.aiApiKey);
+  const userHasAiAccess = true; // Temporarily allow all accounts
 
-  if (!userHasAiAccess) {
-    logger.info("Does not have ai access - unwatching", {
-      tier: premium.tier,
-      hasApiKey: !!emailAccount.user.aiApiKey,
-    });
-    await unwatchEmails({
-      emailAccountId: emailAccount.id,
-      provider,
-      subscriptionId: emailAccount.watchEmailsSubscriptionId,
-    });
-    return { success: false, response: NextResponse.json({ ok: true }) };
-  }
+  // if (!userHasAiAccess) {
+  //   logger.info("Does not have ai access - unwatching", {
+  //     tier: premium.tier,
+  //     hasApiKey: !!emailAccount.user.aiApiKey,
+  //   });
+  //   await unwatchEmails({
+  //     emailAccountId: emailAccount.id,
+  //     provider,
+  //     subscriptionId: emailAccount.watchEmailsSubscriptionId,
+  //   });
+  //   return { success: false, response: NextResponse.json({ ok: true }) };
+  // }
 
   const hasAutomationRules = emailAccount.rules.length > 0;
   if (!hasAutomationRules) {
