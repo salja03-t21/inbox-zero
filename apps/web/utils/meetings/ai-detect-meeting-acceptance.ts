@@ -15,7 +15,7 @@ const meetingAcceptanceSchema = z.object({
     .string()
     .nullable()
     .describe(
-      "The agreed meeting date/time if mentioned (format: natural language like 'Nov 8 at 2pm' or 'tomorrow at 10am')",
+      "The agreed meeting date/time if mentioned in NATURAL LANGUAGE format like 'Nov 8 at 3pm' or 'tomorrow at 10am' - do NOT use ISO format",
     ),
   duration: z
     .number()
@@ -69,6 +69,11 @@ Your task:
 3. Extract the agreed date/time if mentioned
 
 IMPORTANT: Messages are numbered chronologically with Message 1 being the NEWEST (most recent) message.
+
+When extracting agreedDateTime:
+- Use NATURAL LANGUAGE format like '3pm on Nov 8' or 'tomorrow at 10am'
+- Do NOT use ISO 8601 format (e.g. don't use '2025-11-08T15:00:00.000Z')
+- Copy the exact phrasing from the email when possible
 
 Patterns that indicate meeting acceptance:
 - "Yes, let's meet on [date/time]"

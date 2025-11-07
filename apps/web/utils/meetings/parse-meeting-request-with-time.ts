@@ -66,8 +66,29 @@ export async function parseMeetingRequest({
     throw new Error("Email account not found");
   }
 
-  // Get user's timezone (default to UTC since not stored on User model)
-  const timezone = "UTC";
+  // Get user's timezone from their primary calendar
+  const calendarConnection = await prisma.calendarConnection.findFirst({
+    where: {
+      emailAccountId,
+      isConnected: true,
+    },
+    select: {
+      calendars: {
+        where: {
+          isEnabled: true,
+          primary: true,
+        },
+        select: {
+          timezone: true,
+        },
+        take: 1,
+      },
+    },
+  });
+
+  // Use calendar timezone if available, otherwise default to UTC
+  const timezone =
+    calendarConnection?.calendars[0]?.timezone || "America/New_York";
 
   // Use the most recent message for AI parsing
   const latestMessage = threadMessages[threadMessages.length - 1];
@@ -97,17 +118,30 @@ export async function parseMeetingRequest({
   });
 
   // Parse the natural language date/time to ISO format
-  const startTime = await parseNaturalLanguageDateTime({
-    naturalLanguage: agreedDateTime,
-    timezone,
-    referenceTime: new Date(),
-  });
+  // Check if agreedDateTime is already in ISO format
+  let startTime: string;
+  const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
 
-  logger.info("Parsed date/time", {
-    naturalLanguage: agreedDateTime,
-    isoFormat: startTime,
-    timezone,
-  });
+  if (isoDateTimeRegex.test(agreedDateTime)) {
+    // Already in ISO format, use directly
+    logger.info("Date/time already in ISO format, skipping parsing", {
+      isoFormat: agreedDateTime,
+    });
+    startTime = agreedDateTime;
+  } else {
+    // Parse natural language to ISO format
+    startTime = await parseNaturalLanguageDateTime({
+      naturalLanguage: agreedDateTime,
+      timezone,
+      referenceTime: new Date(),
+    });
+
+    logger.info("Parsed date/time", {
+      naturalLanguage: agreedDateTime,
+      isoFormat: startTime,
+      timezone,
+    });
+  }
 
   return {
     title: meetingDetails.title,
