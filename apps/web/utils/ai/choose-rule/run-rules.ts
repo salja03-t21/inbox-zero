@@ -126,28 +126,54 @@ export async function runRules({
             "let's meet",
             "see you",
           ];
-          // Keywords that suggest OTHER tasks beyond meeting
-          const otherTaskKeywords = [
-            "report",
-            "document",
-            "send",
-            "provide",
-            "share",
-            "question",
-            "also",
-            "additionally",
-            "furthermore",
+
+          // Check if reason suggests tasks are COMPLETED/FULFILLED (not pending)
+          const completionPhrases = [
+            "fulfilled",
+            "completed",
+            "resolved",
+            "acknowledged",
+            "received",
+            "got",
+            "thanked",
+            "thanks",
+            "already",
+            "done",
+          ];
+
+          // Keywords that suggest PENDING tasks beyond meeting
+          const pendingTaskKeywords = [
+            "need to",
+            "should",
+            "must",
+            "has to",
+            "pending",
+            "unanswered",
+            "still needs",
+            "requested",
+            "asked for",
+            "waiting for",
+            "committed to",
+            "promised to",
           ];
 
           const hasMeetingKeywords = meetingOnlyKeywords.some((kw) =>
             reasonLower.includes(kw),
           );
-          const hasOtherTasks = otherTaskKeywords.some((kw) =>
+          const hasCompletedTasks = completionPhrases.some((phrase) =>
+            reasonLower.includes(phrase),
+          );
+          const hasPendingTasks = pendingTaskKeywords.some((kw) =>
             reasonLower.includes(kw),
           );
 
-          // Only remove draft if it's ONLY about meeting (no other tasks)
-          if (hasMeetingKeywords && !hasOtherTasks) {
+          // Only remove draft if:
+          // 1. It's about a meeting, AND
+          // 2. There are no pending tasks OR tasks are completed/fulfilled
+          const shouldSkipDraft =
+            hasMeetingKeywords && (!hasPendingTasks || hasCompletedTasks);
+
+          if (shouldSkipDraft) {
             logger.info(
               "Skipping TO_REPLY draft because CREATE_MEETING is handling the meeting-only response",
               { reason: results.reasoning },
