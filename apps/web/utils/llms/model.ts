@@ -87,6 +87,8 @@ function selectModel(
         model: createOpenAI({
           apiKey,
           baseURL,
+          // Force compatibility mode for OpenAI-compatible APIs like Nebius
+          compatibility: "strict",
         })(modelName),
         backupModel: getBackupModel(aiApiKey),
       };
