@@ -101,6 +101,17 @@ export async function runRules({
 
   const finalMatches = limitDraftEmailActions(conversationAwareMatches);
 
+  logger.info("Rule matching results", {
+    totalMatches: finalMatches.length,
+    rules: finalMatches.map((m) => ({
+      ruleId: m.rule.id,
+      ruleName: m.rule.name,
+      systemType: m.rule.systemType,
+      hasActions: m.rule.actions.length,
+      actionTypes: m.rule.actions.map((a) => a.type),
+    })),
+  });
+
   logger.trace("Matching rule", () => ({
     results: finalMatches.map(filterNullProperties),
   }));
@@ -138,6 +149,14 @@ export async function runRules({
     let reasonToUse = results.reasoning;
 
     if (result.rule && isConversationRule(result.rule.id)) {
+      logger.info(
+        "Conversation meta rule matched, determining specific status",
+        {
+          messageId: message.id,
+          threadId: message.threadId,
+        },
+      );
+
       const { rule: statusRule, reason: statusReason } =
         await determineConversationStatus({
           conversationRules,
@@ -148,6 +167,14 @@ export async function runRules({
         });
 
       if (!statusRule) {
+        logger.warn(
+          "No conversation status rule enabled for determined status",
+          {
+            reason: statusReason,
+            messageId: message.id,
+          },
+        );
+
         const executedRule: RunRulesResult = {
           rule: null,
           reason: statusReason || "No enabled conversation status rule found",
@@ -158,6 +185,17 @@ export async function runRules({
         executedRules.push(executedRule);
         continue;
       }
+
+      logger.info("Conversation status determined, executing rule", {
+        statusType: statusRule.systemType,
+        ruleName: statusRule.name,
+        ruleId: statusRule.id,
+        hasActions: statusRule.actions.length,
+        actionTypes: statusRule.actions.map((a) => a.type),
+        hasDraftAction: statusRule.actions.some(
+          (a) => a.type === ActionType.DRAFT_EMAIL,
+        ),
+      });
 
       ruleToExecute = statusRule;
       reasonToUse = statusReason;
@@ -246,12 +284,29 @@ async function executeMatchedRule(
   modelType: ModelType,
   batchTimestamp: Date,
 ) {
+  logger.info("Executing rule and generating action items", {
+    ruleId: rule.id,
+    ruleName: rule.name,
+    ruleSystemType: rule.systemType,
+    ruleActions: rule.actions.map((a) => ({
+      type: a.type,
+      id: a.id,
+      label: a.label,
+    })),
+  });
+
   const actionItems = await getActionItemsWithAiArgs({
     message,
     emailAccount,
     selectedRule: rule,
     client,
     modelType,
+  });
+
+  logger.info("Action items generated", {
+    ruleId: rule.id,
+    actionCount: actionItems.length,
+    actionTypes: actionItems.map((a) => a.type),
   });
 
   const { immediateActions, delayedActions } = groupBy(actionItems, (item) =>

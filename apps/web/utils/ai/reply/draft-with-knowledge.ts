@@ -111,6 +111,7 @@ Suggested times: ${calendarAvailability.suggestedTimes.join(", ")}
 </calendar_availability>
 
 IMPORTANT: Use this calendar information to suggest specific available times when responding to meeting requests. You can now offer specific times when the user is available.
+NOTE: These times have been checked against the user's calendar and working hours preferences.
 `
     : "";
 
@@ -165,7 +166,7 @@ export async function aiDraftWithKnowledge({
   calendarAvailability: CalendarAvailabilityContext | null;
   writingStyle: string | null;
   mcpContext: string | null;
-}) {
+}): Promise<string | null> {
   try {
     logger.info("Drafting email with knowledge base", {
       messageCount: messages.length,
@@ -202,8 +203,6 @@ export async function aiDraftWithKnowledge({
     return result.object.reply;
   } catch (error) {
     logger.error("Failed to draft email with knowledge", { error });
-    return {
-      error: "Failed to draft email using knowledge base",
-    };
+    return null; // Return null instead of error object to maintain consistent return type
   }
 }

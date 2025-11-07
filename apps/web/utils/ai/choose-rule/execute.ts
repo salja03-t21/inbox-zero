@@ -35,8 +35,23 @@ export async function executeAct({
     messageId: executedRule.messageId,
   });
 
+  logger.info("Starting action execution", {
+    actionCount: executedRule.actionItems.length,
+    actionTypes: executedRule.actionItems.map((a) => a.type),
+    hasDraftAction: executedRule.actionItems.some(
+      (a) => a.type === ActionType.DRAFT_EMAIL,
+    ),
+  });
+
   for (const action of executedRule.actionItems) {
     try {
+      logger.info("Executing action", {
+        actionId: action.id,
+        actionType: action.type,
+        hasContent: !!action.content,
+        contentLength: action.content?.length,
+      });
+
       const actionResult = await runActionFunction({
         client,
         email: message,
@@ -47,7 +62,18 @@ export async function executeAct({
         executedRule,
       });
 
+      logger.info("Action executed successfully", {
+        actionId: action.id,
+        actionType: action.type,
+        hasDraftId: !!actionResult?.draftId,
+      });
+
       if (action.type === ActionType.DRAFT_EMAIL && actionResult?.draftId) {
+        logger.info("Updating executed action with draft ID", {
+          actionId: action.id,
+          draftId: actionResult.draftId,
+        });
+
         await updateExecutedActionWithDraftId({
           actionId: action.id,
           draftId: actionResult.draftId,
