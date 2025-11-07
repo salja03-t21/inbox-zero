@@ -97,8 +97,10 @@ export async function withLLMRetry<T>(
 ): Promise<T> {
   return pRetry(operation, {
     retries: maxRetries,
-    onFailedAttempt: async (error) => {
-      const errorInfo = extractLLMErrorInfo(error);
+    onFailedAttempt: async (failedAttempt) => {
+      // p-retry wraps errors - extract the original error
+      const originalError = (failedAttempt as any).error || failedAttempt;
+      const errorInfo = extractLLMErrorInfo(originalError);
       const retryable = isRetryableLLMError(errorInfo);
 
       if (!retryable) {
@@ -108,18 +110,22 @@ export async function withLLMRetry<T>(
           errorMessage: errorInfo.errorMessage.slice(0, 200),
         });
         // Wrap in AbortError to stop p-retry from retrying
-        // AbortError expects the original error, not the p-retry context
         throw new AbortError(
-          error instanceof Error ? error : new Error(String(error)),
+          originalError instanceof Error
+            ? originalError
+            : new Error(String(originalError)),
         );
       }
 
-      const delayMs = calculateLLMRetryDelay(errorInfo, error.attemptNumber);
+      const delayMs = calculateLLMRetryDelay(
+        errorInfo,
+        failedAttempt.attemptNumber,
+      );
 
       logger.warn("LLM API error. Will retry", {
         operationLabel,
         delaySeconds: Math.ceil(delayMs / 1000),
-        attemptNumber: error.attemptNumber,
+        attemptNumber: failedAttempt.attemptNumber,
         maxRetries,
         statusCode: errorInfo.statusCode,
         isRateLimit: errorInfo.isRateLimit,
