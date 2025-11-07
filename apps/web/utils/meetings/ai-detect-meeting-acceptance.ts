@@ -68,6 +68,8 @@ Your task:
 2. Determine if the MOST RECENT message contains acceptance/confirmation of a meeting time
 3. Extract the agreed date/time if mentioned
 
+IMPORTANT: Messages are numbered chronologically with Message 1 being the NEWEST (most recent) message.
+
 Patterns that indicate meeting acceptance:
 - "Yes, let's meet on [date/time]"
 - "[time] works for me"
@@ -82,7 +84,7 @@ DO NOT match:
 - Messages that only discuss availability without committing
 - Questions about scheduling
 
-IMPORTANT: Focus on the LATEST message in the thread to see if it's accepting a previously proposed time.`;
+IMPORTANT: Focus on Message 1 (the newest message) to see if it's accepting a previously proposed time.`;
 
   const prompt = `<current_time>
 ${new Date().toISOString()}
