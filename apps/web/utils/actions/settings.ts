@@ -39,11 +39,8 @@ export const updateAiSettingsAction = actionClientUser
       ctx: { userId },
       parsedInput: { aiProvider, aiModel, aiApiKey, aiBaseUrl },
     }) => {
-      // Normalize base URL: trim whitespace and remove trailing slashes
-      const normalizedBaseUrl = aiBaseUrl?.trim() || null;
-      const cleanBaseUrl = normalizedBaseUrl
-        ? normalizedBaseUrl.replace(/\/+$/, "")
-        : null;
+      // Normalize base URL: trim whitespace only
+      const cleanBaseUrl = aiBaseUrl?.trim() || null;
 
       await prisma.user.update({
         where: { id: userId },
