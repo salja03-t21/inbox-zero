@@ -10,7 +10,7 @@ export interface RateLimitConfig {
 }
 
 const DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
-  "choose-rule": { limit: 100, windowSeconds: 3600 }, // 100 per hour
+  "choose-rule": { limit: 10_000, windowSeconds: 3600 }, // 10000 per hour
   "generate-draft": { limit: 50, windowSeconds: 3600 }, // 50 per hour
   categorize: { limit: 200, windowSeconds: 3600 }, // 200 per hour
   default: { limit: 100, windowSeconds: 3600 },
