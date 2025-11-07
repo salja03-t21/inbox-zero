@@ -134,6 +134,12 @@ export async function parseMeetingRequest({
       naturalLanguage: agreedDateTime,
       timezone,
       referenceTime: new Date(),
+      userAi: {
+        aiProvider: emailAccount.user.aiProvider,
+        aiModel: emailAccount.user.aiModel,
+        aiApiKey: emailAccount.user.aiApiKey,
+        aiBaseUrl: emailAccount.user.aiBaseUrl,
+      },
     });
 
     logger.info("Parsed date/time", {

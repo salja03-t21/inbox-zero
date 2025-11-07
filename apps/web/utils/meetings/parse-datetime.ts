@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createGenerateObject } from "@/utils/llms";
 import { createScopedLogger } from "@/utils/logger";
 import { getModel } from "@/utils/llms/model";
+import type { UserAIFields } from "@/utils/llms/types";
 
 const logger = createScopedLogger("meetings/parse-datetime");
 
@@ -27,10 +28,12 @@ export async function parseNaturalLanguageDateTime({
   naturalLanguage,
   timezone,
   referenceTime,
+  userAi,
 }: {
   naturalLanguage: string;
   timezone: string;
   referenceTime: Date;
+  userAi: UserAIFields;
 }): Promise<string> {
   logger.info("Parsing natural language date/time", {
     naturalLanguage,
@@ -60,17 +63,8 @@ Guidelines:
 
   const prompt = `Parse this date/time expression: "${naturalLanguage}"`;
 
-  // Use economy model (gpt-4o-mini) for simple parsing tasks
-  const { openai } = await import("@ai-sdk/openai");
-  const modelOptions = getModel(
-    {
-      aiProvider: "openai",
-      aiModel: "gpt-4o-mini",
-      aiApiKey: null,
-      aiBaseUrl: null,
-    },
-    "economy",
-  );
+  // Use economy model for simple parsing tasks (falls back to user's configured model)
+  const modelOptions = getModel(userAi, "economy");
 
   const generateObject = createGenerateObject({
     userEmail: "system",
