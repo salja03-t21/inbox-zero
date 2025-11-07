@@ -111,7 +111,7 @@ export async function createMeetingAction({
       to: msg.headers.to || "",
       subject: msg.headers.subject,
       content: msg.textPlain || msg.textHtml || "",
-      date: msg.headers.date,
+      date: new Date(msg.headers.date),
     })),
     userEmail,
   });
@@ -141,7 +141,7 @@ export async function createMeetingAction({
       to: msg.headers.to || "",
       subject: msg.headers.subject,
       content: msg.textPlain || msg.textHtml || "",
-      date: msg.headers.date,
+      date: new Date(msg.headers.date),
     })),
     agreedDateTime: acceptanceResult.agreedDateTime,
     userEmail,
