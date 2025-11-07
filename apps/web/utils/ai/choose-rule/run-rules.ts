@@ -99,10 +99,77 @@ export async function runRules({
     matches: results.matches,
   });
 
-  const finalMatches = limitDraftEmailActions(conversationAwareMatches);
+  const conversationAwareLimited = limitDraftEmailActions(
+    conversationAwareMatches,
+  );
+
+  // Check if CREATE_MEETING action exists and if TO_REPLY reason suggests meeting is being handled
+  const hasMeetingCreation = conversationAwareLimited.some((match) =>
+    match.rule.actions.some(
+      (action) => action.type === ActionType.CREATE_MEETING,
+    ),
+  );
+
+  const finalMatches = hasMeetingCreation
+    ? conversationAwareLimited.map((match) => {
+        // If this is TO_REPLY rule and meeting is being created,
+        // check if the AI's reason mentions meeting/scheduling as the ONLY reason
+        if (match.rule.systemType === SystemType.TO_REPLY) {
+          const reasonLower = (results.reasoning || "").toLowerCase();
+          // Only skip draft if reason is ONLY about meeting/scheduling
+          // Keywords that suggest meeting is the only concern
+          const meetingOnlyKeywords = [
+            "meeting",
+            "schedule",
+            "time",
+            "confirmed",
+            "let's meet",
+            "see you",
+          ];
+          // Keywords that suggest OTHER tasks beyond meeting
+          const otherTaskKeywords = [
+            "report",
+            "document",
+            "send",
+            "provide",
+            "share",
+            "question",
+            "also",
+            "additionally",
+            "furthermore",
+          ];
+
+          const hasMeetingKeywords = meetingOnlyKeywords.some((kw) =>
+            reasonLower.includes(kw),
+          );
+          const hasOtherTasks = otherTaskKeywords.some((kw) =>
+            reasonLower.includes(kw),
+          );
+
+          // Only remove draft if it's ONLY about meeting (no other tasks)
+          if (hasMeetingKeywords && !hasOtherTasks) {
+            logger.info(
+              "Skipping TO_REPLY draft because CREATE_MEETING is handling the meeting-only response",
+              { reason: results.reasoning },
+            );
+            return {
+              ...match,
+              rule: {
+                ...match.rule,
+                actions: match.rule.actions.filter(
+                  (action) => action.type !== ActionType.DRAFT_EMAIL,
+                ),
+              },
+            };
+          }
+        }
+        return match;
+      })
+    : conversationAwareLimited;
 
   logger.info("Rule matching results", {
     totalMatches: finalMatches.length,
+    hasMeetingCreation,
     rules: finalMatches.map((m) => ({
       ruleId: m.rule.id,
       ruleName: m.rule.name,
