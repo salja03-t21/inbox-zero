@@ -89,7 +89,7 @@ sleep 10
 
 # Step 8: Run database migrations
 echo "🗄️  Running database migrations..."
-ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose exec -T app pnpm --filter=web prisma migrate deploy"
+ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose exec -T app sh -c 'cd /app/apps/web && npx prisma migrate deploy'"
 
 # Step 9: Check service status
 echo "✅ Checking service status..."
