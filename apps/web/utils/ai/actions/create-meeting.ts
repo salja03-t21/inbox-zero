@@ -1,7 +1,7 @@
 import { createScopedLogger } from "@/utils/logger";
 import { aiDetectMeetingAcceptance } from "@/utils/meetings/ai-detect-meeting-acceptance";
 import { parseMeetingRequest } from "@/utils/meetings/parse-meeting-request-with-time";
-import { createMeetingLink } from "@/utils/meetings/providers";
+import { createMeetingLink } from "@/utils/meetings/create-meeting-link";
 import { createCalendarEvent } from "@/utils/meetings/create-calendar-event";
 import prisma from "@/utils/prisma";
 import type { EmailProvider } from "@/utils/email/types";
