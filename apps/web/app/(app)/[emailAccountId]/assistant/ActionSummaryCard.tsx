@@ -203,6 +203,12 @@ export function ActionSummaryCard({
       summaryContent = `Folder: ${action.folderName?.value || "unset"}`;
       break;
 
+    case ActionType.CREATE_MEETING:
+      summaryContent = "Create meeting from acceptance";
+      tooltipText =
+        "Automatically creates calendar events when meeting acceptances are detected in emails.";
+      break;
+
     default:
       summaryContent = actionTypeLabel;
   }

@@ -22,6 +22,7 @@ const zodActionType = z.enum([
   ActionType.MARK_READ,
   ActionType.DIGEST,
   ActionType.MOVE_FOLDER,
+  ActionType.CREATE_MEETING,
 ]);
 
 const zodConditionType = z.enum([ConditionType.AI, ConditionType.STATIC]);
