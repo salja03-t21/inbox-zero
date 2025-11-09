@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, FolderIcon, Loader2, X } from "lucide-react";
 import { cn } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { CommandInput } from "@/components/ui/command";
+import { Command, CommandInput } from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
@@ -177,12 +177,14 @@ export function FolderSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 flex flex-col max-h-[600px]">
-          <CommandInput
-            placeholder="Search folders..."
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            className="border-b"
-          />
+          <Command>
+            <CommandInput
+              placeholder="Search folders..."
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              className="border-b"
+            />
+          </Command>
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
