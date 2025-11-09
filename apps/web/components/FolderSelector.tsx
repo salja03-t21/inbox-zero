@@ -1,28 +1,13 @@
 import { useState, useMemo } from "react";
-import {
-  Check,
-  ChevronsUpDown,
-  FolderIcon,
-  ChevronRight,
-  Loader2,
-  X,
-} from "lucide-react";
+import { Check, ChevronsUpDown, FolderIcon, Loader2, X } from "lucide-react";
 import { cn } from "@/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { CommandInput } from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { FOLDER_SEPARATOR, type OutlookFolder } from "@/utils/outlook/folders";
 import type { FieldError } from "react-hook-form";
 
@@ -49,43 +34,6 @@ function flattenFolders(
   }
 
   return result;
-}
-
-function FolderItem({
-  folder,
-  value,
-  onSelect,
-  displayPath,
-}: Omit<FolderItemProps, "level">) {
-  return (
-    <CommandItem
-      key={folder.id}
-      value={folder.id}
-      onSelect={() => onSelect(folder.id)}
-      data-folder-id={folder.id}
-    >
-      <Check
-        className={cn(
-          "mr-2 h-4 w-4",
-          value.id === folder.id ? "opacity-100" : "opacity-0",
-        )}
-      />
-      <div className="flex items-center gap-2 flex-1 truncate">
-        <FolderIcon className="h-4 w-4 flex-shrink-0" />
-        <span className="truncate text-sm">
-          {displayPath || folder.displayName}
-        </span>
-      </div>
-    </CommandItem>
-  );
-}
-
-interface FolderItemProps {
-  folder: OutlookFolder;
-  level?: number; // Deprecated, kept for compatibility
-  value: { name: string; id: string };
-  onSelect: (folderId: string) => void;
-  displayPath?: string;
 }
 
 interface FolderSelectorProps {
@@ -228,40 +176,60 @@ export function FolderSelector({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-          <Command>
-            <CommandInput
-              placeholder="Search folders..."
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-            />
-            <ScrollArea className="h-[300px]">
-              <CommandList>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    <span>Loading folders...</span>
-                  </div>
-                ) : filteredFolders.length === 0 ? (
-                  <CommandEmpty>No folder found.</CommandEmpty>
-                ) : (
-                  <CommandGroup>
-                    {filteredFolders.map(({ folder, displayPath }) => {
-                      return (
-                        <FolderItem
-                          key={folder.id}
-                          folder={folder}
-                          value={value}
-                          onSelect={handleFolderSelect}
-                          displayPath={displayPath}
-                        />
-                      );
-                    })}
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </ScrollArea>
-          </Command>
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 flex flex-col max-h-[600px]">
+          <CommandInput
+            placeholder="Search folders..."
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            className="border-b"
+          />
+          <div className="flex-1 overflow-y-auto">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span>Loading folders...</span>
+              </div>
+            ) : filteredFolders.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                No folder found.
+              </div>
+            ) : (
+              <div className="p-1">
+                {filteredFolders.map(({ folder, displayPath }) => {
+                  return (
+                    <div
+                      key={folder.id}
+                      onClick={() => handleFolderSelect(folder.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleFolderSelect(folder.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className={cn(
+                        "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2",
+                        value.id === folder.id &&
+                          "bg-slate-100 dark:bg-slate-800",
+                      )}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value.id === folder.id ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <div className="flex items-center gap-2 flex-1 truncate">
+                        <FolderIcon className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate text-sm">{displayPath}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </PopoverContent>
       </Popover>
       {error && (
