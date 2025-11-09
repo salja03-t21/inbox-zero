@@ -22,6 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { FOLDER_SEPARATOR, type OutlookFolder } from "@/utils/outlook/folders";
 import type { FieldError } from "react-hook-form";
 
@@ -234,36 +235,32 @@ export function FolderSelector({
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList
-              style={{
-                maxHeight: "300px",
-                overflowY: "scroll",
-                display: "block",
-              }}
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Loading folders...</span>
-                </div>
-              ) : filteredFolders.length === 0 ? (
-                <CommandEmpty>No folder found.</CommandEmpty>
-              ) : (
-                <CommandGroup>
-                  {filteredFolders.map(({ folder, displayPath }) => {
-                    return (
-                      <FolderItem
-                        key={folder.id}
-                        folder={folder}
-                        value={value}
-                        onSelect={handleFolderSelect}
-                        displayPath={displayPath}
-                      />
-                    );
-                  })}
-                </CommandGroup>
-              )}
-            </CommandList>
+            <ScrollArea className="h-[300px]">
+              <CommandList>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span>Loading folders...</span>
+                  </div>
+                ) : filteredFolders.length === 0 ? (
+                  <CommandEmpty>No folder found.</CommandEmpty>
+                ) : (
+                  <CommandGroup>
+                    {filteredFolders.map(({ folder, displayPath }) => {
+                      return (
+                        <FolderItem
+                          key={folder.id}
+                          folder={folder}
+                          value={value}
+                          onSelect={handleFolderSelect}
+                          displayPath={displayPath}
+                        />
+                      );
+                    })}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </ScrollArea>
           </Command>
         </PopoverContent>
       </Popover>
