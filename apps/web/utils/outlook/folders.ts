@@ -27,17 +27,34 @@ export async function getOutlookRootFolders(
   client: OutlookClient,
 ): Promise<OutlookFolder[]> {
   const fields = "id,displayName";
+
+  // First, get all root folders without expansion (to avoid limits)
   const response: { value: MailFolder[] } = await client
     .getClient()
     .api("/me/mailFolders")
     .select(fields)
     .top(999)
-    .expand(
-      `childFolders($select=${fields};$expand=childFolders($select=${fields}))`,
-    )
     .get();
 
-  return response.value.map(convertMailFolderToOutlookFolder);
+  const rootFolders = response.value.map(convertMailFolderToOutlookFolder);
+
+  // Then fetch child folders for each root folder separately (with pagination support)
+  await Promise.all(
+    rootFolders.map(async (folder) => {
+      try {
+        folder.childFolders = await getOutlookChildFolders(client, folder.id);
+      } catch (error) {
+        logger.warn("Failed to fetch child folders for root folder", {
+          folderId: folder.id,
+          folderName: folder.displayName,
+          error,
+        });
+        folder.childFolders = [];
+      }
+    }),
+  );
+
+  return rootFolders;
 }
 
 export async function getOutlookChildFolders(
@@ -169,9 +186,13 @@ export async function getOutlookFolderTree(
       return;
     }
 
-    // The initial call to getOutlookRootFolders already fetched 2 levels
-    // Only fetch more if we're at level 2 or deeper
-    if (currentDepth >= 2) {
+    // The initial call to getOutlookRootFolders now fetches child folders separately
+    // for each root folder (depth 0 -> depth 1), with full pagination support.
+    // We only need to expand deeper (depth >= 2)
+    if (
+      currentDepth >= 2 &&
+      (!folder.childFolders || folder.childFolders.length === 0)
+    ) {
       try {
         folder.childFolders = await getOutlookChildFolders(client, folder.id);
       } catch (error) {
