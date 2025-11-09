@@ -234,7 +234,13 @@ export function FolderSelector({
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList style={{ maxHeight: "500px", overflowY: "auto" }}>
+            <CommandList
+              style={{
+                maxHeight: "300px",
+                overflowY: "scroll",
+                display: "block",
+              }}
+            >
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
