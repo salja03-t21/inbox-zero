@@ -213,7 +213,7 @@ export function FolderSelector({
               ) : filteredFolders.length === 0 ? (
                 <CommandEmpty>No folder found.</CommandEmpty>
               ) : (
-                <CommandGroup>
+                <CommandGroup className="overflow-visible">
                   {filteredFolders.map(({ folder, displayPath, depth }) => (
                     <CommandItem
                       key={folder.id}
