@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Check,
   ChevronsUpDown,
@@ -25,57 +25,66 @@ import {
 import { FOLDER_SEPARATOR, type OutlookFolder } from "@/utils/outlook/folders";
 import type { FieldError } from "react-hook-form";
 
-interface FolderItemProps {
-  folder: OutlookFolder;
-  level: number;
-  value: { name: string; id: string };
-  onSelect: (folderId: string) => void;
-  displayPath?: string;
+/**
+ * Recursively flatten folder hierarchy into a flat list of items for rendering
+ * This avoids deeply nested DOM structures and improves performance
+ */
+function flattenFolders(
+  folders: OutlookFolder[],
+  parentPath = "",
+): Array<{ folder: OutlookFolder; displayPath: string }> {
+  const result: Array<{ folder: OutlookFolder; displayPath: string }> = [];
+
+  for (const folder of folders) {
+    const currentPath = parentPath
+      ? `${parentPath}${FOLDER_SEPARATOR}${folder.displayName}`
+      : folder.displayName;
+
+    result.push({ folder, displayPath: currentPath });
+
+    if (folder.childFolders && folder.childFolders.length > 0) {
+      result.push(...flattenFolders(folder.childFolders, currentPath));
+    }
+  }
+
+  return result;
 }
 
 function FolderItem({
   folder,
-  level,
   value,
   onSelect,
   displayPath,
-}: FolderItemProps) {
+}: Omit<FolderItemProps, "level">) {
   return (
-    <div key={folder.id}>
-      <CommandItem
-        key={`${folder.id}-${level}`}
-        value={folder.id}
-        onSelect={() => onSelect(folder.id)}
-        data-folder-id={folder.id}
-        data-level={level}
-      >
-        <Check
-          className={cn(
-            "mr-2 h-4 w-4",
-            value.id === folder.id ? "opacity-100" : "opacity-0",
-          )}
-        />
-        <div className="flex items-center gap-2">
-          {level > 0 &&
-            Array.from({ length: level }, (_, i) => (
-              <ChevronRight key={i} className="h-3 w-3 text-muted-foreground" />
-            ))}
-          <FolderIcon className="h-4 w-4" />
-          <span>{displayPath || folder.displayName}</span>
-        </div>
-      </CommandItem>
-      {folder.childFolders?.map((child) => (
-        <div key={child.id} className={""}>
-          <FolderItem
-            folder={child}
-            level={level + 1}
-            value={value}
-            onSelect={onSelect}
-          />
-        </div>
-      ))}
-    </div>
+    <CommandItem
+      key={folder.id}
+      value={folder.id}
+      onSelect={() => onSelect(folder.id)}
+      data-folder-id={folder.id}
+    >
+      <Check
+        className={cn(
+          "mr-2 h-4 w-4",
+          value.id === folder.id ? "opacity-100" : "opacity-0",
+        )}
+      />
+      <div className="flex items-center gap-2 flex-1 truncate">
+        <FolderIcon className="h-4 w-4 flex-shrink-0" />
+        <span className="truncate text-sm">
+          {displayPath || folder.displayName}
+        </span>
+      </div>
+    </CommandItem>
   );
+}
+
+interface FolderItemProps {
+  folder: OutlookFolder;
+  level?: number; // Deprecated, kept for compatibility
+  value: { name: string; id: string };
+  onSelect: (folderId: string) => void;
+  displayPath?: string;
 }
 
 interface FolderSelectorProps {
@@ -119,37 +128,19 @@ export function FolderSelector({
     ? findFolderById(folders, currentFolderId)
     : null;
 
+  // Flatten folders for better UI rendering and performance
+  const flattenedFolders = useMemo(() => flattenFolders(folders), [folders]);
+
   const filteredFolders =
     searchQuery.trim() === ""
-      ? folders.map((folder) => ({ folder, displayPath: folder.displayName }))
-      : filterFoldersRecursively(folders, searchQuery.toLowerCase());
-
-  function filterFoldersRecursively(
-    folderList: OutlookFolder[],
-    query: string,
-    parentPath = "",
-  ): { folder: OutlookFolder; displayPath: string }[] {
-    const results: { folder: OutlookFolder; displayPath: string }[] = [];
-
-    for (const folder of folderList) {
-      const currentPath = parentPath
-        ? `${parentPath}${FOLDER_SEPARATOR}${folder.displayName}`
-        : folder.displayName;
-      if (folder.displayName.toLowerCase().includes(query)) {
-        results.push({ folder, displayPath: currentPath });
-      }
-      if (folder.childFolders && folder.childFolders.length > 0) {
-        const childResults = filterFoldersRecursively(
-          folder.childFolders,
-          query,
-          currentPath,
+      ? flattenedFolders
+      : flattenedFolders.filter(
+          ({ folder, displayPath }) =>
+            folder.displayName
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            displayPath.toLowerCase().includes(searchQuery.toLowerCase()),
         );
-        results.push(...childResults);
-      }
-    }
-
-    return results;
-  }
 
   const buildFolderPath = (folderId: string): string => {
     const folder = findFolderById(folders, folderId);
@@ -243,30 +234,28 @@ export function FolderSelector({
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList>
+            <CommandList className="max-h-[400px] overflow-y-auto">
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   <span>Loading folders...</span>
                 </div>
+              ) : filteredFolders.length === 0 ? (
+                <CommandEmpty>No folder found.</CommandEmpty>
               ) : (
-                <>
-                  <CommandEmpty>No folder found.</CommandEmpty>
-                  <CommandGroup>
-                    {filteredFolders.map(({ folder, displayPath }) => {
-                      return (
-                        <FolderItem
-                          key={folder.id}
-                          folder={folder}
-                          level={0}
-                          value={value}
-                          onSelect={handleFolderSelect}
-                          displayPath={displayPath}
-                        />
-                      );
-                    })}
-                  </CommandGroup>
-                </>
+                <CommandGroup>
+                  {filteredFolders.map(({ folder, displayPath }) => {
+                    return (
+                      <FolderItem
+                        key={folder.id}
+                        folder={folder}
+                        value={value}
+                        onSelect={handleFolderSelect}
+                        displayPath={displayPath}
+                      />
+                    );
+                  })}
+                </CommandGroup>
               )}
             </CommandList>
           </Command>
