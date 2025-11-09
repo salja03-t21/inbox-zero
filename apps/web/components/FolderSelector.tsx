@@ -183,7 +183,7 @@ export function FolderSelector({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 pointer-events-auto">
           <div className="flex flex-col">
             <div className="border-b px-3 py-2">
               <Input
