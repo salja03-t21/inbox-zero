@@ -227,14 +227,14 @@ export function FolderSelector({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 max-h-[500px] overflow-hidden flex flex-col">
-          <Command className="flex flex-col h-full">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+          <Command>
             <CommandInput
               placeholder="Search folders..."
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
-            <CommandList className="overflow-y-auto flex-1">
+            <CommandList style={{ maxHeight: "500px", overflowY: "auto" }}>
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
