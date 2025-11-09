@@ -190,7 +190,7 @@ export function FolderSelector({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 max-h-[60vh] overflow-hidden">
           <Command shouldFilter={false} className="overflow-visible">
             <CommandInput
               placeholder="Search folders..."
@@ -199,7 +199,7 @@ export function FolderSelector({
               className="border-b"
             />
             <CommandList
-              className="max-h-[400px] overflow-y-scroll"
+              className="max-h-[400px] overflow-y-auto"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "#cbd5e1 #f1f5f9",
