@@ -144,7 +144,7 @@ export function FolderSelector({
             </SelectValue>
           )}
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-[400px]">
           {flattenedFolders.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               No folders found
@@ -154,8 +154,8 @@ export function FolderSelector({
               <SelectItem
                 key={folder.id}
                 value={folder.id}
-                className={cn("cursor-pointer", depth > 0 && "ml-4")}
-                style={{ paddingLeft: `${depth * 12 + 8}px` }}
+                className="cursor-pointer pl-0"
+                style={{ paddingLeft: `${depth * 20 + 32}px` }}
               >
                 <div className="flex items-center gap-2">
                   <FolderIcon className="h-4 w-4 shrink-0" />
