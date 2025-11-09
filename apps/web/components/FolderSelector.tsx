@@ -194,10 +194,14 @@ export function FolderSelector({
               />
             </div>
             <div
-              className="max-h-[400px] overflow-y-auto p-1"
+              className="overflow-y-scroll p-1 pointer-events-auto"
               style={{
+                maxHeight: "400px",
+                minHeight: "100px",
+                overflowY: "scroll",
                 scrollbarWidth: "thin",
                 scrollbarColor: "#cbd5e1 #f1f5f9",
+                WebkitOverflowScrolling: "touch",
               }}
             >
               {isLoading ? (
