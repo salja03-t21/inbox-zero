@@ -142,37 +142,49 @@ async function findOutlookFolderByName(
 
 export async function getOutlookFolderTree(
   client: OutlookClient,
-  expandLevels = 6,
+  maxDepth = 10,
 ): Promise<OutlookFolder[]> {
   const folders = await getOutlookRootFolders(client);
 
-  if (expandLevels <= 2) {
-    return folders;
-  }
+  // Recursively fetch all child folders to the specified depth
+  async function expandFolder(
+    folder: OutlookFolder,
+    currentDepth: number,
+  ): Promise<void> {
+    // Stop if we've reached max depth or if this folder has no ID
+    if (currentDepth >= maxDepth || !folder.id) {
+      return;
+    }
 
-  const remainingLevels = expandLevels - 2;
-  for (let currentLevel = 0; currentLevel < remainingLevels; currentLevel++) {
-    const folderQueue = [...folders];
-
-    while (folderQueue.length > 0) {
-      const folder = folderQueue.shift()!;
-      if (!folder.childFolders || folder.childFolders.length === 0) {
-        try {
-          folder.childFolders = await getOutlookChildFolders(client, folder.id);
-        } catch (error) {
-          logger.warn("Failed to fetch deeper folders", {
-            folderId: folder.id,
-            error,
-          });
-        }
-      }
-      if (folder.childFolders) {
-        folderQueue.push(
-          ...folder.childFolders.map(convertMailFolderToOutlookFolder),
-        );
+    // The initial call to getOutlookRootFolders already fetched 2 levels
+    // Only fetch more if we're at level 2 or deeper
+    if (currentDepth >= 2) {
+      try {
+        folder.childFolders = await getOutlookChildFolders(client, folder.id);
+      } catch (error) {
+        logger.warn("Failed to fetch child folders", {
+          folderId: folder.id,
+          folderName: folder.displayName,
+          depth: currentDepth,
+          error,
+        });
+        folder.childFolders = [];
+        return;
       }
     }
+
+    // Recursively expand all children
+    if (folder.childFolders && folder.childFolders.length > 0) {
+      await Promise.all(
+        folder.childFolders.map((child) =>
+          expandFolder(child, currentDepth + 1),
+        ),
+      );
+    }
   }
+
+  // Expand all root folders
+  await Promise.all(folders.map((folder) => expandFolder(folder, 0)));
 
   return folders;
 }
