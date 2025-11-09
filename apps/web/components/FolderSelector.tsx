@@ -25,18 +25,25 @@ import type { FieldError } from "react-hook-form";
 function flattenFolders(
   folders: OutlookFolder[],
   parentPath = "",
-): Array<{ folder: OutlookFolder; displayPath: string }> {
-  const result: Array<{ folder: OutlookFolder; displayPath: string }> = [];
+  depth = 0,
+): Array<{ folder: OutlookFolder; displayPath: string; depth: number }> {
+  const result: Array<{
+    folder: OutlookFolder;
+    displayPath: string;
+    depth: number;
+  }> = [];
 
   for (const folder of folders) {
     const currentPath = parentPath
       ? `${parentPath}${FOLDER_SEPARATOR}${folder.displayName}`
       : folder.displayName;
 
-    result.push({ folder, displayPath: currentPath });
+    result.push({ folder, displayPath: currentPath, depth });
 
     if (folder.childFolders && folder.childFolders.length > 0) {
-      result.push(...flattenFolders(folder.childFolders, currentPath));
+      result.push(
+        ...flattenFolders(folder.childFolders, currentPath, depth + 1),
+      );
     }
   }
 
@@ -191,7 +198,13 @@ export function FolderSelector({
               onValueChange={setSearchQuery}
               className="border-b"
             />
-            <CommandList>
+            <CommandList
+              className="max-h-[400px] overflow-y-scroll"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#cbd5e1 #f1f5f9",
+              }}
+            >
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -201,7 +214,7 @@ export function FolderSelector({
                 <CommandEmpty>No folder found.</CommandEmpty>
               ) : (
                 <CommandGroup>
-                  {filteredFolders.map(({ folder, displayPath }) => (
+                  {filteredFolders.map(({ folder, displayPath, depth }) => (
                     <CommandItem
                       key={folder.id}
                       value={folder.id}
@@ -210,16 +223,19 @@ export function FolderSelector({
                         value.id === folder.id &&
                           "bg-slate-100 dark:bg-slate-800",
                       )}
+                      style={{ paddingLeft: `${0.5 + depth * 1.25}rem` }}
                     >
                       <Check
                         className={cn(
-                          "mr-2 h-4 w-4",
+                          "mr-2 h-4 w-4 flex-shrink-0",
                           value.id === folder.id ? "opacity-100" : "opacity-0",
                         )}
                       />
                       <div className="flex items-center gap-2 flex-1 truncate">
                         <FolderIcon className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate text-sm">{displayPath}</span>
+                        <span className="truncate text-sm">
+                          {folder.displayName}
+                        </span>
                       </div>
                     </CommandItem>
                   ))}
