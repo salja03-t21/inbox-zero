@@ -2,14 +2,7 @@ import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, FolderIcon, Loader2, X } from "lucide-react";
 import { cn } from "@/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -190,16 +183,18 @@ export function FolderSelector({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 max-h-[60vh] overflow-hidden">
-          <Command shouldFilter={false} className="overflow-visible">
-            <CommandInput
-              placeholder="Search folders..."
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              className="border-b"
-            />
-            <CommandList
-              className="max-h-[400px] overflow-y-auto"
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+          <div className="flex flex-col">
+            <div className="border-b px-3 py-2">
+              <Input
+                placeholder="Search folders..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 border-none shadow-none focus-visible:ring-0 px-0"
+              />
+            </div>
+            <div
+              className="max-h-[400px] overflow-y-auto p-1"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "#cbd5e1 #f1f5f9",
@@ -211,38 +206,39 @@ export function FolderSelector({
                   <span>Loading folders...</span>
                 </div>
               ) : filteredFolders.length === 0 ? (
-                <CommandEmpty>No folder found.</CommandEmpty>
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  No folder found.
+                </div>
               ) : (
-                <CommandGroup className="overflow-visible">
-                  {filteredFolders.map(({ folder, displayPath, depth }) => (
-                    <CommandItem
-                      key={folder.id}
-                      value={folder.id}
-                      onSelect={() => handleFolderSelect(folder.id)}
+                filteredFolders.map(({ folder, displayPath, depth }) => (
+                  <button
+                    key={folder.id}
+                    onClick={() => handleFolderSelect(folder.id)}
+                    className={cn(
+                      "w-full flex items-center rounded-sm px-2 py-1.5 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-ring",
+                      value.id === folder.id &&
+                        "bg-slate-100 dark:bg-slate-800",
+                    )}
+                    style={{ paddingLeft: `${0.5 + depth * 1.25}rem` }}
+                    type="button"
+                  >
+                    <Check
                       className={cn(
-                        value.id === folder.id &&
-                          "bg-slate-100 dark:bg-slate-800",
+                        "mr-2 h-4 w-4 flex-shrink-0",
+                        value.id === folder.id ? "opacity-100" : "opacity-0",
                       )}
-                      style={{ paddingLeft: `${0.5 + depth * 1.25}rem` }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4 flex-shrink-0",
-                          value.id === folder.id ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <div className="flex items-center gap-2 flex-1 truncate">
-                        <FolderIcon className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate text-sm">
-                          {folder.displayName}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                    />
+                    <div className="flex items-center gap-2 flex-1 truncate">
+                      <FolderIcon className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate text-sm">
+                        {folder.displayName}
+                      </span>
+                    </div>
+                  </button>
+                ))
               )}
-            </CommandList>
-          </Command>
+            </div>
+          </div>
         </PopoverContent>
       </Popover>
       {error && (
