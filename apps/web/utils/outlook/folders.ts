@@ -45,16 +45,29 @@ export async function getOutlookChildFolders(
   folderId: string,
 ): Promise<OutlookFolder[]> {
   const fields = "id,displayName";
-  const response: { value: MailFolder[] } = await client
-    .getClient()
-    .api(`/me/mailFolders/${folderId}/childFolders`)
-    .select(fields)
-    .expand(
-      `childFolders($select=${fields};$expand=childFolders($select=${fields}))`,
-    )
-    .get();
+  let allFolders: MailFolder[] = [];
+  let nextLink: string | undefined;
 
-  return response.value.map(convertMailFolderToOutlookFolder);
+  // Fetch all folders with pagination support
+  do {
+    const response: { value: MailFolder[]; "@odata.nextLink"?: string } =
+      nextLink
+        ? await client.getClient().api(nextLink).get()
+        : await client
+            .getClient()
+            .api(`/me/mailFolders/${folderId}/childFolders`)
+            .select(fields)
+            .top(999)
+            .expand(
+              `childFolders($select=${fields};$expand=childFolders($select=${fields}))`,
+            )
+            .get();
+
+    allFolders = allFolders.concat(response.value);
+    nextLink = response["@odata.nextLink"];
+  } while (nextLink);
+
+  return allFolders.map(convertMailFolderToOutlookFolder);
 }
 
 /**
