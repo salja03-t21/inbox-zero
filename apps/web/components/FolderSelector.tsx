@@ -191,7 +191,7 @@ export function FolderSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-          <Command shouldFilter={false}>
+          <Command shouldFilter={false} className="overflow-visible">
             <CommandInput
               placeholder="Search folders..."
               value={searchQuery}
