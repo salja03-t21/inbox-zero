@@ -114,6 +114,10 @@ model EmailAccount {
   name  String? // Name associated with the Google account
   image String? // Profile image URL from the Google account
 
+  // Shared mailbox support (Microsoft only)
+  isSharedMailbox     Boolean @default(false) // True if this is a shared mailbox
+  sharedMailboxOwner  String? // The email address of the shared mailbox being accessed
+
   about                     String?
   writingStyle              String?
   signature                 String? // User's email signature from provider or manually set
