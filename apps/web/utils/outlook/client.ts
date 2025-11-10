@@ -174,22 +174,16 @@ export function getLinkingOAuth2Url() {
     throw new Error("Microsoft login not enabled - missing client ID");
   }
 
-  const redirectUri = `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`;
-  console.log('[DEBUG] Microsoft OAuth redirect_uri:', redirectUri);
-  console.log('[DEBUG] NEXT_PUBLIC_BASE_URL:', env.NEXT_PUBLIC_BASE_URL);
-
   const baseUrl =
     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
   const params = new URLSearchParams({
     client_id: env.MICROSOFT_CLIENT_ID,
     response_type: "code",
-    redirect_uri: redirectUri,
+    redirect_uri: `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`,
     scope: SCOPES.join(" "),
   });
 
-  const fullUrl = `${baseUrl}?${params.toString()}`;
-  console.log('[DEBUG] Full Microsoft OAuth URL:', fullUrl);
-  return fullUrl;
+  return `${baseUrl}?${params.toString()}`;
 }
 
 // Helper types for common Microsoft Graph operations
