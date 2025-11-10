@@ -23,6 +23,7 @@ import { createScopedLogger } from "@/utils/logger";
 import { getContactsClient as getOutlookContactsClient } from "@/utils/outlook/client";
 import { SCOPES as OUTLOOK_SCOPES } from "@/utils/outlook/scopes";
 import { updateAccountSeats } from "@/utils/premium/server";
+import { createPremiumForUser } from "@/utils/premium/create-premium";
 import prisma from "@/utils/prisma";
 
 const logger = createScopedLogger("auth");
@@ -235,6 +236,8 @@ async function handleSignIn({
         userId: user.id,
         email: user.email,
       }),
+      // Automatically create premium for all new users
+      createAutoPremiumForNewUser({ userId: user.id }),
     ]);
   }
 }
@@ -270,6 +273,48 @@ async function handlePendingPremiumInvite({ email }: { email: string }) {
   }
 
   logger.info("Added user to premium from invite", { email });
+}
+
+async function createAutoPremiumForNewUser({ userId }: { userId: string }) {
+  try {
+    logger.info("Creating automatic premium for new user", { userId });
+    
+    // Check if user already has premium (could happen from pending invite)
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { premiumId: true },
+    });
+    
+    if (existingUser?.premiumId) {
+      logger.info("User already has premium, skipping auto-creation", { userId });
+      return;
+    }
+    
+    // Create lifetime premium with generous email account access
+    const premium = await prisma.premium.create({
+      data: {
+        lemonSqueezyRenewsAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10 years
+        tier: "LIFETIME",
+        emailAccountsAccess: 10, // Allow up to 10 email accounts per user
+        users: { connect: { id: userId } },
+        admins: { connect: { id: userId } },
+      },
+    });
+    
+    logger.info("Successfully created automatic premium for new user", { 
+      userId, 
+      premiumId: premium.id 
+    });
+  } catch (error) {
+    logger.error("Error creating automatic premium for new user", {
+      userId,
+      error,
+    });
+    // Don't throw error - premium creation failure shouldn't prevent sign up
+    captureException(error, {
+      extra: { userId, location: "createAutoPremiumForNewUser" },
+    });
+  }
 }
 
 export async function handleReferralOnSignUp({
