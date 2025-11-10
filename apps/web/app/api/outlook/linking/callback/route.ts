@@ -14,6 +14,14 @@ export const GET = withError(async (request) => {
   if (!env.MICROSOFT_CLIENT_ID || !env.MICROSOFT_CLIENT_SECRET)
     throw new SafeError("Microsoft login not enabled");
 
+  // Debug logging
+  console.log("[DEBUG] Microsoft OAuth callback received:", {
+    url: request.url,
+    origin: request.nextUrl.origin,
+    baseUrl: env.NEXT_PUBLIC_BASE_URL,
+    timestamp: new Date().toISOString()
+  });
+
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
   const receivedState = searchParams.get("state");

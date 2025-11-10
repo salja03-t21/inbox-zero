@@ -176,14 +176,26 @@ export function getLinkingOAuth2Url() {
 
   const baseUrl =
     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
+  const redirectUri = `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`;
+  
+  // Debug logging
+  console.log("[DEBUG] Microsoft OAuth URL generation:", {
+    NEXT_PUBLIC_BASE_URL: env.NEXT_PUBLIC_BASE_URL,
+    redirectUri,
+    timestamp: new Date().toISOString()
+  });
+  
   const params = new URLSearchParams({
     client_id: env.MICROSOFT_CLIENT_ID,
     response_type: "code",
-    redirect_uri: `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`,
+    redirect_uri: redirectUri,
     scope: SCOPES.join(" "),
   });
 
-  return `${baseUrl}?${params.toString()}`;
+  const finalUrl = `${baseUrl}?${params.toString()}`;
+  console.log("[DEBUG] Final Microsoft OAuth URL:", finalUrl);
+  
+  return finalUrl;
 }
 
 // Helper types for common Microsoft Graph operations
