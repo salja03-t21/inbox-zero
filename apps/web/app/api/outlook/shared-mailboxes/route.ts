@@ -1,7 +1,28 @@
 import { NextResponse } from "next/server";
 import { withEmailAccount } from "@/utils/middleware";
+import prisma from "@/utils/prisma";
 
-export const GET = withEmailAccount(async ({ emailAccount }) => {
+export const GET = withEmailAccount(async (req) => {
+  const { emailAccountId } = req.auth;
+  
+  // Fetch the email account with tokens
+  const emailAccount = await prisma.emailAccount.findUnique({
+    where: { id: emailAccountId },
+    include: {
+      account: {
+        select: {
+          access_token: true,
+        },
+      },
+    },
+  });
+  
+  if (!emailAccount) {
+    return NextResponse.json(
+      { error: "Email account not found" },
+      { status: 404 }
+    );
+  }
   try {
     // Fetch mailboxes the user has access to
     // This queries for all users where the current user has delegated access
