@@ -27,7 +27,7 @@ export function SharedMailboxSection() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Only show this section for Microsoft accounts
-  if (!isMicrosoftProvider(emailAccount.account.provider)) {
+  if (!emailAccount || !isMicrosoftProvider(emailAccount.account.provider)) {
     return null;
   }
 
