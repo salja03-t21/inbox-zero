@@ -7,7 +7,10 @@ const querySchema = z.object({
   emailAccountId: z.string().optional(),
 });
 
-export const GET = withAuth(async ({ userId, searchParams }) => {
+export const GET = withAuth(async (req) => {
+  const { userId } = req.auth;
+  const searchParams = req.nextUrl.searchParams;
+  
   try {
     const { emailAccountId } = querySchema.parse({
       emailAccountId: searchParams.get("emailAccountId"),
