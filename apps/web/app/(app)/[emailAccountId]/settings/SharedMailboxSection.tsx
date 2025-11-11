@@ -74,7 +74,7 @@ function ConnectedMailboxesList() {
       email: string;
       name: string | null;
     }>;
-  }>(`/api/user/shared-mailboxes?emailAccountId=${emailAccount.id}`);
+  }>(emailAccount ? `/api/user/shared-mailboxes?emailAccountId=${emailAccount.id}` : null);
 
   if (isLoading) return <LoadingContent loading />;
   if (error) return <LoadingContent error={error} />;
