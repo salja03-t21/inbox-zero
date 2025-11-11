@@ -116,3 +116,67 @@ export const fetchSignaturesFromProviderAction = actionClient
 
     return { signatures };
   });
+
+const connectSharedMailboxSchema = z.object({
+  sharedMailboxEmail: z.string().email(),
+  sharedMailboxName: z.string().optional(),
+});
+
+export const connectSharedMailboxAction = actionClient
+  .metadata({ name: "connectSharedMailbox" })
+  .schema(connectSharedMailboxSchema)
+  .action(
+    async ({
+      ctx: { emailAccountId, userId, logger },
+      parsedInput: { sharedMailboxEmail, sharedMailboxName },
+    }) => {
+      logger.info("Connecting shared mailbox", {
+        sharedMailboxEmail,
+        emailAccountId,
+      });
+
+      // Check if this shared mailbox is already connected for this user
+      const existingSharedMailbox = await prisma.emailAccount.findFirst({
+        where: {
+          userId,
+          isSharedMailbox: true,
+          sharedMailboxOwner: sharedMailboxEmail,
+        },
+      });
+
+      if (existingSharedMailbox) {
+        throw new SafeError(
+          "This shared mailbox is already connected to your account",
+        );
+      }
+
+      // Get the primary email account to copy the account credentials
+      const primaryEmailAccount = await prisma.emailAccount.findUnique({
+        where: { id: emailAccountId },
+        include: { account: true },
+      });
+
+      if (!primaryEmailAccount) {
+        throw new SafeError("Primary email account not found");
+      }
+
+      // Create a new EmailAccount entry for the shared mailbox
+      // This shares the same Account (OAuth tokens) but represents a different mailbox
+      const sharedMailbox = await prisma.emailAccount.create({
+        data: {
+          email: sharedMailboxEmail,
+          name: sharedMailboxName || sharedMailboxEmail,
+          userId,
+          accountId: primaryEmailAccount.accountId,
+          isSharedMailbox: true,
+          sharedMailboxOwner: sharedMailboxEmail,
+        },
+      });
+
+      logger.info("Shared mailbox connected successfully", {
+        sharedMailboxId: sharedMailbox.id,
+      });
+
+      return { sharedMailboxId: sharedMailbox.id };
+    },
+  );

@@ -7,6 +7,7 @@ import { MeetingSchedulerSection } from "@/app/(app)/[emailAccountId]/settings/M
 import { ModelSection } from "@/app/(app)/[emailAccountId]/settings/ModelSection";
 import { MultiAccountSection } from "@/app/(app)/[emailAccountId]/settings/MultiAccountSection";
 import { ResetAnalyticsSection } from "@/app/(app)/[emailAccountId]/settings/ResetAnalyticsSection";
+import { SharedMailboxSection } from "@/app/(app)/[emailAccountId]/settings/SharedMailboxSection";
 import { WebhookSection } from "@/app/(app)/[emailAccountId]/settings/WebhookSection";
 import { FormSection, FormWrapper } from "@/components/Form";
 import { PageHeader } from "@/components/PageHeader";
@@ -55,6 +56,7 @@ export default function SettingsPage() {
               </FormSection>
 
               <MeetingSchedulerSection />
+              <SharedMailboxSection />
               <ResetAnalyticsSection />
 
               {/* this is only used in Gmail when sending a new message. disabling for now. */}

@@ -13,6 +13,7 @@ export const SCOPES = [
   "Mail.ReadBasic", // Read basic mail properties
   "Mail.Read", // Read mail in all mailboxes
   "Mail.Read.Shared", // Read mail in shared mailboxes
+  "Mail.ReadWrite.Shared", // Read and write mail in shared mailboxes
   "MailboxSettings.ReadWrite", // Read and write mailbox settings
   ...(env.NEXT_PUBLIC_CONTACTS_ENABLED ? ["Contacts.ReadWrite"] : []),
 ] as const;
