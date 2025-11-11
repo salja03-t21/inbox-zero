@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { withEmailAccount } from "@/utils/middleware";
-import { getOutlookClient } from "@/utils/outlook/client";
 
 export const GET = withEmailAccount(async ({ emailAccount }) => {
   try {
-    const client = getOutlookClient({ accessToken: emailAccount.account.access_token! });
-    
     // Fetch mailboxes the user has access to
     // This queries for all users where the current user has delegated access
     const response = await fetch(

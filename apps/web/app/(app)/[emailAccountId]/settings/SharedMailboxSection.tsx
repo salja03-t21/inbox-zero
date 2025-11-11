@@ -10,7 +10,7 @@ import { useAction } from "next-safe-action/hooks";
 import { connectSharedMailboxAction } from "@/utils/actions/email-account";
 import type { SharedMailboxesResponse } from "@/app/api/outlook/shared-mailboxes/route";
 import { Badge } from "@/components/ui/badge";
-import { useEmailAccount } from "@/providers/EmailAccountProvider";
+import { useAccount } from "@/providers/EmailAccountProvider";
 import { isMicrosoftProvider } from "@/utils/email/provider-types";
 import {
   Dialog,
@@ -23,7 +23,7 @@ import {
 import { PlusIcon, TrashIcon } from "lucide-react";
 
 export function SharedMailboxSection() {
-  const { emailAccount } = useEmailAccount();
+  const { emailAccount } = useAccount();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Only show this section for Microsoft accounts
@@ -65,7 +65,7 @@ export function SharedMailboxSection() {
 }
 
 function ConnectedMailboxesList() {
-  const { emailAccount } = useEmailAccount();
+  const { emailAccount } = useAccount();
   
   // Fetch connected shared mailboxes
   const { data, isLoading, error, mutate } = useSWR<{
