@@ -76,53 +76,50 @@ function ConnectedMailboxesList() {
     }>;
   }>(emailAccount ? `/api/user/shared-mailboxes?emailAccountId=${emailAccount.id}` : null);
 
-  if (isLoading) return <LoadingContent loading />;
-  if (error) return <LoadingContent error={error} />;
-
   const sharedMailboxes = data?.sharedMailboxes || [];
 
-  if (sharedMailboxes.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-        No shared mailboxes connected yet
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-2">
-      {sharedMailboxes.map((mailbox) => (
-        <div
-          key={mailbox.id}
-          className="flex items-center justify-between rounded-lg border p-3"
-        >
-          <div className="flex flex-col">
-            <span className="font-medium">{mailbox.name || mailbox.email}</span>
-            {mailbox.name && (
-              <span className="text-sm text-muted-foreground">
-                {mailbox.email}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">Connected</Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                // TODO: Implement disconnect functionality
-                toastError({
-                  description:
-                    "Disconnect functionality coming soon",
-                });
-              }}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-          </div>
+    <LoadingContent loading={isLoading} error={error}>
+      {sharedMailboxes.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+          No shared mailboxes connected yet
         </div>
-      ))}
-    </div>
+      ) : (
+        <div className="space-y-2">
+          {sharedMailboxes.map((mailbox) => (
+            <div
+              key={mailbox.id}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">{mailbox.name || mailbox.email}</span>
+                {mailbox.name && (
+                  <span className="text-sm text-muted-foreground">
+                    {mailbox.email}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">Connected</Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    // TODO: Implement disconnect functionality
+                    toastError({
+                      description:
+                        "Disconnect functionality coming soon",
+                    });
+                  }}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </LoadingContent>
   );
 }
 
@@ -156,42 +153,39 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
     [connectMailbox]
   );
 
-  if (isLoading) return <LoadingContent loading />;
-  if (error) return <LoadingContent error={error} />;
-
   const mailboxes = data?.mailboxes || [];
 
-  if (mailboxes.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-        No shared mailboxes found. Make sure you have delegated access to shared
-        mailboxes in your Microsoft account.
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-2">
-      {mailboxes.map((mailbox) => (
-        <div
-          key={mailbox.email}
-          className="flex items-center justify-between rounded-lg border p-3"
-        >
-          <div className="flex flex-col">
-            <span className="font-medium">{mailbox.displayName}</span>
-            <span className="text-sm text-muted-foreground">
-              {mailbox.email}
-            </span>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => handleConnect(mailbox.email, mailbox.displayName)}
-            disabled={isExecuting}
-          >
-            {isExecuting ? "Connecting..." : "Connect"}
-          </Button>
+    <LoadingContent loading={isLoading} error={error}>
+      {mailboxes.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+          No shared mailboxes found. Make sure you have delegated access to shared
+          mailboxes in your Microsoft account.
         </div>
-      ))}
-    </div>
+      ) : (
+        <div className="space-y-2">
+          {mailboxes.map((mailbox) => (
+            <div
+              key={mailbox.email}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">{mailbox.displayName}</span>
+                <span className="text-sm text-muted-foreground">
+                  {mailbox.email}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => handleConnect(mailbox.email, mailbox.displayName)}
+                disabled={isExecuting}
+              >
+                {isExecuting ? "Connecting..." : "Connect"}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </LoadingContent>
   );
 }
