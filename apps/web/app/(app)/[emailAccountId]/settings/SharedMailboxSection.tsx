@@ -124,12 +124,13 @@ function ConnectedMailboxesList() {
 }
 
 function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
+  const { emailAccountId } = useAccount();
   const { data, isLoading, error } = useSWR<SharedMailboxesResponse>(
     "/api/outlook/shared-mailboxes"
   );
 
   const { execute: connectMailbox, isExecuting } = useAction(
-    connectSharedMailboxAction,
+    connectSharedMailboxAction.bind(null, emailAccountId),
     {
       onSuccess: () => {
         toastSuccess({ description: "Shared mailbox connected!" });
