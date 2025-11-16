@@ -153,8 +153,9 @@ async function authMiddleware(
   }
 
   // Create a new request with auth info
-  const authReq = req.clone() as RequestWithAuth;
-  authReq.auth = { userId: session.user.id };
+  const authReq = Object.assign(req, {
+    auth: { userId: session.user.id },
+  }) as RequestWithAuth;
 
   return authReq;
 }
@@ -200,12 +201,13 @@ async function emailAccountMiddleware(
     });
 
     if (targetEmailAccount) {
-      const emailAccountReq = req.clone() as RequestWithEmailAccount;
-      emailAccountReq.auth = {
-        userId,
-        emailAccountId,
-        email: targetEmailAccount.email,
-      };
+      const emailAccountReq = Object.assign(authReq, {
+        auth: {
+          userId,
+          emailAccountId,
+          email: targetEmailAccount.email,
+        },
+      }) as RequestWithEmailAccount;
       return emailAccountReq;
     }
   }
@@ -219,8 +221,9 @@ async function emailAccountMiddleware(
   }
 
   // Create a new request with email account info
-  const emailAccountReq = req.clone() as RequestWithEmailAccount;
-  emailAccountReq.auth = { userId, emailAccountId, email };
+  const emailAccountReq = Object.assign(authReq, {
+    auth: { userId, emailAccountId, email },
+  }) as RequestWithEmailAccount;
 
   return emailAccountReq;
 }
@@ -261,9 +264,9 @@ async function emailProviderMiddleware(
       provider: emailAccount.account.provider,
     });
 
-    const providerReq = emailAccountReq.clone() as RequestWithEmailProvider;
-    providerReq.auth = emailAccountReq.auth;
-    providerReq.emailProvider = provider;
+    const providerReq = Object.assign(emailAccountReq, {
+      emailProvider: provider,
+    }) as RequestWithEmailProvider;
 
     return providerReq;
   } catch (error) {
