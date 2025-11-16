@@ -1326,7 +1326,7 @@ export class OutlookProvider implements EmailProvider {
     expirationDate: Date;
     subscriptionId?: string;
   } | null> {
-    const subscription = await watchOutlook(this.client.getClient());
+    const subscription = await watchOutlook(this.client);
 
     if (subscription.expirationDateTime) {
       const expirationDate = new Date(subscription.expirationDateTime);
@@ -1343,7 +1343,7 @@ export class OutlookProvider implements EmailProvider {
       logger.warn("No subscription ID provided for Outlook unwatch");
       return;
     }
-    await unwatchOutlook(this.client.getClient(), subscriptionId);
+    await unwatchOutlook(this.client, subscriptionId);
   }
 
   isReplyInThread(message: ParsedMessage): boolean {
