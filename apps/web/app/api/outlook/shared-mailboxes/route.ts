@@ -26,20 +26,27 @@ export const GET = withEmailAccount(async (req) => {
   try {
     // Fetch mailboxes the user has access to
     // This queries for all users where the current user has delegated access
-    const response = await fetch(
-      "https://graph.microsoft.com/v1.0/me/people?$filter=personType/subclass eq 'OrganizationUser'&$select=emailAddresses,displayName&$top=50",
-      {
-        headers: {
-          Authorization: `Bearer ${emailAccount.account.access_token}`,
-        },
-      }
-    );
+    const url = "https://graph.microsoft.com/v1.0/me/people?$filter=personType/subclass eq 'OrganizationUser'&$select=emailAddresses,displayName&$top=50";
+    console.log("[DEBUG] Fetching shared mailboxes from:", url);
+    
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${emailAccount.account.access_token}`,
+      },
+    });
 
     if (!response.ok) {
+      const errorData = await response.text();
+      console.error("[DEBUG] Microsoft API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorData,
+      });
       throw new Error(`Failed to fetch shared mailboxes: ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log("[DEBUG] Microsoft API response:", data);
     
     // Filter to only include mailboxes with valid email addresses
     const mailboxes = data.value
