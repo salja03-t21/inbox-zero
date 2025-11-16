@@ -265,7 +265,7 @@ export class OutlookProvider implements EmailProvider {
 
     // Get messages from Microsoft Graph API (well-known Sent Items folder)
     let request = client
-      .api(`${client.getBaseUrl()}/mailFolders('sentitems')/messages`)
+      .api(`${this.client.getBaseUrl()}/mailFolders('sentitems')/messages`)
       .select(
         "id,conversationId,subject,bodyPreview,receivedDateTime,from,toRecipients",
       )
