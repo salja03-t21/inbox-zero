@@ -1,7 +1,7 @@
 "use server";
 
 import { after } from "next/server";
-import { actionClient } from "@/utils/actions/safe-action";
+import { actionClient, actionClientUser } from "@/utils/actions/safe-action";
 import prisma from "@/utils/prisma";
 import { aiAnalyzePersona } from "@/utils/ai/knowledge/persona";
 import { createEmailProvider } from "@/utils/email/provider";
@@ -185,7 +185,7 @@ const disconnectSharedMailboxSchema = z.object({
   sharedMailboxId: z.string(),
 });
 
-export const disconnectSharedMailboxAction = actionClient
+export const disconnectSharedMailboxAction = actionClientUser
   .metadata({ name: "disconnectSharedMailbox" })
   .schema(disconnectSharedMailboxSchema)
   .action(
