@@ -85,7 +85,7 @@ export async function getFolderIds(client: OutlookClient) {
       try {
         const response = await client
           .getClient()
-          .api(`/me/mailFolders/${folderName}`)
+          .api(`${client.getBaseUrl()}/mailFolders/${folderName}`)
           .select("id")
           .get();
         return [key, response.id];
@@ -229,7 +229,7 @@ export async function queryBatchMessages(
   // Build the base request
   let request = client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,from,sender,toRecipients,receivedDateTime,isDraft,isRead,body,categories,parentFolderId",
     )
@@ -376,7 +376,7 @@ export async function queryMessagesWithFilters(
   // Build base request
   let request = client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,from,sender,toRecipients,receivedDateTime,isDraft,isRead,body,categories,parentFolderId",
     )
@@ -448,7 +448,7 @@ export async function getMessage(
 ): Promise<ParsedMessage> {
   const message = await client
     .getClient()
-    .api(`/me/messages/${messageId}`)
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,from,sender,toRecipients,receivedDateTime,isDraft,isRead,body,categories,parentFolderId",
     )
@@ -470,7 +470,7 @@ export async function getMessages(
   const top = options.maxResults || 20;
   let request = client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .top(top)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,body,from,toRecipients,receivedDateTime,isRead,categories,parentFolderId,isDraft",
