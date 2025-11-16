@@ -38,7 +38,7 @@ export async function createFilter(options: {
 
     const response: MessageRule = await client
       .getClient()
-      .api("/me/mailFolders/inbox/messageRules")
+      .api(`${client.getBaseUrl()}/mailFolders/inbox/messageRules`)
       .post(rule);
 
     return { status: 201, data: response };
@@ -78,7 +78,7 @@ export async function createAutoArchiveFilter({
 
     const response: MessageRule = await client
       .getClient()
-      .api("/me/mailFolders/inbox/messageRules")
+      .api(`${client.getBaseUrl()}/mailFolders/inbox/messageRules`)
       .post(rule);
 
     return { status: 201, data: response };
@@ -100,7 +100,7 @@ export async function deleteFilter(options: {
   try {
     await client
       .getClient()
-      .api(`/me/mailFolders/inbox/messageRules/${id}`)
+      .api(`${client.getBaseUrl()}/mailFolders/inbox/messageRules/${id}`)
       .delete();
 
     return { status: 204 };
@@ -114,7 +114,7 @@ export async function getFiltersList(options: { client: OutlookClient }) {
   try {
     const response: { value: MessageRule[] } = await options.client
       .getClient()
-      .api("/me/mailFolders/inbox/messageRules")
+      .api(`${options.client.getBaseUrl()}/mailFolders/inbox/messageRules`)
       .get();
 
     return response;
@@ -143,7 +143,7 @@ export async function createCategoryFilter({
     // First, ensure the category exists
     const categories: { value: OutlookCategory[] } = await client
       .getClient()
-      .api("/me/outlook/masterCategories")
+      .api(`${client.getBaseUrl()}/outlook/masterCategories`)
       .get();
 
     let category = categories.value.find(
@@ -154,7 +154,7 @@ export async function createCategoryFilter({
       // Create the category if it doesn't exist
       category = await client
         .getClient()
-        .api("/me/outlook/masterCategories")
+        .api(`${client.getBaseUrl()}/outlook/masterCategories`)
         .post({
           displayName: categoryName,
           color: "preset0", // Default color
@@ -214,7 +214,7 @@ export async function updateFilter({
 
     const response: MessageRule = await client
       .getClient()
-      .api(`/me/mailFolders/inbox/messageRules/${id}`)
+      .api(`${client.getBaseUrl()}/mailFolders/inbox/messageRules/${id}`)
       .patch(rule);
 
     return response;
