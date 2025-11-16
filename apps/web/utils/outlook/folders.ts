@@ -31,7 +31,7 @@ export async function getOutlookRootFolders(
   // First, get all root folders without expansion (to avoid limits)
   const response: { value: MailFolder[] } = await client
     .getClient()
-    .api("/me/mailFolders")
+    .api(`${client.getBaseUrl()}/mailFolders`)
     .select(fields)
     .top(999)
     .get();
@@ -72,7 +72,7 @@ export async function getOutlookChildFolders(
         ? await client.getClient().api(nextLink).get()
         : await client
             .getClient()
-            .api(`/me/mailFolders/${folderId}/childFolders`)
+            .api(`${client.getBaseUrl()}/mailFolders/${folderId}/childFolders`)
             .select(fields)
             .top(999)
             .expand(
@@ -110,7 +110,7 @@ async function findOutlookFolderByName(
       "@odata.nextLink"?: string;
     } = await client
       .getClient()
-      .api(`/me/mailFolders/${inboxId}/childFolders`)
+      .api(`${client.getBaseUrl()}/mailFolders/${inboxId}/childFolders`)
       .filter(`displayName eq '${escapedFolderName}'`)
       .select("id,displayName")
       .top(100)
@@ -144,7 +144,7 @@ async function findOutlookFolderByName(
     const rootResponse: { value: MailFolder[]; "@odata.nextLink"?: string } =
       await client
         .getClient()
-        .api("/me/mailFolders")
+        .api(`${client.getBaseUrl()}/mailFolders`)
         .filter(`displayName eq '${escapedFolderName}'`)
         .select("id,displayName")
         .top(200)
@@ -260,7 +260,7 @@ export async function getOrCreateOutlookFolderIdByName(
 
     const response = await client
       .getClient()
-      .api(`/me/mailFolders/${inboxId}/childFolders`)
+      .api(`${client.getBaseUrl()}/mailFolders/${inboxId}/childFolders`)
       .post({
         displayName: trimmedName,
       });
@@ -327,7 +327,7 @@ export async function moveMessageToFolder(
   messageId: string,
   destinationFolderId: string,
 ): Promise<void> {
-  await client.getClient().api(`/me/messages/${messageId}/move`).post({
+  await client.getClient().api(`${client.getBaseUrl()}/messages/${messageId}/move`).post({
     destinationId: destinationFolderId,
   });
 }
@@ -340,7 +340,7 @@ export async function markMessageAsRead(
   messageId: string,
   isRead: boolean,
 ): Promise<void> {
-  await client.getClient().api(`/me/messages/${messageId}`).patch({
+  await client.getClient().api(`${client.getBaseUrl()}/messages/${messageId}`).patch({
     isRead,
   });
 }
@@ -356,7 +356,7 @@ export async function flagMessage(
 ): Promise<void> {
   await client
     .getClient()
-    .api(`/me/messages/${messageId}`)
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
     .patch({
       flag: isFlagged
         ? { flagStatus: "flagged" }
@@ -380,7 +380,7 @@ export async function getWellKnownFolderId(
 ): Promise<string> {
   const response = await client
     .getClient()
-    .api(`/me/mailFolders/${folderName}`)
+    .api(`${client.getBaseUrl()}/mailFolders/${folderName}`)
     .select("id")
     .get();
 
