@@ -50,7 +50,7 @@ export async function sendEmailWithHtml(
 
   const result: Message = await client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .post(message);
   return result;
 }
@@ -91,7 +91,7 @@ export async function replyToEmail(
   };
 
   // Send the email immediately using the sendMail endpoint
-  const result = await client.getClient().api("/me/sendMail").post({
+  const result = await client.getClient().api(`${client.getBaseUrl()}/sendMail`).post({
     message: replyMessage,
     saveToSentItems: true,
   });
@@ -113,7 +113,7 @@ export async function forwardEmail(
   // Get the original message
   const originalMessage: Message = await client
     .getClient()
-    .api(`/me/messages/${options.messageId}`)
+    .api(`${client.getBaseUrl()}/messages/${options.messageId}`)
     .get();
 
   const message: ParsedMessage = {
@@ -153,7 +153,7 @@ export async function forwardEmail(
 
   const result = await client
     .getClient()
-    .api(`/me/messages/${options.messageId}/forward`)
+    .api(`${client.getBaseUrl()}/messages/${options.messageId}/forward`)
     .post({ message: forwardMessage });
 
   return result;
@@ -190,11 +190,11 @@ export async function draftEmail(
   // This ensures the draft is linked to the original message as a reply
   const replyDraft: Message = await client
     .getClient()
-    .api(`/me/messages/${originalEmail.id}/createReply`)
+    .api(`${client.getBaseUrl()}/messages/${originalEmail.id}/createReply`)
     .post({});
 
   // Update the draft with our content
-  const updateRequest = client.getClient().api(`/me/messages/${replyDraft.id}`);
+  const updateRequest = client.getClient().api(`${client.getBaseUrl()}/messages/${replyDraft.id}`);
 
   // To handle change key error
   const etag = (replyDraft as { "@odata.etag"?: string })?.["@odata.etag"];
