@@ -61,9 +61,9 @@ export class OutlookClient {
    * For shared mailboxes, use /users/{email} instead of /me
    */
   getBaseUrl(): string {
-    return this.sharedMailboxEmail 
-      ? `/users/${encodeURIComponent(this.sharedMailboxEmail)}` 
-      : '/me';
+    return this.sharedMailboxEmail
+      ? `/users/${encodeURIComponent(this.sharedMailboxEmail)}`
+      : "/me";
   }
 
   // Helper methods for common operations
@@ -76,7 +76,9 @@ export class OutlookClient {
 
   async getUserPhoto(): Promise<string | null> {
     try {
-      const photoResponse = await this.client.api(`${this.getBaseUrl()}/photo/$value`).get();
+      const photoResponse = await this.client
+        .api(`${this.getBaseUrl()}/photo/$value`)
+        .get();
 
       if (photoResponse) {
         const arrayBuffer = await photoResponse.arrayBuffer();
@@ -92,7 +94,10 @@ export class OutlookClient {
 }
 
 // Helper to create OutlookClient instance
-const createOutlookClient = (accessToken: string, sharedMailboxEmail?: string | null) => {
+const createOutlookClient = (
+  accessToken: string,
+  sharedMailboxEmail?: string | null,
+) => {
   return new OutlookClient(accessToken, sharedMailboxEmail);
 };
 
@@ -191,14 +196,14 @@ export function getLinkingOAuth2Url() {
   const baseUrl =
     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
   const redirectUri = `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`;
-  
+
   // Debug logging
   console.log("[DEBUG] Microsoft OAuth URL generation:", {
     NEXT_PUBLIC_BASE_URL: env.NEXT_PUBLIC_BASE_URL,
     redirectUri,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
-  
+
   const params = new URLSearchParams({
     client_id: env.MICROSOFT_CLIENT_ID,
     response_type: "code",
@@ -209,7 +214,7 @@ export function getLinkingOAuth2Url() {
 
   const finalUrl = `${baseUrl}?${params.toString()}`;
   console.log("[DEBUG] Final Microsoft OAuth URL:", finalUrl);
-  
+
   return finalUrl;
 }
 

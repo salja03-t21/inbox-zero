@@ -100,7 +100,9 @@ export async function getOutlookClientForEmailId({
     refreshToken: account?.account.refresh_token || "",
     expiresAt: account?.account.expires_at?.getTime() ?? null,
     emailAccountId,
-    sharedMailboxEmail: account?.isSharedMailbox ? account.sharedMailboxOwner : null,
+    sharedMailboxEmail: account?.isSharedMailbox
+      ? account.sharedMailboxOwner
+      : null,
   });
   return outlook;
 }
@@ -121,7 +123,9 @@ async function getTokens({ emailAccountId }: { emailAccountId: string }) {
     accessToken: emailAccount?.account.access_token,
     refreshToken: emailAccount?.account.refresh_token,
     expiresAt: emailAccount?.account.expires_at?.getTime() ?? null,
-    sharedMailboxEmail: emailAccount?.isSharedMailbox ? emailAccount.sharedMailboxOwner : null,
+    sharedMailboxEmail: emailAccount?.isSharedMailbox
+      ? emailAccount.sharedMailboxOwner
+      : null,
   };
 }
 

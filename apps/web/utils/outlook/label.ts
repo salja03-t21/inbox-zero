@@ -200,9 +200,12 @@ export async function labelMessage({
   messageId: string;
   categories: string[];
 }) {
-  return client.getClient().api(`${client.getBaseUrl()}/messages/${messageId}`).patch({
-    categories,
-  });
+  return client
+    .getClient()
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
+    .patch({
+      categories,
+    });
 }
 
 export async function labelThread({
@@ -310,7 +313,10 @@ export async function archiveThread({
   const wellKnownFolders = Object.keys(WELL_KNOWN_FOLDERS);
   if (!wellKnownFolders.includes(folderId.toLowerCase())) {
     try {
-      await client.getClient().api(`${client.getBaseUrl()}/mailFolders/${folderId}`).get();
+      await client
+        .getClient()
+        .api(`${client.getBaseUrl()}/mailFolders/${folderId}`)
+        .get();
     } catch (error) {
       logger.warn(
         "Custom destination folder not found, skipping archive operation",
@@ -441,9 +447,12 @@ export async function archiveThread({
         await Promise.allSettled(movePromises);
       } else {
         // If no messages found, try treating threadId as a messageId
-        await client.getClient().api(`${client.getBaseUrl()}/messages/${threadId}/move`).post({
-          destinationId: folderId,
-        });
+        await client
+          .getClient()
+          .api(`${client.getBaseUrl()}/messages/${threadId}/move`)
+          .post({
+            destinationId: folderId,
+          });
       }
 
       // Publish the archive action
@@ -497,9 +506,12 @@ export async function markReadThread({
     // Update each message in the thread
     await Promise.all(
       messages.value.map((message: { id: string }) =>
-        client.getClient().api(`${client.getBaseUrl()}/messages/${message.id}`).patch({
-          isRead: read,
-        }),
+        client
+          .getClient()
+          .api(`${client.getBaseUrl()}/messages/${message.id}`)
+          .patch({
+            isRead: read,
+          }),
       ),
     );
   } catch (error) {
@@ -527,16 +539,22 @@ export async function markReadThread({
         // Update each message in the thread
         await Promise.all(
           threadMessages.map((message: { id: string }) =>
-            client.getClient().api(`${client.getBaseUrl()}/messages/${message.id}`).patch({
-              isRead: read,
-            }),
+            client
+              .getClient()
+              .api(`${client.getBaseUrl()}/messages/${message.id}`)
+              .patch({
+                isRead: read,
+              }),
           ),
         );
       } else {
         // If no messages found, try treating threadId as a messageId
-        await client.getClient().api(`${client.getBaseUrl()}/messages/${threadId}`).patch({
-          isRead: read,
-        });
+        await client
+          .getClient()
+          .api(`${client.getBaseUrl()}/messages/${threadId}`)
+          .patch({
+            isRead: read,
+          });
       }
     } catch (directError) {
       logger.error("Failed to mark message as read", {
