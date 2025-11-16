@@ -164,7 +164,7 @@ export class OutlookProvider implements EmailProvider {
 
     const response = await this.client
       .getClient()
-      .api("/me/messages")
+      .api(`${this.client.getBaseUrl()}/messages`)
       .filter(
         `internetMessageId eq '${escapeODataString(messageIdWithBrackets)}'`,
       )
@@ -265,7 +265,7 @@ export class OutlookProvider implements EmailProvider {
 
     // Get messages from Microsoft Graph API (well-known Sent Items folder)
     let request = client
-      .api("/me/mailFolders('sentitems')/messages")
+      .api(`${client.getBaseUrl()}/mailFolders('sentitems')/messages`)
       .select(
         "id,conversationId,subject,bodyPreview,receivedDateTime,from,toRecipients",
       )
@@ -365,7 +365,7 @@ export class OutlookProvider implements EmailProvider {
     // Get current message categories to avoid replacing them
     const message = await this.client
       .getClient()
-      .api(`/me/messages/${messageId}`)
+      .api(`${this.client.getBaseUrl()}/messages/${messageId}`)
       .select("categories")
       .get();
 
@@ -592,7 +592,7 @@ export class OutlookProvider implements EmailProvider {
       this.getLabels(),
       this.client
         .getClient()
-        .api("/me/messages")
+        .api(`${this.client.getBaseUrl()}/messages`)
         .filter(`conversationId eq '${escapeODataString(threadId)}'`)
         .select("id,categories")
         .get() as Promise<{
@@ -639,7 +639,7 @@ export class OutlookProvider implements EmailProvider {
   async deleteLabel(labelId: string): Promise<void> {
     await this.client
       .getClient()
-      .api(`/me/outlook/masterCategories/${labelId}`)
+      .api(`${this.client.getBaseUrl()}/outlook/masterCategories/${labelId}`)
       .delete();
   }
 
