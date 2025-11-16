@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { FormSection, FormSectionLeft } from "@/components/Form";
@@ -25,11 +25,17 @@ import { PlusIcon, TrashIcon } from "lucide-react";
 export function SharedMailboxSection() {
   const { emailAccount } = useAccount();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Only show this section for Microsoft accounts
   if (!emailAccount || !isMicrosoftProvider(emailAccount.account.provider)) {
     return null;
   }
+
+  const handleConnect = () => {
+    setDialogOpen(false);
+    setRefreshTrigger(prev => prev + 1); // Trigger refresh
+  };
 
   return (
     <FormSection id="shared-mailboxes">
@@ -38,7 +44,7 @@ export function SharedMailboxSection() {
         description="Connect to shared mailboxes you have access to. This allows you to manage emails from shared inboxes like support@company.com."
       />
       <div className="space-y-4">
-        <ConnectedMailboxesList />
+        <ConnectedMailboxesList refreshTrigger={refreshTrigger} />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline">
@@ -55,7 +61,7 @@ export function SharedMailboxSection() {
               </DialogDescription>
             </DialogHeader>
             <AvailableMailboxesList
-              onConnect={() => setDialogOpen(false)}
+              onConnect={handleConnect}
             />
           </DialogContent>
         </Dialog>
@@ -64,7 +70,7 @@ export function SharedMailboxSection() {
   );
 }
 
-function ConnectedMailboxesList() {
+function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) {
   const { emailAccount } = useAccount();
   
   // Fetch connected shared mailboxes
@@ -75,6 +81,13 @@ function ConnectedMailboxesList() {
       name: string | null;
     }>;
   }>(emailAccount ? `/api/user/shared-mailboxes?emailAccountId=${emailAccount.id}` : null);
+  
+  // Refresh when trigger changes
+  React.useEffect(() => {
+    if (refreshTrigger > 0) {
+      mutate();
+    }
+  }, [refreshTrigger, mutate]);
 
   const sharedMailboxes = data?.sharedMailboxes || [];
 
