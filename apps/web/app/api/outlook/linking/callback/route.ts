@@ -29,7 +29,8 @@ export const GET = withError(async (request) => {
     OUTLOOK_LINKING_STATE_COOKIE_NAME,
   )?.value;
 
-  const redirectUrl = new URL("/accounts", request.nextUrl.origin);
+  // Use the configured base URL instead of request origin to avoid proxy/tunnel issues
+  const redirectUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
   const response = NextResponse.redirect(redirectUrl);
 
   if (!storedState || !receivedState || storedState !== receivedState) {
