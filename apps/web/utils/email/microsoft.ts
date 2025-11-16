@@ -477,7 +477,7 @@ export class OutlookProvider implements EmailProvider {
   }
 
   async markReadMessage(messageId: string): Promise<void> {
-    await this.client.getClient().api(`/me/messages/${messageId}`).patch({
+    await this.client.getClient().api(`${this.client.getBaseUrl()}/messages/${messageId}`).patch({
       isRead: true,
     });
   }
@@ -509,7 +509,7 @@ export class OutlookProvider implements EmailProvider {
     try {
       const escapedThreadId = escapeODataString(threadId);
       const response = await client
-        .api("/me/messages")
+        .api(`${this.client.getBaseUrl()}/messages`)
         .filter(
           `conversationId eq '${escapedThreadId}' and parentFolderId eq 'inbox'`,
         )
@@ -1026,12 +1026,12 @@ export class OutlookProvider implements EmailProvider {
       const client = this.client.getClient();
 
       // Determine endpoint and build filters based on query type
-      let endpoint = "/me/messages";
+      let endpoint = `${this.client.getBaseUrl()}/messages`;
       const filters: string[] = [];
 
       // Route to appropriate endpoint based on type
       if (type === "sent") {
-        endpoint = "/me/mailFolders('sentitems')/messages";
+        endpoint = `${this.client.getBaseUrl()}/mailFolders('sentitems')/messages`;
       } else if (type === "all") {
         // For "all" type, use default messages endpoint with folder filter
         filters.push(
@@ -1264,7 +1264,7 @@ export class OutlookProvider implements EmailProvider {
     try {
       const response: { value: Message[] } = await this.client
         .getClient()
-        .api("/me/messages")
+        .api(`${this.client.getBaseUrl()}/messages`)
         .filter(
           `from/emailAddress/address eq '${escapeODataString(options.from)}' and receivedDateTime lt ${options.date.toISOString()}`,
         )

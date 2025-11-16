@@ -75,7 +75,7 @@ async function performOutlookAction({
     // Get all messages in the conversation
     const client = outlook.getClient();
     const response: { value: { id: string }[] } = await client
-      .api("/me/messages")
+      .api(`${outlook.getBaseUrl()}/messages`)
       .filter(`conversationId eq '${conversationId}'`)
       .select("id")
       .get();
