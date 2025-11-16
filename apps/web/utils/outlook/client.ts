@@ -190,6 +190,7 @@ export function getLinkingOAuth2Url() {
     response_type: "code",
     redirect_uri: redirectUri,
     scope: SCOPES.join(" "),
+    prompt: "consent", // Force re-consent to clear cached redirect URI
   });
 
   const finalUrl = `${baseUrl}?${params.toString()}`;
