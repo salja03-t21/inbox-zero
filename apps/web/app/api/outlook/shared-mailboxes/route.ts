@@ -23,47 +23,16 @@ export const GET = withEmailAccount(async (req) => {
       { status: 404 }
     );
   }
-  try {
-    // Fetch mailboxes the user has access to
-    // This queries for all users where the current user has delegated access
-    const url = "https://graph.microsoft.com/v1.0/me/people?$filter=personType/subclass eq 'OrganizationUser'&$select=emailAddresses,displayName&$top=50";
-    console.log("[DEBUG] Fetching shared mailboxes from:", url);
-    
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${emailAccount.account.access_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error("[DEBUG] Microsoft API error:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorData,
-      });
-      throw new Error(`Failed to fetch shared mailboxes: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log("[DEBUG] Microsoft API response:", data);
-    
-    // Filter to only include mailboxes with valid email addresses
-    const mailboxes = data.value
-      .filter((person: any) => person.emailAddresses && person.emailAddresses.length > 0)
-      .map((person: any) => ({
-        email: person.emailAddresses[0].address,
-        displayName: person.displayName,
-      }));
-
-    return NextResponse.json({ mailboxes });
-  } catch (error) {
-    console.error("Error fetching shared mailboxes:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch shared mailboxes" },
-      { status: 500 }
-    );
-  }
+  // NOTE: Microsoft Graph API does not provide a direct endpoint to list shared mailboxes
+  // that a user has delegated access to. Users must manually enter the shared mailbox email.
+  // This is a known limitation of the MS Graph API.
+  // See: https://github.com/microsoftgraph/msgraph-sdk-dotnet/issues/1634
+  
+  return NextResponse.json({ mailboxes: [] });
+  // To implement automatic discovery, you would need:
+  // 1. Exchange Online PowerShell access (more permissions)
+  // 2. User to grant additional permissions in Azure
+  // 3. Or: Use "Get-Mailbox -RecipientTypeDetails SharedMailbox" via Exchange
 });
 
 export type SharedMailboxesResponse = {

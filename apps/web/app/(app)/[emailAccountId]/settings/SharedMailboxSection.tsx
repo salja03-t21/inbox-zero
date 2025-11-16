@@ -125,6 +125,88 @@ function ConnectedMailboxesList() {
 
 function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
   const { emailAccountId } = useAccount();
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualName, setManualName] = useState("");
+
+  const { execute: connectMailbox, isExecuting } = useAction(
+    connectSharedMailboxAction.bind(null, emailAccountId),
+    {
+      onSuccess: () => {
+        toastSuccess({ description: "Shared mailbox connected!" });
+        setManualEmail("");
+        setManualName("");
+        onConnect();
+      },
+      onError: (error) => {
+        toastError({
+          description: `Failed to connect: ${error.error.serverError || ""}`,
+        });
+      },
+    }
+  );
+
+  const handleManualConnect = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!manualEmail.trim()) {
+        toastError({ description: "Please enter an email address" });
+        return;
+      }
+      connectMailbox({
+        sharedMailboxEmail: manualEmail.trim(),
+        sharedMailboxName: manualName.trim() || manualEmail.trim(),
+      });
+    },
+    [manualEmail, manualName, connectMailbox]
+  );
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleManualConnect} className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Shared Mailbox Email
+          </label>
+          <input
+            type="email"
+            placeholder="shared@company.com"
+            value={manualEmail}
+            onChange={(e) => setManualEmail(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md text-sm"
+            disabled={isExecuting}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Display Name (optional)
+          </label>
+          <input
+            type="text"
+            placeholder="e.g., Support Team"
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md text-sm"
+            disabled={isExecuting}
+          />
+        </div>
+        <Button type="submit" disabled={isExecuting} className="w-full">
+          {isExecuting ? "Connecting..." : "Connect Shared Mailbox"}
+        </Button>
+      </form>
+      <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+        <p className="font-medium mb-1">Note:</p>
+        <p>
+          Microsoft Graph API doesn't support listing shared mailboxes directly.
+          Please enter the email address of the shared mailbox you have delegated
+          access to in your Microsoft account.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
+  const { emailAccountId } = useAccount();
   const { data, isLoading, error } = useSWR<SharedMailboxesResponse>(
     "/api/outlook/shared-mailboxes"
   );
