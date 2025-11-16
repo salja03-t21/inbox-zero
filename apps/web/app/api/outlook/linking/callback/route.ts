@@ -121,6 +121,16 @@ export const GET = withError(async (request) => {
         user: { select: { name: true, email: true } },
       },
     });
+    
+    // Also get the corresponding EmailAccount for later updates
+    const existingEmailAccount = existingAccount ? await prisma.emailAccount.findFirst({
+      where: {
+        accountId: existingAccount.id,
+      },
+      select: {
+        id: true,
+      },
+    }) : null;
 
     if (!existingAccount) {
       if (action === "merge") {
@@ -234,23 +244,25 @@ export const GET = withError(async (request) => {
       targetUserId,
     });
 
-    await prisma.$transaction([
-      prisma.account.update({
-        where: { id: existingAccount.id },
-        data: { userId: targetUserId },
-      }),
-      prisma.emailAccount.update({
-        where: { accountId: existingAccount.id },
-        data: {
-          userId: targetUserId,
-          name: existingAccount.user.name,
-          email: existingAccount.user.email,
-        },
-      }),
-      prisma.user.delete({
-        where: { id: existingAccount.userId },
-      }),
-    ]);
+    if (existingEmailAccount) {
+      await prisma.$transaction([
+        prisma.account.update({
+          where: { id: existingAccount.id },
+          data: { userId: targetUserId },
+        }),
+        prisma.emailAccount.update({
+          where: { id: existingEmailAccount.id },
+          data: {
+            userId: targetUserId,
+            name: existingAccount.user.name,
+            email: existingAccount.user.email,
+          },
+        }),
+        prisma.user.delete({
+          where: { id: existingAccount.userId },
+        }),
+      ]);
+    }
 
     logger.info("Account re-assigned to user.", {
       email: providerEmail,
