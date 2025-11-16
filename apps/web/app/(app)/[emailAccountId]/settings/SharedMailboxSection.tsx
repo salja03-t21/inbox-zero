@@ -7,7 +7,7 @@ import { FormSection, FormSectionLeft } from "@/components/Form";
 import { LoadingContent } from "@/components/LoadingContent";
 import { toastError, toastSuccess } from "@/components/Toast";
 import { useAction } from "next-safe-action/hooks";
-import { connectSharedMailboxAction } from "@/utils/actions/email-account";
+import { connectSharedMailboxAction, disconnectSharedMailboxAction } from "@/utils/actions/email-account";
 import type { SharedMailboxesResponse } from "@/app/api/outlook/shared-mailboxes/route";
 import { Badge } from "@/components/ui/badge";
 import { useAccount } from "@/providers/EmailAccountProvider";
@@ -89,6 +89,30 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
     }
   }, [refreshTrigger, mutate]);
 
+  const { execute: disconnectMailbox, isExecuting: isDisconnecting } = useAction(
+    disconnectSharedMailboxAction,
+    {
+      onSuccess: () => {
+        toastSuccess({ description: "Shared mailbox disconnected!" });
+        mutate(); // Refresh the list
+      },
+      onError: (error) => {
+        toastError({
+          description: `Failed to disconnect: ${error.error.serverError || ""}`,
+        });
+      },
+    }
+  );
+
+  const handleDisconnect = useCallback(
+    (mailboxId: string, mailboxName: string) => {
+      if (confirm(`Are you sure you want to disconnect "${mailboxName}"?`)) {
+        disconnectMailbox({ sharedMailboxId: mailboxId });
+      }
+    },
+    [disconnectMailbox]
+  );
+
   const sharedMailboxes = data?.sharedMailboxes || [];
 
   return (
@@ -117,13 +141,8 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    // TODO: Implement disconnect functionality
-                    toastError({
-                      description:
-                        "Disconnect functionality coming soon",
-                    });
-                  }}
+                  onClick={() => handleDisconnect(mailbox.id, mailbox.name || mailbox.email)}
+                  disabled={isDisconnecting}
                 >
                   <TrashIcon className="h-4 w-4" />
                 </Button>

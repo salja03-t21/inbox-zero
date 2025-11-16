@@ -180,3 +180,47 @@ export const connectSharedMailboxAction = actionClient
       return { sharedMailboxId: sharedMailbox.id };
     },
   );
+
+const disconnectSharedMailboxSchema = z.object({
+  sharedMailboxId: z.string(),
+});
+
+export const disconnectSharedMailboxAction = actionClient
+  .metadata({ name: "disconnectSharedMailbox" })
+  .schema(disconnectSharedMailboxSchema)
+  .action(
+    async ({
+      ctx: { userId, logger },
+      parsedInput: { sharedMailboxId },
+    }) => {
+      logger.info("Disconnecting shared mailbox", {
+        sharedMailboxId,
+      });
+
+      // Verify the shared mailbox belongs to the user and is actually a shared mailbox
+      const sharedMailbox = await prisma.emailAccount.findFirst({
+        where: {
+          id: sharedMailboxId,
+          userId,
+          isSharedMailbox: true,
+        },
+      });
+
+      if (!sharedMailbox) {
+        throw new SafeError(
+          "Shared mailbox not found or you don't have permission to disconnect it",
+        );
+      }
+
+      // Delete the shared mailbox EmailAccount (this won't delete the Account/OAuth tokens)
+      await prisma.emailAccount.delete({
+        where: { id: sharedMailboxId },
+      });
+
+      logger.info("Shared mailbox disconnected successfully", {
+        sharedMailboxId,
+      });
+
+      return { success: true };
+    },
+  );
