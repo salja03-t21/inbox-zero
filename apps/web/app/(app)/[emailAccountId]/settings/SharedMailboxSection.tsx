@@ -7,7 +7,10 @@ import { FormSection, FormSectionLeft } from "@/components/Form";
 import { LoadingContent } from "@/components/LoadingContent";
 import { toastError, toastSuccess } from "@/components/Toast";
 import { useAction } from "next-safe-action/hooks";
-import { connectSharedMailboxAction, disconnectSharedMailboxAction } from "@/utils/actions/email-account";
+import {
+  connectSharedMailboxAction,
+  disconnectSharedMailboxAction,
+} from "@/utils/actions/email-account";
 import type { SharedMailboxesResponse } from "@/app/api/outlook/shared-mailboxes/route";
 import { Badge } from "@/components/ui/badge";
 import { useAccount } from "@/providers/EmailAccountProvider";
@@ -34,7 +37,7 @@ export function SharedMailboxSection() {
 
   const handleConnect = () => {
     setDialogOpen(false);
-    setRefreshTrigger(prev => prev + 1); // Trigger refresh
+    setRefreshTrigger((prev) => prev + 1); // Trigger refresh
   };
 
   return (
@@ -60,9 +63,7 @@ export function SharedMailboxSection() {
                 manage emails from this mailbox.
               </DialogDescription>
             </DialogHeader>
-            <AvailableMailboxesList
-              onConnect={handleConnect}
-            />
+            <AvailableMailboxesList onConnect={handleConnect} />
           </DialogContent>
         </Dialog>
       </div>
@@ -70,9 +71,13 @@ export function SharedMailboxSection() {
   );
 }
 
-function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) {
+function ConnectedMailboxesList({
+  refreshTrigger,
+}: {
+  refreshTrigger: number;
+}) {
   const { emailAccount } = useAccount();
-  
+
   // Fetch connected shared mailboxes
   const { data, isLoading, error, mutate } = useSWR<{
     sharedMailboxes: Array<{
@@ -80,8 +85,12 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
       email: string;
       name: string | null;
     }>;
-  }>(emailAccount ? `/api/user/shared-mailboxes?emailAccountId=${emailAccount.id}` : null);
-  
+  }>(
+    emailAccount
+      ? `/api/user/shared-mailboxes?emailAccountId=${emailAccount.id}`
+      : null,
+  );
+
   // Refresh when trigger changes
   React.useEffect(() => {
     if (refreshTrigger > 0) {
@@ -89,9 +98,8 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
     }
   }, [refreshTrigger, mutate]);
 
-  const { execute: disconnectMailbox, isExecuting: isDisconnecting } = useAction(
-    disconnectSharedMailboxAction,
-    {
+  const { execute: disconnectMailbox, isExecuting: isDisconnecting } =
+    useAction(disconnectSharedMailboxAction, {
       onSuccess: () => {
         toastSuccess({ description: "Shared mailbox disconnected!" });
         mutate(); // Refresh the list
@@ -101,8 +109,7 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
           description: `Failed to disconnect: ${error.error.serverError || ""}`,
         });
       },
-    }
-  );
+    });
 
   const handleDisconnect = useCallback(
     (mailboxId: string, mailboxName: string) => {
@@ -110,7 +117,7 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
         disconnectMailbox({ sharedMailboxId: mailboxId });
       }
     },
-    [disconnectMailbox]
+    [disconnectMailbox],
   );
 
   const sharedMailboxes = data?.sharedMailboxes || [];
@@ -129,7 +136,9 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
               className="flex items-center justify-between rounded-lg border p-3"
             >
               <div className="flex flex-col">
-                <span className="font-medium">{mailbox.name || mailbox.email}</span>
+                <span className="font-medium">
+                  {mailbox.name || mailbox.email}
+                </span>
                 {mailbox.name && (
                   <span className="text-sm text-muted-foreground">
                     {mailbox.email}
@@ -141,7 +150,9 @@ function ConnectedMailboxesList({ refreshTrigger }: { refreshTrigger: number }) 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleDisconnect(mailbox.id, mailbox.name || mailbox.email)}
+                  onClick={() =>
+                    handleDisconnect(mailbox.id, mailbox.name || mailbox.email)
+                  }
                   disabled={isDisconnecting}
                 >
                   <TrashIcon className="h-4 w-4" />
@@ -174,7 +185,7 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
           description: `Failed to connect: ${error.error.serverError || ""}`,
         });
       },
-    }
+    },
   );
 
   const handleManualConnect = useCallback(
@@ -189,7 +200,7 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
         sharedMailboxName: manualName.trim() || manualEmail.trim(),
       });
     },
-    [manualEmail, manualName, connectMailbox]
+    [manualEmail, manualName, connectMailbox],
   );
 
   return (
@@ -229,8 +240,8 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
         <p className="font-medium mb-1">Note:</p>
         <p>
           Microsoft Graph API doesn't support listing shared mailboxes directly.
-          Please enter the email address of the shared mailbox you have delegated
-          access to in your Microsoft account.
+          Please enter the email address of the shared mailbox you have
+          delegated access to in your Microsoft account.
         </p>
       </div>
     </div>
@@ -240,7 +251,7 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
 function OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
   const { emailAccountId } = useAccount();
   const { data, isLoading, error } = useSWR<SharedMailboxesResponse>(
-    "/api/outlook/shared-mailboxes"
+    "/api/outlook/shared-mailboxes",
   );
 
   const { execute: connectMailbox, isExecuting } = useAction(
@@ -255,7 +266,7 @@ function OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
           description: `Failed to connect: ${error.error.serverError || ""}`,
         });
       },
-    }
+    },
   );
 
   const handleConnect = useCallback(
@@ -265,7 +276,7 @@ function OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
         sharedMailboxName: displayName,
       });
     },
-    [connectMailbox]
+    [connectMailbox],
   );
 
   const mailboxes = data?.mailboxes || [];
@@ -274,8 +285,8 @@ function OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
     <LoadingContent loading={isLoading} error={error}>
       {mailboxes.length === 0 ? (
         <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-          No shared mailboxes found. Make sure you have delegated access to shared
-          mailboxes in your Microsoft account.
+          No shared mailboxes found. Make sure you have delegated access to
+          shared mailboxes in your Microsoft account.
         </div>
       ) : (
         <div className="space-y-2">
@@ -292,7 +303,9 @@ function OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
               </div>
               <Button
                 size="sm"
-                onClick={() => handleConnect(mailbox.email, mailbox.displayName)}
+                onClick={() =>
+                  handleConnect(mailbox.email, mailbox.displayName)
+                }
                 disabled={isExecuting}
               >
                 {isExecuting ? "Connecting..." : "Connect"}

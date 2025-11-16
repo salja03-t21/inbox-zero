@@ -34,6 +34,9 @@ export async function watchOutlook(client: OutlookClient) {
   };
 }
 
-export async function unwatchOutlook(client: OutlookClient, subscriptionId: string) {
+export async function unwatchOutlook(
+  client: OutlookClient,
+  subscriptionId: string,
+) {
   await client.getClient().api(`/subscriptions/${subscriptionId}`).delete();
 }

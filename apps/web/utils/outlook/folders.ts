@@ -327,9 +327,12 @@ export async function moveMessageToFolder(
   messageId: string,
   destinationFolderId: string,
 ): Promise<void> {
-  await client.getClient().api(`${client.getBaseUrl()}/messages/${messageId}/move`).post({
-    destinationId: destinationFolderId,
-  });
+  await client
+    .getClient()
+    .api(`${client.getBaseUrl()}/messages/${messageId}/move`)
+    .post({
+      destinationId: destinationFolderId,
+    });
 }
 
 /**
@@ -340,9 +343,12 @@ export async function markMessageAsRead(
   messageId: string,
   isRead: boolean,
 ): Promise<void> {
-  await client.getClient().api(`${client.getBaseUrl()}/messages/${messageId}`).patch({
-    isRead,
-  });
+  await client
+    .getClient()
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
+    .patch({
+      isRead,
+    });
 }
 
 /**

@@ -96,16 +96,18 @@ export const GET = withError(async (request) => {
         user: { select: { name: true, email: true } },
       },
     });
-    
+
     // Also get the corresponding EmailAccount for later updates
-    const existingEmailAccount = existingAccount ? await prisma.emailAccount.findFirst({
-      where: {
-        accountId: existingAccount.id,
-      },
-      select: {
-        id: true,
-      },
-    }) : null;
+    const existingEmailAccount = existingAccount
+      ? await prisma.emailAccount.findFirst({
+          where: {
+            accountId: existingAccount.id,
+          },
+          select: {
+            id: true,
+          },
+        })
+      : null;
 
     if (!existingAccount) {
       logger.warn(

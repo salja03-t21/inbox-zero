@@ -133,9 +133,12 @@ export async function trashThread(options: {
         await Promise.allSettled(movePromises);
       } else {
         // If no messages found, try treating threadId as a messageId
-        await client.getClient().api(`${client.getBaseUrl()}/messages/${threadId}/move`).post({
-          destinationId: "deleteditems",
-        });
+        await client
+          .getClient()
+          .api(`${client.getBaseUrl()}/messages/${threadId}/move`)
+          .post({
+            destinationId: "deleteditems",
+          });
       }
 
       // Publish the delete action

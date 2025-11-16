@@ -4,7 +4,7 @@ import prisma from "@/utils/prisma";
 
 export const GET = withEmailAccount(async (req) => {
   const { emailAccountId } = req.auth;
-  
+
   // Fetch the email account with tokens
   const emailAccount = await prisma.emailAccount.findUnique({
     where: { id: emailAccountId },
@@ -16,18 +16,18 @@ export const GET = withEmailAccount(async (req) => {
       },
     },
   });
-  
+
   if (!emailAccount) {
     return NextResponse.json(
       { error: "Email account not found" },
-      { status: 404 }
+      { status: 404 },
     );
   }
   // NOTE: Microsoft Graph API does not provide a direct endpoint to list shared mailboxes
   // that a user has delegated access to. Users must manually enter the shared mailbox email.
   // This is a known limitation of the MS Graph API.
   // See: https://github.com/microsoftgraph/msgraph-sdk-dotnet/issues/1634
-  
+
   return NextResponse.json({ mailboxes: [] });
   // To implement automatic discovery, you would need:
   // 1. Exchange Online PowerShell access (more permissions)

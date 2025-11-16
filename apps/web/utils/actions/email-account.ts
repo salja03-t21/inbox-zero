@@ -189,10 +189,7 @@ export const disconnectSharedMailboxAction = actionClientUser
   .metadata({ name: "disconnectSharedMailbox" })
   .schema(disconnectSharedMailboxSchema)
   .action(
-    async ({
-      ctx: { userId, logger },
-      parsedInput: { sharedMailboxId },
-    }) => {
+    async ({ ctx: { userId, logger }, parsedInput: { sharedMailboxId } }) => {
       logger.info("Disconnecting shared mailbox", {
         sharedMailboxId,
       });

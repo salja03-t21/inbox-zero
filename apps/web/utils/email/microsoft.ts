@@ -477,9 +477,12 @@ export class OutlookProvider implements EmailProvider {
   }
 
   async markReadMessage(messageId: string): Promise<void> {
-    await this.client.getClient().api(`${this.client.getBaseUrl()}/messages/${messageId}`).patch({
-      isRead: true,
-    });
+    await this.client
+      .getClient()
+      .api(`${this.client.getBaseUrl()}/messages/${messageId}`)
+      .patch({
+        isRead: true,
+      });
   }
 
   async blockUnsubscribedEmail(messageId: string): Promise<void> {

@@ -19,7 +19,7 @@ export const GET = withError(async (request) => {
     url: request.url,
     origin: request.nextUrl.origin,
     baseUrl: env.NEXT_PUBLIC_BASE_URL,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 
   const searchParams = request.nextUrl.searchParams;
@@ -121,16 +121,18 @@ export const GET = withError(async (request) => {
         user: { select: { name: true, email: true } },
       },
     });
-    
+
     // Also get the corresponding EmailAccount for later updates
-    const existingEmailAccount = existingAccount ? await prisma.emailAccount.findFirst({
-      where: {
-        accountId: existingAccount.id,
-      },
-      select: {
-        id: true,
-      },
-    }) : null;
+    const existingEmailAccount = existingAccount
+      ? await prisma.emailAccount.findFirst({
+          where: {
+            accountId: existingAccount.id,
+          },
+          select: {
+            id: true,
+          },
+        })
+      : null;
 
     if (!existingAccount) {
       if (action === "merge") {

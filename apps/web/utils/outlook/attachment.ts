@@ -8,7 +8,9 @@ export async function getOutlookAttachment(
 ) {
   const attachment: FileAttachment = await client
     .getClient()
-    .api(`${client.getBaseUrl()}/messages/${messageId}/attachments/${attachmentId}`)
+    .api(
+      `${client.getBaseUrl()}/messages/${messageId}/attachments/${attachmentId}`,
+    )
     .get();
 
   return attachment;

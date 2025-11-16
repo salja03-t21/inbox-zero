@@ -91,10 +91,13 @@ export async function replyToEmail(
   };
 
   // Send the email immediately using the sendMail endpoint
-  const result = await client.getClient().api(`${client.getBaseUrl()}/sendMail`).post({
-    message: replyMessage,
-    saveToSentItems: true,
-  });
+  const result = await client
+    .getClient()
+    .api(`${client.getBaseUrl()}/sendMail`)
+    .post({
+      message: replyMessage,
+      saveToSentItems: true,
+    });
   return result;
 }
 
@@ -194,7 +197,9 @@ export async function draftEmail(
     .post({});
 
   // Update the draft with our content
-  const updateRequest = client.getClient().api(`${client.getBaseUrl()}/messages/${replyDraft.id}`);
+  const updateRequest = client
+    .getClient()
+    .api(`${client.getBaseUrl()}/messages/${replyDraft.id}`);
 
   // To handle change key error
   const etag = (replyDraft as { "@odata.etag"?: string })?.["@odata.etag"];

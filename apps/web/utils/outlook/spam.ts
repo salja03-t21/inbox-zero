@@ -84,9 +84,12 @@ export async function markSpam(client: OutlookClient, threadId: string) {
         await Promise.allSettled(movePromises);
       } else {
         // If no messages found, try treating threadId as a messageId
-        await client.getClient().api(`${client.getBaseUrl()}/messages/${threadId}/move`).post({
-          destinationId: "junkemail",
-        });
+        await client
+          .getClient()
+          .api(`${client.getBaseUrl()}/messages/${threadId}/move`)
+          .post({
+            destinationId: "junkemail",
+          });
       }
     } catch (directError) {
       logger.error("Failed to mark message as spam", {

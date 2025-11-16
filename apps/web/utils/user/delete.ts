@@ -48,7 +48,7 @@ export async function deleteUser({ userId }: { userId: string }) {
           userId,
           emailProvider,
           subscriptionId: emailAccount.watchEmailsSubscriptionId,
-        })
+        }),
       );
     }
   }

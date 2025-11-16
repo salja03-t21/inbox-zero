@@ -10,7 +10,7 @@ const querySchema = z.object({
 export const GET = withAuth(async (req) => {
   const { userId } = req.auth;
   const searchParams = req.nextUrl.searchParams;
-  
+
   try {
     const { emailAccountId } = querySchema.parse({
       emailAccountId: searchParams.get("emailAccountId"),
@@ -50,7 +50,7 @@ export const GET = withAuth(async (req) => {
     console.error("Error fetching shared mailboxes:", error);
     return NextResponse.json(
       { error: "Failed to fetch shared mailboxes" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
