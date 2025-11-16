@@ -107,18 +107,20 @@ export const getOutlookClientWithRefresh = async ({
   refreshToken,
   expiresAt,
   emailAccountId,
+  sharedMailboxEmail,
 }: {
   accessToken?: string | null;
   refreshToken: string | null;
   expiresAt: number | null;
   emailAccountId: string;
+  sharedMailboxEmail?: string | null;
 }): Promise<OutlookClient> => {
   if (!refreshToken) throw new SafeError("No refresh token");
 
   // Check if token needs refresh
   const expiryDate = expiresAt ? expiresAt : null;
   if (accessToken && expiryDate && expiryDate > Date.now()) {
-    return createOutlookClient(accessToken);
+    return createOutlookClient(accessToken, sharedMailboxEmail);
   }
 
   // Refresh token
@@ -161,7 +163,7 @@ export const getOutlookClientWithRefresh = async ({
       provider: "microsoft",
     });
 
-    return createOutlookClient(tokens.access_token);
+    return createOutlookClient(tokens.access_token, sharedMailboxEmail);
   } catch (error) {
     const isInvalidGrantError =
       error instanceof Error &&

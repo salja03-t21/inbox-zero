@@ -58,6 +58,7 @@ export async function getOutlookClientForEmail({
     refreshToken: tokens.refreshToken || "",
     expiresAt: tokens.expiresAt,
     emailAccountId,
+    sharedMailboxEmail: tokens.sharedMailboxEmail,
   });
   return outlook;
 }
@@ -73,6 +74,7 @@ export async function getOutlookAndAccessTokenForEmail({
     refreshToken: tokens.refreshToken || "",
     expiresAt: tokens.expiresAt,
     emailAccountId,
+    sharedMailboxEmail: tokens.sharedMailboxEmail,
   });
   const accessToken = getOutlookAccessToken(outlook);
   return { outlook, accessToken, tokens };
@@ -86,6 +88,8 @@ export async function getOutlookClientForEmailId({
   const account = await prisma.emailAccount.findUnique({
     where: { id: emailAccountId },
     select: {
+      isSharedMailbox: true,
+      sharedMailboxOwner: true,
       account: {
         select: { access_token: true, refresh_token: true, expires_at: true },
       },
@@ -96,6 +100,7 @@ export async function getOutlookClientForEmailId({
     refreshToken: account?.account.refresh_token || "",
     expiresAt: account?.account.expires_at?.getTime() ?? null,
     emailAccountId,
+    sharedMailboxEmail: account?.isSharedMailbox ? account.sharedMailboxOwner : null,
   });
   return outlook;
 }
@@ -104,6 +109,8 @@ async function getTokens({ emailAccountId }: { emailAccountId: string }) {
   const emailAccount = await prisma.emailAccount.findUnique({
     where: { id: emailAccountId },
     select: {
+      isSharedMailbox: true,
+      sharedMailboxOwner: true,
       account: {
         select: { access_token: true, refresh_token: true, expires_at: true },
       },
@@ -114,6 +121,7 @@ async function getTokens({ emailAccountId }: { emailAccountId: string }) {
     accessToken: emailAccount?.account.access_token,
     refreshToken: emailAccount?.account.refresh_token,
     expiresAt: emailAccount?.account.expires_at?.getTime() ?? null,
+    sharedMailboxEmail: emailAccount?.isSharedMailbox ? emailAccount.sharedMailboxOwner : null,
   };
 }
 
