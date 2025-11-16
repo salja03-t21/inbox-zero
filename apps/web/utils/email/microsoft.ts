@@ -356,6 +356,18 @@ export class OutlookProvider implements EmailProvider {
       usedFallback = true;
     }
 
+    // If category still doesn't exist and we have a name, create it
+    // This happens when using rules created in one mailbox on another mailbox (e.g., shared mailboxes)
+    if (!category && labelName) {
+      logger.info("Category doesn't exist in this mailbox, creating it", {
+        labelId,
+        labelName,
+      });
+      const createdLabel = await this.createLabel(labelName);
+      category = await this.getLabelById(createdLabel.id);
+      usedFallback = true;
+    }
+
     if (!category) {
       throw new Error(
         `Category with ID ${labelId}${labelName ? ` or name ${labelName}` : ""} not found`,
