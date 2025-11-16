@@ -19,10 +19,12 @@ type AuthOptions = {
 export class OutlookClient {
   private readonly client: Client;
   private readonly accessToken: string;
+  private readonly sharedMailboxEmail: string | null;
   private folderIdCache: Record<string, string> | null = null;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, sharedMailboxEmail?: string | null) {
     this.accessToken = accessToken;
+    this.sharedMailboxEmail = sharedMailboxEmail || null;
     this.client = Client.init({
       authProvider: (done) => {
         done(null, this.accessToken);
@@ -54,17 +56,27 @@ export class OutlookClient {
     this.folderIdCache = cache;
   }
 
+  /**
+   * Get the base URL for Microsoft Graph API calls.
+   * For shared mailboxes, use /users/{email} instead of /me
+   */
+  getBaseUrl(): string {
+    return this.sharedMailboxEmail 
+      ? `/users/${encodeURIComponent(this.sharedMailboxEmail)}` 
+      : '/me';
+  }
+
   // Helper methods for common operations
   async getUserProfile(): Promise<User> {
     return await this.client
-      .api("/me")
+      .api(this.getBaseUrl())
       .select("id,displayName,mail,userPrincipalName")
       .get();
   }
 
   async getUserPhoto(): Promise<string | null> {
     try {
-      const photoResponse = await this.client.api("/me/photo/$value").get();
+      const photoResponse = await this.client.api(`${this.getBaseUrl()}/photo/$value`).get();
 
       if (photoResponse) {
         const arrayBuffer = await photoResponse.arrayBuffer();
@@ -80,8 +92,8 @@ export class OutlookClient {
 }
 
 // Helper to create OutlookClient instance
-const createOutlookClient = (accessToken: string) => {
-  return new OutlookClient(accessToken);
+const createOutlookClient = (accessToken: string, sharedMailboxEmail?: string | null) => {
+  return new OutlookClient(accessToken, sharedMailboxEmail);
 };
 
 export const getContactsClient = ({ accessToken }: AuthOptions) => {
