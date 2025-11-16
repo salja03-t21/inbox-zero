@@ -56,7 +56,7 @@ export const OUTLOOK_COLOR_MAP = {
 export async function getLabels(client: OutlookClient) {
   const response: { value: OutlookCategory[] } = await client
     .getClient()
-    .api("/me/outlook/masterCategories")
+    .api(`${client.getBaseUrl()}/outlook/masterCategories`)
     .get();
   return response.value.map((label) => ({
     ...label,
@@ -71,7 +71,7 @@ export async function getLabelById(options: {
   const { client, id } = options;
   const response: OutlookCategory = await client
     .getClient()
-    .api(`/me/outlook/masterCategories/${id}`)
+    .api(`${client.getBaseUrl()}/outlook/masterCategories/${id}`)
     .get();
   return response;
 }
@@ -94,7 +94,7 @@ export async function createLabel({
 
     const response: OutlookCategory = await client
       .getClient()
-      .api("/me/outlook/masterCategories")
+      .api(`${client.getBaseUrl()}/outlook/masterCategories`)
       .post({
         displayName: name,
         color: outlookColor,
@@ -200,7 +200,7 @@ export async function labelMessage({
   messageId: string;
   categories: string[];
 }) {
-  return client.getClient().api(`/me/messages/${messageId}`).patch({
+  return client.getClient().api(`${client.getBaseUrl()}/messages/${messageId}`).patch({
     categories,
   });
 }
@@ -219,7 +219,7 @@ export async function labelThread({
   const escapedThreadId = threadId.replace(/'/g, "''");
   const messages: { value: Message[] } = await client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .filter(`conversationId eq '${escapedThreadId}'`)
     .get();
 
@@ -249,7 +249,7 @@ export async function removeThreadLabel({
   const escapedThreadId = threadId.replace(/'/g, "''");
   const messages = await client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .filter(`conversationId eq '${escapedThreadId}'`)
     .select("id,categories")
     .get();
@@ -269,7 +269,7 @@ export async function removeThreadLabel({
         try {
           await client
             .getClient()
-            .api(`/me/messages/${message.id}`)
+            .api(`${client.getBaseUrl()}/messages/${message.id}`)
             .patch({ categories: updatedCategories });
         } catch (error) {
           logger.warn("Failed to remove category from message", {
@@ -310,7 +310,7 @@ export async function archiveThread({
   const wellKnownFolders = Object.keys(WELL_KNOWN_FOLDERS);
   if (!wellKnownFolders.includes(folderId.toLowerCase())) {
     try {
-      await client.getClient().api(`/me/mailFolders/${folderId}`).get();
+      await client.getClient().api(`${client.getBaseUrl()}/mailFolders/${folderId}`).get();
     } catch (error) {
       logger.warn(
         "Custom destination folder not found, skipping archive operation",
@@ -330,7 +330,7 @@ export async function archiveThread({
     const escapedThreadId = threadId.replace(/'/g, "''");
     const messages = await client
       .getClient()
-      .api("/me/messages")
+      .api(`${client.getBaseUrl()}/messages`)
       .filter(`conversationId eq '${escapedThreadId}'`) // Escape single quotes in threadId for the filter
       .get();
 
@@ -339,7 +339,7 @@ export async function archiveThread({
         try {
           return await client
             .getClient()
-            .api(`/me/messages/${message.id}/move`)
+            .api(`${client.getBaseUrl()}/messages/${message.id}/move`)
             .post({
               destinationId: folderId,
             });
@@ -403,7 +403,7 @@ export async function archiveThread({
       // Try to get messages by conversationId using a different endpoint
       const messages = await client
         .getClient()
-        .api("/me/messages")
+        .api(`${client.getBaseUrl()}/messages`)
         .select("id")
         .get();
 
@@ -420,7 +420,7 @@ export async function archiveThread({
             try {
               return await client
                 .getClient()
-                .api(`/me/messages/${message.id}/move`)
+                .api(`${client.getBaseUrl()}/messages/${message.id}/move`)
                 .post({
                   destinationId: folderId,
                 });
@@ -441,7 +441,7 @@ export async function archiveThread({
         await Promise.allSettled(movePromises);
       } else {
         // If no messages found, try treating threadId as a messageId
-        await client.getClient().api(`/me/messages/${threadId}/move`).post({
+        await client.getClient().api(`${client.getBaseUrl()}/messages/${threadId}/move`).post({
           destinationId: folderId,
         });
       }
@@ -490,14 +490,14 @@ export async function markReadThread({
     const escapedThreadId = threadId.replace(/'/g, "''");
     const messages = await client
       .getClient()
-      .api("/me/messages")
+      .api(`${client.getBaseUrl()}/messages`)
       .filter(`conversationId eq '${escapedThreadId}'`)
       .get();
 
     // Update each message in the thread
     await Promise.all(
       messages.value.map((message: { id: string }) =>
-        client.getClient().api(`/me/messages/${message.id}`).patch({
+        client.getClient().api(`${client.getBaseUrl()}/messages/${message.id}`).patch({
           isRead: read,
         }),
       ),
@@ -513,7 +513,7 @@ export async function markReadThread({
       // Try to get messages by conversationId using a different endpoint
       const messages = await client
         .getClient()
-        .api("/me/messages")
+        .api(`${client.getBaseUrl()}/messages`)
         .select("id")
         .get();
 
@@ -527,14 +527,14 @@ export async function markReadThread({
         // Update each message in the thread
         await Promise.all(
           threadMessages.map((message: { id: string }) =>
-            client.getClient().api(`/me/messages/${message.id}`).patch({
+            client.getClient().api(`${client.getBaseUrl()}/messages/${message.id}`).patch({
               isRead: read,
             }),
           ),
         );
       } else {
         // If no messages found, try treating threadId as a messageId
-        await client.getClient().api(`/me/messages/${threadId}`).patch({
+        await client.getClient().api(`${client.getBaseUrl()}/messages/${threadId}`).patch({
           isRead: read,
         });
       }
@@ -560,7 +560,7 @@ export async function markImportantMessage({
   // In Outlook, we use the "Important" flag
   await client
     .getClient()
-    .api(`/me/messages/${messageId}`)
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
     .patch({
       importance: important ? "high" : "normal",
     });
