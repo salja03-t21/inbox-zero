@@ -9,7 +9,7 @@ export async function getDraft(draftId: string, client: OutlookClient) {
   try {
     const response: Message = await client
       .getClient()
-      .api(`/me/messages/${draftId}`)
+      .api(`${client.getBaseUrl()}/messages/${draftId}`)
       .get();
     const message = convertMessage(response);
     return message;
@@ -33,7 +33,7 @@ export async function getDraft(draftId: string, client: OutlookClient) {
 export async function deleteDraft(client: OutlookClient, draftId: string) {
   try {
     logger.info("Deleting draft", { draftId });
-    await client.getClient().api(`/me/messages/${draftId}`).delete();
+    await client.getClient().api(`${client.getBaseUrl()}/messages/${draftId}`).delete();
     logger.info("Successfully deleted draft", { draftId });
   } catch (error) {
     if (isNotFoundError(error)) {
