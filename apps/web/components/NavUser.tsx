@@ -11,7 +11,6 @@ import {
   PaletteIcon,
   ChromeIcon,
   Building2Icon,
-  CrownIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -173,13 +172,6 @@ export function NavUser() {
             <Link href={prefixPath(currentEmailAccountId, "/usage")}>
               <BarChartIcon className="mr-2 size-4" />
               Usage
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link href="/premium">
-              <CrownIcon className="mr-2 size-4" />
-              Premium
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>

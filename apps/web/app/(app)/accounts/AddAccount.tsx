@@ -65,12 +65,13 @@ export function AddAccount() {
   return (
     <Card className="flex items-center justify-center">
       <CardContent className="flex flex-col items-center gap-4 p-6">
-        <AddEmailAccount
+        {/* Google account adding disabled */}
+        {/* <AddEmailAccount
           name="Google"
           image="/images/google.svg"
           handleConnect={handleConnectGoogle}
           handleMerge={handleMergeGoogle}
-        />
+        /> */}
         <AddEmailAccount
           name="Microsoft"
           image="/images/microsoft.svg"

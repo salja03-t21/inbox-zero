@@ -209,7 +209,7 @@ export function getLinkingOAuth2Url() {
     response_type: "code",
     redirect_uri: redirectUri,
     scope: SCOPES.join(" "),
-    prompt: "consent", // Force re-consent to clear cached redirect URI
+    prompt: "select_account",
   });
 
   const finalUrl = `${baseUrl}?${params.toString()}`;

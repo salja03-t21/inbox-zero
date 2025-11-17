@@ -15,9 +15,32 @@ import { TabsToolbar } from "@/components/TabsToolbar";
 import { SectionDescription } from "@/components/Typography";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/providers/EmailAccountProvider";
+import { useUser } from "@/hooks/useUser";
+import { isOrganizationAdmin } from "@/utils/organizations/roles";
 
 export default function SettingsPage() {
   const { emailAccount } = useAccount();
+  const { data: user } = useUser();
+
+  const currentEmailAccountMembers =
+    user?.members?.filter(
+      (member) => member.emailAccountId === emailAccount?.id,
+    ) || [];
+  const hasOrganization = currentEmailAccountMembers.length > 0;
+  const isAdmin = isOrganizationAdmin(currentEmailAccountMembers);
+
+  // If user is in an organization, only admins can access settings
+  // If user is not in an organization, they can access their own settings
+  if (hasOrganization && !isAdmin) {
+    return (
+      <div className="content-container">
+        <PageHeader
+          title="Access Denied"
+          description="You must be an organization administrator to access settings."
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
