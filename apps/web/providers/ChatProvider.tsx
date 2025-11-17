@@ -43,6 +43,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [chatId, setChatId] = useQueryState("chatId", parseAsString);
   const [context, setContext] = useState<MessageContext | null>(null);
 
+  // Clear chatId when email account changes to prevent 403 errors
+  useEffect(() => {
+    if (chatId && emailAccountId) {
+      setChatId(null);
+    }
+  }, [emailAccountId]);
+
   const { data } = useChatMessages(chatId);
 
   const setNewChat = useCallback(() => {
