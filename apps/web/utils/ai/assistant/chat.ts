@@ -79,7 +79,7 @@ const getUserRulesAndSettingsTool = ({
 
       return {
         about: emailAccount?.about || "Not set",
-        rules: emailAccount?.rules.map((rule) => {
+        rules: (emailAccount?.rules || []).map((rule) => {
           const staticFilter = filterNullProperties({
             from: rule.from,
             to: rule.to,
