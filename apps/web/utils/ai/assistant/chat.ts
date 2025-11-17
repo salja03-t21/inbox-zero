@@ -925,7 +925,9 @@ Examples:
       </explanation>
     </output>
   </example>
-</examples>`;
+</examples>
+
+IMPORTANT: After using any tools, you MUST provide a text response to the user explaining your findings and recommendations. Never finish without responding to the user's message.`;
 
   const toolOptions = {
     email: user.email,
