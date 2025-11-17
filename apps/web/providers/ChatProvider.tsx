@@ -73,15 +73,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           },
         };
       },
+      onResponse: ({ response }) => {
+        console.log("[Chat Transport] Response received", {
+          status: response.status,
+          ok: response.ok,
+        });
+        if (!response.ok) {
+          console.error("[Chat Transport] Response not OK", {
+            status: response.status,
+            statusText: response.statusText,
+          });
+        }
+      },
     }),
     // messages: initialMessages, // NOTE: couldn't get this to work
     experimental_throttle: 100,
     generateId: generateUUID,
     onFinish: () => {
+      console.log("[Chat] onFinish called");
       mutate("/api/user/rules");
     },
     onError: (error) => {
-      console.error(error);
+      console.error("[Chat] onError called", error);
       toastError({
         title: "An error occured!",
         description: error.message || "",

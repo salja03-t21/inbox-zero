@@ -109,9 +109,25 @@ export function Chat() {
         <PromptInput
           onSubmit={(e) => {
             e.preventDefault();
+            console.log("[Chat Submit]", {
+              hasInput: !!input.trim(),
+              status,
+              canSubmit: input.trim() && status === "ready",
+            });
             if (input.trim() && status === "ready") {
               handleSubmit();
               setLocalStorageInput("");
+            } else {
+              console.warn("[Chat Submit Blocked]", {
+                reason:
+                  !input.trim()
+                    ? "No input"
+                    : status !== "ready"
+                      ? `Status is '${status}', not 'ready'`
+                      : "Unknown",
+                status,
+                input: input.slice(0, 50),
+              });
             }
           }}
           className="relative"
