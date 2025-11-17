@@ -167,8 +167,15 @@ const getLearnedPatternsTool = ({
         };
       }
 
+      if (!rule.group?.items || rule.group.items.length === 0) {
+        return {
+          patterns: [],
+          message: "This rule doesn't have any learned patterns yet.",
+        };
+      }
+
       return {
-        patterns: rule.group?.items,
+        patterns: rule.group.items,
       };
     },
   });
