@@ -71,6 +71,12 @@ export const POST = withEmailAccount(async (request) => {
   });
 
   try {
+    logger.info("Starting AI assistant chat processing", {
+      chatId: chat.id,
+      messageCount: uiMessages.length,
+      emailAccountId,
+    });
+
     const result = await aiProcessAssistantChat({
       messages: convertToModelMessages(uiMessages),
       emailAccountId,
@@ -78,13 +84,21 @@ export const POST = withEmailAccount(async (request) => {
       context,
     });
 
+    logger.info("AI assistant chat processing complete, starting stream", {
+      chatId: chat.id,
+    });
+
     return result.toUIMessageStreamResponse({
       onFinish: async ({ messages }) => {
+        logger.info("Stream finished, saving messages", {
+          chatId: chat.id,
+          messageCount: messages.length,
+        });
         await saveChatMessages(messages, chat.id);
       },
     });
   } catch (error) {
-    logger.error("Error in assistant chat", { error });
+    logger.error("Error in assistant chat", { error, chatId: chat.id });
     return NextResponse.json(
       { error: "Error in assistant chat" },
       { status: 500 },
