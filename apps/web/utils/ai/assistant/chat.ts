@@ -40,84 +40,105 @@ const getUserRulesAndSettingsTool = ({
       "Retrieve all existing rules for the user, their about information",
     inputSchema: z.object({}),
     execute: async () => {
-      trackToolCall({
-        tool: "get_user_rules_and_settings",
-        email,
-      });
+      try {
+        trackToolCall({
+          tool: "get_user_rules_and_settings",
+          email,
+        });
 
-      const emailAccount = await prisma.emailAccount.findUnique({
-        where: { id: emailAccountId },
-        select: {
-          about: true,
-          rules: {
-            select: {
-              name: true,
-              instructions: true,
-              from: true,
-              to: true,
-              subject: true,
-              conditionalOperator: true,
-              enabled: true,
-              runOnThreads: true,
-              actions: {
-                select: {
-                  type: true,
-                  content: true,
-                  label: true,
-                  to: true,
-                  cc: true,
-                  bcc: true,
-                  subject: true,
-                  url: true,
-                  folderName: true,
+        logger.info("Fetching user rules and settings", { emailAccountId });
+
+        const emailAccount = await prisma.emailAccount.findUnique({
+          where: { id: emailAccountId },
+          select: {
+            about: true,
+            rules: {
+              select: {
+                name: true,
+                instructions: true,
+                from: true,
+                to: true,
+                subject: true,
+                conditionalOperator: true,
+                enabled: true,
+                runOnThreads: true,
+                actions: {
+                  select: {
+                    type: true,
+                    content: true,
+                    label: true,
+                    to: true,
+                    cc: true,
+                    bcc: true,
+                    subject: true,
+                    url: true,
+                    folderName: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      return {
-        about: emailAccount?.about || "Not set",
-        rules: (emailAccount?.rules || []).map((rule) => {
-          const staticFilter = filterNullProperties({
-            from: rule.from,
-            to: rule.to,
-            subject: rule.subject,
-          });
+        if (!emailAccount) {
+          logger.warn("Email account not found", { emailAccountId });
+        }
 
-          const staticConditions =
-            Object.keys(staticFilter).length > 0 ? staticFilter : undefined;
+        const result = {
+          about: emailAccount?.about || "Not set",
+          rules: (emailAccount?.rules || []).map((rule) => {
+            const staticFilter = filterNullProperties({
+              from: rule.from,
+              to: rule.to,
+              subject: rule.subject,
+            });
 
-          return {
-            name: rule.name,
-            conditions: {
-              aiInstructions: rule.instructions,
-              static: staticConditions,
-              // only need to show conditional operator if there are multiple conditions
-              conditionalOperator:
-                rule.instructions && staticConditions
-                  ? rule.conditionalOperator
-                  : undefined,
-            },
-            actions: rule.actions.map((action) => ({
-              type: action.type,
-              fields: filterNullProperties({
-                label: action.label,
-                content: action.content,
-                to: action.to,
-                cc: action.cc,
-                bcc: action.bcc,
-                subject: action.subject,
-                url: action.url,
-                folderName: action.folderName,
-              }),
-            })),
-            enabled: rule.enabled,
-            runOnThreads: rule.runOnThreads,
-          };
-        }),
-      };
+            const staticConditions =
+              Object.keys(staticFilter).length > 0 ? staticFilter : undefined;
+
+            return {
+              name: rule.name,
+              conditions: {
+                aiInstructions: rule.instructions,
+                static: staticConditions,
+                // only need to show conditional operator if there are multiple conditions
+                conditionalOperator:
+                  rule.instructions && staticConditions
+                    ? rule.conditionalOperator
+                    : undefined,
+              },
+              actions: rule.actions.map((action) => ({
+                type: action.type,
+                fields: filterNullProperties({
+                  label: action.label,
+                  content: action.content,
+                  to: action.to,
+                  cc: action.cc,
+                  bcc: action.bcc,
+                  subject: action.subject,
+                  url: action.url,
+                  folderName: action.folderName,
+                }),
+              })),
+              enabled: rule.enabled,
+              runOnThreads: rule.runOnThreads,
+            };
+          }),
+        };
+
+        logger.info("Successfully fetched user rules and settings", {
+          emailAccountId,
+          rulesCount: result.rules.length,
+        });
+
+        return result;
+      } catch (error) {
+        logger.error("Error in getUserRulesAndSettings tool", {
+          error,
+          emailAccountId,
+        });
+        throw error;
+      }
     },
   });
 
@@ -141,42 +162,67 @@ const getLearnedPatternsTool = ({
         .describe("The name of the rule to get the learned patterns for"),
     }),
     execute: async ({ ruleName }) => {
-      trackToolCall({ tool: "get_learned_patterns", email });
+      try {
+        trackToolCall({ tool: "get_learned_patterns", email });
 
-      const rule = await prisma.rule.findUnique({
-        where: { name_emailAccountId: { name: ruleName, emailAccountId } },
-        select: {
-          group: {
-            select: {
-              items: {
-                select: {
-                  type: true,
-                  value: true,
-                  exclude: true,
+        logger.info("Fetching learned patterns", { ruleName, emailAccountId });
+
+        const rule = await prisma.rule.findUnique({
+          where: { name_emailAccountId: { name: ruleName, emailAccountId } },
+          select: {
+            group: {
+              select: {
+                items: {
+                  select: {
+                    type: true,
+                    value: true,
+                    exclude: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      if (!rule) {
+        if (!rule) {
+          logger.warn("Rule not found for learned patterns", {
+            ruleName,
+            emailAccountId,
+          });
+          return {
+            error:
+              "Rule not found. Try listing the rules again. The user may have made changes since you last checked.",
+          };
+        }
+
+        if (!rule.group?.items || rule.group.items.length === 0) {
+          logger.info("No learned patterns found for rule", {
+            ruleName,
+            emailAccountId,
+          });
+          return {
+            patterns: [],
+            message: "This rule doesn't have any learned patterns yet.",
+          };
+        }
+
+        logger.info("Successfully fetched learned patterns", {
+          ruleName,
+          emailAccountId,
+          patternsCount: rule.group.items.length,
+        });
+
         return {
-          error:
-            "Rule not found. Try listing the rules again. The user may have made changes since you last checked.",
+          patterns: rule.group.items,
         };
+      } catch (error) {
+        logger.error("Error in getLearnedPatterns tool", {
+          error,
+          ruleName,
+          emailAccountId,
+        });
+        throw error;
       }
-
-      if (!rule.group?.items || rule.group.items.length === 0) {
-        return {
-          patterns: [],
-          message: "This rule doesn't have any learned patterns yet.",
-        };
-      }
-
-      return {
-        patterns: rule.group.items,
-      };
     },
   });
 
