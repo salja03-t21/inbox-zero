@@ -218,6 +218,7 @@ export async function chatCompletionStream({
     model,
     messages,
     tools,
+    stopWhen: maxSteps ? stepCountIs(maxSteps) : undefined,
     providerOptions,
     ...commonOptions,
     experimental_transform: smoothStream({ chunking: "word" }),
