@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { FormSection, FormSectionLeft } from "@/components/Form";
 import {
   Table,
   TableBody,
@@ -123,7 +122,7 @@ export function AdminUserManagementSection() {
           });
         } else {
           toastSuccess({
-            description: `Email account ${!currentEnabled ? "enabled" : "disabled"} successfully`,
+            description: `Email account ${!currentEnabled ? "enabled" : "disabled"} successfully${!currentEnabled ? "" : ". Login access has been revoked."}`,
           });
           mutate(); // Refresh the list to show updated state
         }
@@ -146,14 +145,19 @@ export function AdminUserManagementSection() {
 
   return (
     <>
-      <FormSection>
-        <FormSectionLeft
-          title="User Management"
-          description="View and manage all users and their email automation rules. Only administrators can access this section."
-        />
+      <div className="content-container max-w-full py-16">
+        <div className="mb-8">
+          <h4 className="font-cal text-base leading-7 text-foreground">
+            User Management
+          </h4>
+          <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-foreground">
+            View and manage all users and their email automation rules. Only
+            administrators can access this section.
+          </p>
+        </div>
 
         <LoadingContent loading={isLoading} error={error}>
-          <div className="col-span-2 space-y-4">
+          <div className="space-y-4">
             {data && data.length > 0 ? (
               <Card>
                 <Table>
@@ -265,7 +269,7 @@ export function AdminUserManagementSection() {
             )}
           </div>
         </LoadingContent>
-      </FormSection>
+      </div>
 
       <AdminUserRulesModal
         emailAccountId={selectedEmailAccountId}

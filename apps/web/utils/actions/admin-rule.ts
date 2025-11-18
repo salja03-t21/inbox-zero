@@ -217,6 +217,7 @@ export const adminToggleEmailAccountAction = adminActionClient
     // Verify the email account exists
     const emailAccount = await prisma.emailAccount.findUnique({
       where: { id: emailAccountId },
+      include: { account: true },
     });
 
     if (!emailAccount) {
@@ -228,6 +229,19 @@ export const adminToggleEmailAccountAction = adminActionClient
       where: { id: emailAccountId },
       data: { enabled },
     });
+
+    // If disabling, also clear the account's access tokens to prevent login
+    if (!enabled) {
+      await prisma.account.update({
+        where: { id: emailAccount.accountId },
+        data: {
+          access_token: null,
+          refresh_token: null,
+          expires_at: null,
+          refreshTokenExpiresAt: null,
+        },
+      });
+    }
 
     revalidatePath(`/settings`);
   });
