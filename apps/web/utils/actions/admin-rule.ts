@@ -65,6 +65,13 @@ export const adminToggleRuleAction = adminActionClient
       // Get email account for provider
       const emailAccount = await prisma.emailAccount.findUnique({
         where: { id: emailAccountId },
+        include: {
+          account: {
+            select: {
+              provider: true,
+            },
+          },
+        },
       });
 
       if (!emailAccount) {
@@ -73,7 +80,7 @@ export const adminToggleRuleAction = adminActionClient
 
       const provider = await createEmailProvider({
         emailAccountId,
-        emailAccountEmail: emailAccount.email,
+        provider: emailAccount.account.provider,
       });
 
       // Update the rule
@@ -108,6 +115,13 @@ export const adminDeleteRuleAction = adminActionClient
     // Get email account for provider
     const emailAccount = await prisma.emailAccount.findUnique({
       where: { id: emailAccountId },
+      include: {
+        account: {
+          select: {
+            provider: true,
+          },
+        },
+      },
     });
 
     if (!emailAccount) {
@@ -116,7 +130,7 @@ export const adminDeleteRuleAction = adminActionClient
 
     const provider = await createEmailProvider({
       emailAccountId,
-      emailAccountEmail: emailAccount.email,
+      provider: emailAccount.account.provider,
     });
 
     // Delete the rule
