@@ -136,8 +136,7 @@ export const adminDeleteRuleAction = adminActionClient
     // Delete the rule
     await deleteRule({
       emailAccountId,
-      id: ruleId,
-      provider,
+      ruleId,
     });
 
     revalidatePath(`/settings`);
