@@ -47,7 +47,7 @@ const adminActionClient = actionClient.use(async ({ next, ctx }) => {
 
 export const adminToggleRuleAction = adminActionClient
   .metadata({ name: "adminToggleRule" })
-  .schema(adminToggleRuleBody)
+  .inputSchema(adminToggleRuleBody)
   .action(
     async ({ parsedInput: { ruleId, emailAccountId, enabled, systemType } }) => {
       // Verify the rule belongs to the specified email account
@@ -91,7 +91,7 @@ export const adminToggleRuleAction = adminActionClient
 
 export const adminDeleteRuleAction = adminActionClient
   .metadata({ name: "adminDeleteRule" })
-  .schema(adminDeleteRuleBody)
+  .inputSchema(adminDeleteRuleBody)
   .action(async ({ parsedInput: { ruleId, emailAccountId } }) => {
     // Verify the rule belongs to the specified email account
     const rule = await prisma.rule.findFirst({
