@@ -14,3 +14,10 @@ export const adminDeleteRuleBody = z.object({
   emailAccountId: z.string(),
 });
 export type AdminDeleteRuleBody = z.infer<typeof adminDeleteRuleBody>;
+
+export const adminDeleteEmailAccountBody = z.object({
+  emailAccountId: z.string(),
+});
+export type AdminDeleteEmailAccountBody = z.infer<
+  typeof adminDeleteEmailAccountBody
+>;
