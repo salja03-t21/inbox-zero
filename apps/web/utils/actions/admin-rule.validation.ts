@@ -1,0 +1,16 @@
+import { z } from "zod";
+import { SystemType } from "@prisma/client";
+
+export const adminToggleRuleBody = z.object({
+  ruleId: z.string(),
+  emailAccountId: z.string(),
+  enabled: z.boolean(),
+  systemType: z.nativeEnum(SystemType).optional(),
+});
+export type AdminToggleRuleBody = z.infer<typeof adminToggleRuleBody>;
+
+export const adminDeleteRuleBody = z.object({
+  ruleId: z.string(),
+  emailAccountId: z.string(),
+});
+export type AdminDeleteRuleBody = z.infer<typeof adminDeleteRuleBody>;

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminUserManagementSection } from "@/app/(app)/[emailAccountId]/settings/AdminUserManagementSection";
 import { ApiKeysSection } from "@/app/(app)/[emailAccountId]/settings/ApiKeysSection";
 import { BillingSection } from "@/app/(app)/[emailAccountId]/settings/BillingSection";
 import { DeleteSection } from "@/app/(app)/[emailAccountId]/settings/DeleteSection";
@@ -54,6 +55,7 @@ export default function SettingsPage() {
             <TabsList>
               <TabsTrigger value="user">User</TabsTrigger>
               <TabsTrigger value="email">Email Account</TabsTrigger>
+              <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
           </div>
         </TabsToolbar>
@@ -90,6 +92,12 @@ export default function SettingsPage() {
               /> */}
             </FormWrapper>
           )}
+        </TabsContent>
+
+        <TabsContent value="admin" className="content-container mb-10">
+          <FormWrapper>
+            <AdminUserManagementSection />
+          </FormWrapper>
         </TabsContent>
       </Tabs>
     </div>
