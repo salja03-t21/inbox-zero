@@ -6,7 +6,7 @@ import {
   adminDeleteRuleBody,
 } from "@/utils/actions/admin-rule.validation";
 import prisma from "@/utils/prisma";
-import { actionClient } from "@/utils/actions/safe-action";
+import { actionClientUser } from "@/utils/actions/safe-action";
 import { isOrganizationAdmin } from "@/utils/organizations/roles";
 import { SafeError } from "@/utils/error";
 import { deleteRule } from "@/utils/rule/rule";
@@ -14,7 +14,7 @@ import { createEmailProvider } from "@/utils/email/provider";
 import type { SystemType } from "@prisma/client";
 
 // Custom action client that verifies admin permissions
-const adminActionClient = actionClient.use(async ({ next, ctx }) => {
+const adminActionClient = actionClientUser.use(async ({ next, ctx }) => {
   const { userId } = ctx;
 
   // Get the requesting user with their organization memberships
