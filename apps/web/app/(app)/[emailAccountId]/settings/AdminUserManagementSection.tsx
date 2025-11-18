@@ -26,9 +26,14 @@ import {
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { LoadingContent } from "@/components/LoadingContent";
 import { AdminUserRulesModal } from "@/app/(app)/[emailAccountId]/settings/AdminUserRulesModal";
-import { adminDeleteEmailAccountAction } from "@/utils/actions/admin-rule";
+import {
+  adminDeleteEmailAccountAction,
+  adminToggleEmailAccountAction,
+} from "@/utils/actions/admin-rule";
 import { toastSuccess, toastError } from "@/components/Toast";
 import { formatDistanceToNow } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export function AdminUserManagementSection() {
   const { data, isLoading, error, mutate } = useAdminUsers();
@@ -42,6 +47,9 @@ export function AdminUserManagementSection() {
     email: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingAccountIds, setTogglingAccountIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const handleViewRules = useCallback(
     (emailAccountId: string, userEmail: string) => {
@@ -97,6 +105,44 @@ export function AdminUserManagementSection() {
       setEmailAccountToDelete(null);
     }
   }, [emailAccountToDelete, mutate]);
+
+  const handleToggleEnabled = useCallback(
+    async (emailAccountId: string, currentEnabled: boolean) => {
+      setTogglingAccountIds((prev) => new Set(prev).add(emailAccountId));
+
+      try {
+        const result = await adminToggleEmailAccountAction({
+          emailAccountId,
+          enabled: !currentEnabled,
+        });
+
+        if (result?.serverError) {
+          toastError({
+            title: "Error toggling email account",
+            description: result.serverError,
+          });
+        } else {
+          toastSuccess({
+            description: `Email account ${!currentEnabled ? "enabled" : "disabled"} successfully`,
+          });
+          mutate(); // Refresh the list to show updated state
+        }
+      } catch (error) {
+        toastError({
+          title: "Error toggling email account",
+          description:
+            error instanceof Error ? error.message : "Unknown error occurred",
+        });
+      } finally {
+        setTogglingAccountIds((prev) => {
+          const next = new Set(prev);
+          next.delete(emailAccountId);
+          return next;
+        });
+      }
+    },
+    [mutate],
+  );
 
   return (
     <>
@@ -173,7 +219,29 @@ export function AdminUserManagementSection() {
                         <TableCell>
                           <div className="space-y-2">
                             {user.emailAccounts.map((account) => (
-                              <div key={account.id}>
+                              <div
+                                key={account.id}
+                                className="flex items-center gap-3"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    id={`enabled-${account.id}`}
+                                    checked={account.enabled}
+                                    onCheckedChange={() =>
+                                      handleToggleEnabled(
+                                        account.id,
+                                        account.enabled,
+                                      )
+                                    }
+                                    disabled={togglingAccountIds.has(account.id)}
+                                  />
+                                  <Label
+                                    htmlFor={`enabled-${account.id}`}
+                                    className="text-sm text-muted-foreground cursor-pointer"
+                                  >
+                                    {account.enabled ? "Enabled" : "Disabled"}
+                                  </Label>
+                                </div>
                                 <Button
                                   variant="destructive"
                                   size="sm"

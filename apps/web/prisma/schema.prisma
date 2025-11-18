@@ -118,6 +118,9 @@ model EmailAccount {
   isSharedMailbox     Boolean @default(false) // True if this is a shared mailbox
   sharedMailboxOwner  String? // The email address of the shared mailbox being accessed
 
+  // Admin control: disable rule execution for this account
+  enabled Boolean @default(true) // If false, rules won't be applied to this mailbox
+
   about                     String?
   writingStyle              String?
   signature                 String? // User's email signature from provider or manually set

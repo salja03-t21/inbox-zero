@@ -21,3 +21,11 @@ export const adminDeleteEmailAccountBody = z.object({
 export type AdminDeleteEmailAccountBody = z.infer<
   typeof adminDeleteEmailAccountBody
 >;
+
+export const adminToggleEmailAccountBody = z.object({
+  emailAccountId: z.string(),
+  enabled: z.boolean(),
+});
+export type AdminToggleEmailAccountBody = z.infer<
+  typeof adminToggleEmailAccountBody
+>;

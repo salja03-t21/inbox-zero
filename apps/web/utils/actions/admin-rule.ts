@@ -5,6 +5,7 @@ import {
   adminToggleRuleBody,
   adminDeleteRuleBody,
   adminDeleteEmailAccountBody,
+  adminToggleEmailAccountBody,
 } from "@/utils/actions/admin-rule.validation";
 import prisma from "@/utils/prisma";
 import { actionClientUser } from "@/utils/actions/safe-action";
@@ -207,4 +208,26 @@ export const adminDeleteEmailAccountAction = adminActionClient
 
     revalidatePath(`/settings`);
     revalidatePath(`/accounts`);
+  });
+
+export const adminToggleEmailAccountAction = adminActionClient
+  .metadata({ name: "adminToggleEmailAccount" })
+  .schema(adminToggleEmailAccountBody)
+  .action(async ({ parsedInput: { emailAccountId, enabled } }) => {
+    // Verify the email account exists
+    const emailAccount = await prisma.emailAccount.findUnique({
+      where: { id: emailAccountId },
+    });
+
+    if (!emailAccount) {
+      throw new SafeError("Email account not found");
+    }
+
+    // Update the enabled status
+    await prisma.emailAccount.update({
+      where: { id: emailAccountId },
+      data: { enabled },
+    });
+
+    revalidatePath(`/settings`);
   });

@@ -42,6 +42,7 @@ async function getAdminUsers({ userId }: { userId: string }) {
         select: {
           id: true,
           email: true,
+          enabled: true,
           _count: {
             select: {
               rules: true,
@@ -61,6 +62,7 @@ async function getAdminUsers({ userId }: { userId: string }) {
     emailAccounts: user.emailAccounts.map((account) => ({
       id: account.id,
       email: account.email,
+      enabled: account.enabled,
       rulesCount: account._count.rules,
       hasActiveRules: account._count.rules > 0,
     })),
