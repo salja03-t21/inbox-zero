@@ -50,23 +50,18 @@ async function getAdminRules({
   return rules;
 }
 
-export const GET = withAuth(
-  async (
-    request,
-    { params }: { params: Promise<{ emailAccountId: string }> },
-  ) => {
-    const userId = request.auth.userId;
-    const { emailAccountId } = await params;
+export const GET = withAuth(async (request, context) => {
+  const userId = request.auth.userId;
+  const { emailAccountId } = await context.params;
 
-    try {
-      const result = await getAdminRules({ userId, emailAccountId });
-      return NextResponse.json(result);
-    } catch (error) {
-      console.error("Error fetching admin rules:", error);
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Internal server error" },
-        { status: error instanceof Error && error.message.includes("Unauthorized") ? 403 : 500 },
-      );
-    }
-  },
-);
+  try {
+    const result = await getAdminRules({ userId, emailAccountId });
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Error fetching admin rules:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: error instanceof Error && error.message.includes("Unauthorized") ? 403 : 500 },
+    );
+  }
+});
