@@ -13,9 +13,21 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { LoadingContent } from "@/components/LoadingContent";
 import { AdminUserRulesModal } from "@/app/(app)/[emailAccountId]/settings/AdminUserRulesModal";
+import { adminDeleteEmailAccountAction } from "@/utils/actions/admin-rule";
+import { toastSuccess, toastError } from "@/components/Toast";
 import { formatDistanceToNow } from "date-fns";
 
 export function AdminUserManagementSection() {
@@ -24,6 +36,12 @@ export function AdminUserManagementSection() {
     string | null
   >(null);
   const [selectedUserEmail, setSelectedUserEmail] = useState<string>("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [emailAccountToDelete, setEmailAccountToDelete] = useState<{
+    id: string;
+    email: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleViewRules = useCallback(
     (emailAccountId: string, userEmail: string) => {
@@ -38,6 +56,47 @@ export function AdminUserManagementSection() {
     setSelectedUserEmail("");
     mutate(); // Refresh the user list after modal closes
   }, [mutate]);
+
+  const handleDeleteClick = useCallback(
+    (emailAccountId: string, email: string) => {
+      setEmailAccountToDelete({ id: emailAccountId, email });
+      setDeleteDialogOpen(true);
+    },
+    [],
+  );
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!emailAccountToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const result = await adminDeleteEmailAccountAction({
+        emailAccountId: emailAccountToDelete.id,
+      });
+
+      if (result?.serverError) {
+        toastError({
+          title: "Error deleting email account",
+          description: result.serverError,
+        });
+      } else {
+        toastSuccess({
+          description: `Email account ${emailAccountToDelete.email} deleted successfully`,
+        });
+        mutate(); // Refresh the list
+      }
+    } catch (error) {
+      toastError({
+        title: "Error deleting email account",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setEmailAccountToDelete(null);
+    }
+  }, [emailAccountToDelete, mutate]);
 
   return (
     <>
@@ -58,6 +117,7 @@ export function AdminUserManagementSection() {
                       <TableHead>Email</TableHead>
                       <TableHead>Email Accounts</TableHead>
                       <TableHead>Joined</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -110,6 +170,23 @@ export function AdminUserManagementSection() {
                             addSuffix: true,
                           })}
                         </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            {user.emailAccounts.map((account) => (
+                              <div key={account.id}>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeleteClick(account.id, account.email)
+                                  }
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -128,6 +205,35 @@ export function AdminUserManagementSection() {
         isOpen={!!selectedEmailAccountId}
         onClose={handleCloseModal}
       />
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Email Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the email account{" "}
+              <strong>{emailAccountToDelete?.email}</strong>? This action cannot
+              be undone and will permanently delete all associated data
+              including rules, labels, and history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   adminToggleRuleBody,
   adminDeleteRuleBody,
+  adminDeleteEmailAccountBody,
 } from "@/utils/actions/admin-rule.validation";
 import prisma from "@/utils/prisma";
 import { actionClient } from "@/utils/actions/safe-action";
@@ -157,3 +158,40 @@ async function toggleRule({
     data: { enabled },
   });
 }
+
+export const adminDeleteEmailAccountAction = adminActionClient
+  .metadata({ name: "adminDeleteEmailAccount" })
+  .schema(adminDeleteEmailAccountBody)
+  .action(async ({ parsedInput: { emailAccountId } }) => {
+    // Verify the email account exists
+    const emailAccount = await prisma.emailAccount.findUnique({
+      where: { id: emailAccountId },
+      include: {
+        user: true,
+        account: true,
+      },
+    });
+
+    if (!emailAccount) {
+      throw new SafeError("Email account not found");
+    }
+
+    // Delete the email account (cascading deletes will handle related records)
+    await prisma.emailAccount.delete({
+      where: { id: emailAccountId },
+    });
+
+    // Also delete the associated Account if this was the only EmailAccount using it
+    const remainingEmailAccounts = await prisma.emailAccount.findFirst({
+      where: { accountId: emailAccount.accountId },
+    });
+
+    if (!remainingEmailAccounts) {
+      await prisma.account.delete({
+        where: { id: emailAccount.accountId },
+      });
+    }
+
+    revalidatePath(`/settings`);
+    revalidatePath(`/accounts`);
+  });
