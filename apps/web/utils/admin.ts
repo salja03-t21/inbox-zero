@@ -1,5 +1,8 @@
 import { env } from "@/env";
 import prisma from "@/utils/prisma";
+import { createScopedLogger } from "@/utils/logger";
+
+const logger = createScopedLogger("admin");
 
 /**
  * Check if a user is an admin.
@@ -13,13 +16,21 @@ export async function isAdmin({
   email?: string | null;
   userId?: string;
 }): Promise<boolean> {
-  if (!email && !userId) return false;
+  if (!email && !userId) {
+    logger.debug("isAdmin check failed: no email or userId provided");
+    return false;
+  }
 
   // First check database
   if (userId) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isAdmin: true },
+      select: { isAdmin: true, email: true },
+    });
+    logger.debug("Database admin check", {
+      userId,
+      userEmail: user?.email,
+      isAdmin: user?.isAdmin,
     });
     if (user?.isAdmin) return true;
   } else if (email) {
@@ -27,13 +38,24 @@ export async function isAdmin({
       where: { email },
       select: { isAdmin: true },
     });
+    logger.debug("Database admin check by email", {
+      email,
+      isAdmin: user?.isAdmin,
+    });
     if (user?.isAdmin) return true;
   }
 
   // Fallback to env variable for bootstrapping
+  logger.debug("Env admin check", {
+    email,
+    envAdmins: env.ADMINS,
+    includes: env.ADMINS?.includes(email || ""),
+  });
   if (email && env.ADMINS?.includes(email)) {
+    logger.info("User is admin via ADMINS env variable", { email });
     return true;
   }
 
+  logger.debug("isAdmin check failed", { email, userId });
   return false;
 }
