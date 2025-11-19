@@ -12,6 +12,9 @@ import { RegisterSSOModal } from "@/app/(app)/admin/RegisterSSOModal";
 import { AdminHashEmail } from "@/app/(app)/admin/AdminHashEmail";
 import { GmailUrlConverter } from "@/app/(app)/admin/GmailUrlConverter";
 import { DebugLabels } from "@/app/(app)/admin/DebugLabels";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ShieldCheckIcon } from "lucide-react";
 
 // NOTE: Turn on Fluid Compute on Vercel to allow for 800 seconds max duration
 export const maxDuration = 800;
@@ -19,7 +22,9 @@ export const maxDuration = 800;
 export default async function AdminPage() {
   const session = await auth();
 
-  if (!isAdmin({ email: session?.user.email })) {
+  if (
+    !(await isAdmin({ email: session?.user.email, userId: session?.user.id }))
+  ) {
     return (
       <ErrorPage
         title="No Access"
@@ -33,6 +38,18 @@ export default async function AdminPage() {
       <TopSection title="Admin" />
 
       <div className="m-8 space-y-8">
+        <div className="rounded-lg border border-gray-200 bg-white p-6">
+          <h2 className="text-lg font-semibold mb-4">Quick Links</h2>
+          <div className="flex gap-2">
+            <Link href="/admin/users">
+              <Button variant="outline" className="gap-2">
+                <ShieldCheckIcon className="h-4 w-4" />
+                User Management
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         <AdminUpgradeUserForm />
         <AdminUserControls />
         <AdminHashEmail />

@@ -1,43 +1,26 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/utils/middleware";
 import prisma from "@/utils/prisma";
-import { isOrganizationAdmin } from "@/utils/organizations/roles";
+import { isAdmin as checkIsAdmin } from "@/utils/admin";
 
 export type AdminUsersResponse = Awaited<ReturnType<typeof getAdminUsers>>;
 
 async function getAdminUsers({ userId }: { userId: string }) {
-  // Get the requesting user with their organization memberships
-  const requestingUser = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      emailAccounts: {
-        include: {
-          members: true,
-        },
-      },
-    },
-  });
+  // Check if the requesting user is a global admin
+  const userIsAdmin = await checkIsAdmin({ userId });
 
-  if (!requestingUser) {
-    throw new Error("User not found");
+  if (!userIsAdmin) {
+    throw new Error("Unauthorized: Global admin access required");
   }
 
-  // Check if user is an admin in any organization
-  const isAdmin = requestingUser.emailAccounts.some((account) =>
-    isOrganizationAdmin(account.members),
-  );
-
-  if (!isAdmin) {
-    throw new Error("Unauthorized: Admin access required");
-  }
-
-  // Fetch all users with their email accounts and rule counts
+  // Fetch all users with their email accounts and admin status
   const users = await prisma.user.findMany({
     select: {
       id: true,
       name: true,
       email: true,
       createdAt: true,
+      isAdmin: true,
       emailAccounts: {
         select: {
           id: true,
@@ -59,6 +42,7 @@ async function getAdminUsers({ userId }: { userId: string }) {
     name: user.name,
     email: user.email,
     createdAt: user.createdAt,
+    isAdmin: user.isAdmin,
     emailAccounts: user.emailAccounts.map((account) => ({
       id: account.id,
       email: account.email,

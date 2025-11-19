@@ -142,7 +142,7 @@ export const actionClientUser = baseClient.use(
 export const adminActionClient = baseClient.use(async ({ next, metadata }) => {
   const session = await auth();
   if (!session?.user) throw new SafeError("Unauthorized");
-  if (!isAdmin({ email: session.user.email }))
+  if (!(await isAdmin({ email: session.user.email, userId: session.user.id })))
     throw new SafeError("Unauthorized");
 
   return withServerActionInstrumentation(metadata?.name, async () => {

@@ -84,6 +84,7 @@ model User {
   aiApiKey      String?
   aiBaseUrl     String?
   webhookSecret String?
+  isAdmin       Boolean @default(false) // Global admin status for the application
 
   // referral system
   referralCode String? @unique // User's own referral code
