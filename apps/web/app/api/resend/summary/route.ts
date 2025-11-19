@@ -218,16 +218,18 @@ async function sendEmail({
   async function sendEmail({
     emailAccountId,
     userEmail,
+    provider,
   }: {
     emailAccountId: string;
     userEmail: string;
+    provider: string;
   }) {
     const token = await createUnsubscribeToken({ emailAccountId });
 
     // Create email provider
     const emailProvider = await createEmailProvider({
       emailAccountId,
-      provider: emailAccount.account.provider,
+      provider,
     });
 
     // Prepare email props
@@ -256,7 +258,11 @@ async function sendEmail({
 
   await Promise.all([
     shouldSendEmail
-      ? sendEmail({ emailAccountId, userEmail: emailAccount.email })
+      ? sendEmail({
+          emailAccountId,
+          userEmail: emailAccount.email,
+          provider: emailAccount.account.provider,
+        })
       : Promise.resolve(),
     prisma.emailAccount.update({
       where: { id: emailAccountId },
