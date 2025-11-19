@@ -6,8 +6,18 @@ import { isAdmin as checkIsAdmin } from "@/utils/admin";
 export type AdminUsersResponse = Awaited<ReturnType<typeof getAdminUsers>>;
 
 async function getAdminUsers({ userId }: { userId: string }) {
+  // Get user's email for admin check (needed for env variable fallback)
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
   // Check if the requesting user is a global admin
-  const userIsAdmin = await checkIsAdmin({ userId });
+  const userIsAdmin = await checkIsAdmin({ userId, email: user.email });
 
   if (!userIsAdmin) {
     throw new Error("Unauthorized: Global admin access required");
