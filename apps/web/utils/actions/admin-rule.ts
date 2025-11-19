@@ -51,7 +51,9 @@ export const adminToggleRuleAction = adminActionClient
   .metadata({ name: "adminToggleRule" })
   .inputSchema(adminToggleRuleBody)
   .action(
-    async ({ parsedInput: { ruleId, emailAccountId, enabled, systemType } }) => {
+    async ({
+      parsedInput: { ruleId, emailAccountId, enabled, systemType },
+    }) => {
       // Verify the rule belongs to the specified email account
       const rule = await prisma.rule.findFirst({
         where: {

@@ -119,12 +119,11 @@ export function Chat() {
               setLocalStorageInput("");
             } else {
               console.warn("[Chat Submit Blocked]", {
-                reason:
-                  !input.trim()
-                    ? "No input"
-                    : status !== "ready"
-                      ? `Status is '${status}', not 'ready'`
-                      : "Unknown",
+                reason: !input.trim()
+                  ? "No input"
+                  : status !== "ready"
+                    ? `Status is '${status}', not 'ready'`
+                    : "Unknown",
                 status,
                 input: input.slice(0, 50),
               });

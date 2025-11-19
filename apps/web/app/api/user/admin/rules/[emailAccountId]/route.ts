@@ -60,8 +60,15 @@ export const GET = withAuth(async (request, context) => {
   } catch (error) {
     console.error("Error fetching admin rules:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: error instanceof Error && error.message.includes("Unauthorized") ? 403 : 500 },
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      {
+        status:
+          error instanceof Error && error.message.includes("Unauthorized")
+            ? 403
+            : 500,
+      },
     );
   }
 });

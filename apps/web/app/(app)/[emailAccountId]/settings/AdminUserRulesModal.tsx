@@ -164,9 +164,7 @@ export function AdminUserRulesModal({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={rule.enabled ? "default" : "secondary"}
-                        >
+                        <Badge variant={rule.enabled ? "default" : "secondary"}>
                           {rule.enabled ? "Enabled" : "Disabled"}
                         </Badge>
                       </TableCell>

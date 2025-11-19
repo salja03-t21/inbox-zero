@@ -20,7 +20,9 @@ import { camelCase } from "lodash";
 import { createEmailProvider } from "@/utils/email/provider";
 import { sleep } from "@/utils/sleep";
 import { render } from "@react-email/components";
-import DigestEmail, { generateDigestSubject } from "@inboxzero/resend/emails/digest";
+import DigestEmail, {
+  generateDigestSubject,
+} from "@inboxzero/resend/emails/digest";
 import { env } from "@/env";
 
 export const maxDuration = 60;

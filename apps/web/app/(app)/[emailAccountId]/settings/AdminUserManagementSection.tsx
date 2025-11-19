@@ -182,9 +182,7 @@ export function AdminUserManagementSection() {
                                 key={account.id}
                                 className="flex items-center gap-2"
                               >
-                                <span className="text-sm">
-                                  {account.email}
-                                </span>
+                                <span className="text-sm">{account.email}</span>
                                 {account.hasActiveRules ? (
                                   <>
                                     <Badge variant="secondary">
@@ -237,7 +235,9 @@ export function AdminUserManagementSection() {
                                         account.enabled,
                                       )
                                     }
-                                    disabled={togglingAccountIds.has(account.id)}
+                                    disabled={togglingAccountIds.has(
+                                      account.id,
+                                    )}
                                   />
                                   <Label
                                     htmlFor={`enabled-${account.id}`}
@@ -278,10 +278,7 @@ export function AdminUserManagementSection() {
         onClose={handleCloseModal}
       />
 
-      <AlertDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-      >
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Email Account</AlertDialogTitle>
@@ -293,9 +290,7 @@ export function AdminUserManagementSection() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
