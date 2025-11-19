@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { sendDigestEmail } from "@inboxzero/resend";
 import { withEmailAccount, withError } from "@/utils/middleware";
-import { env } from "@/env";
 import { captureException, SafeError } from "@/utils/error";
 import prisma from "@/utils/prisma";
 import { createScopedLogger, type Logger } from "@/utils/logger";
@@ -21,6 +19,9 @@ import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import { camelCase } from "lodash";
 import { createEmailProvider } from "@/utils/email/provider";
 import { sleep } from "@/utils/sleep";
+import { render } from "@react-email/components";
+import DigestEmail, { generateDigestSubject } from "@inboxzero/resend/emails/digest";
+import { env } from "@/env";
 
 export const maxDuration = 60;
 
@@ -284,18 +285,27 @@ async function sendEmail({
 
     logger.info("Sending digest email");
 
-    // First, send the digest email and wait for it to complete
-    await sendDigestEmail({
-      from: env.RESEND_FROM_EMAIL,
+    // Prepare email props
+    const emailProps = {
+      baseUrl: env.NEXT_PUBLIC_BASE_URL,
+      unsubscribeToken: token,
+      date: new Date(),
+      ruleNames: Object.fromEntries(ruleNameMap),
+      ...executedRulesByRule,
+      emailAccountId,
+    };
+
+    // Render the digest email template to HTML
+    const digestHtml = await render(DigestEmail(emailProps));
+
+    // Generate subject line
+    const subject = generateDigestSubject(emailProps);
+
+    // Send digest email from user's own account to themselves
+    await emailProvider.sendEmailWithHtml({
       to: emailAccount.email,
-      emailProps: {
-        baseUrl: env.NEXT_PUBLIC_BASE_URL,
-        unsubscribeToken: token,
-        date: new Date(),
-        ruleNames: Object.fromEntries(ruleNameMap),
-        ...executedRulesByRule,
-        emailAccountId,
-      },
+      subject,
+      messageHtml: digestHtml,
     });
 
     logger.info("Digest email sent");
