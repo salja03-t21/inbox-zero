@@ -17,7 +17,7 @@ export async function isAdmin({
   userId?: string;
 }): Promise<boolean> {
   if (!email && !userId) {
-    logger.debug("isAdmin check failed: no email or userId provided");
+    logger.info("isAdmin check failed: no email or userId provided");
     return false;
   }
 
@@ -27,7 +27,7 @@ export async function isAdmin({
       where: { id: userId },
       select: { isAdmin: true, email: true },
     });
-    logger.debug("Database admin check", {
+    logger.info("Database admin check", {
       userId,
       userEmail: user?.email,
       isAdmin: user?.isAdmin,
@@ -38,7 +38,7 @@ export async function isAdmin({
       where: { email },
       select: { isAdmin: true },
     });
-    logger.debug("Database admin check by email", {
+    logger.info("Database admin check by email", {
       email,
       isAdmin: user?.isAdmin,
     });
@@ -46,7 +46,7 @@ export async function isAdmin({
   }
 
   // Fallback to env variable for bootstrapping
-  logger.debug("Env admin check", {
+  logger.info("Env admin check", {
     email,
     envAdmins: env.ADMINS,
     includes: env.ADMINS?.includes(email || ""),
@@ -56,6 +56,6 @@ export async function isAdmin({
     return true;
   }
 
-  logger.debug("isAdmin check failed", { email, userId });
+  logger.info("isAdmin check failed", { email, userId });
   return false;
 }
