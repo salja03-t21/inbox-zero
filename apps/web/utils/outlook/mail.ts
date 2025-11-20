@@ -76,7 +76,43 @@ export async function replyToEmail(
     message,
   });
 
-  // Only replying to the original sender
+  // Default to reply-all behavior: include original TO field recipients in CC
+  const replyToAddress = message.headers["reply-to"] || message.headers.from;
+
+  // Build CC list for reply-all behavior
+  const ccRecipients: { emailAddress: { address: string } }[] = [];
+
+  // Add original CC recipients if they exist
+  if (message.headers.cc) {
+    const originalCcAddresses = message.headers.cc
+      .split(",")
+      .map((addr) => addr.trim());
+    for (const addr of originalCcAddresses) {
+      ccRecipients.push({ emailAddress: { address: addr } });
+    }
+  }
+
+  // Add original TO recipients to CC (excluding the reply-to address to avoid duplicates)
+  if (message.headers.to && message.headers.to !== replyToAddress) {
+    // Split multiple TO addresses and filter out the reply-to address
+    const originalToAddresses = message.headers.to
+      .split(",")
+      .map((addr) => addr.trim());
+    const filteredToAddresses = originalToAddresses.filter(
+      (addr) => addr !== replyToAddress,
+    );
+    for (const addr of filteredToAddresses) {
+      ccRecipients.push({ emailAddress: { address: addr } });
+    }
+  }
+
+  // Remove duplicate CC recipients
+  const uniqueCcRecipients = ccRecipients.filter(
+    (recipient, index, self) =>
+      index ===
+      self.findIndex((r) => r.emailAddress.address === recipient.emailAddress.address),
+  );
+
   const replyMessage = {
     subject: `Re: ${message.headers.subject}`,
     body: {
@@ -86,10 +122,11 @@ export async function replyToEmail(
     toRecipients: [
       {
         emailAddress: {
-          address: message.headers["reply-to"] || message.headers.from,
+          address: replyToAddress,
         },
       },
     ],
+    ...(uniqueCcRecipients.length > 0 ? { ccRecipients: uniqueCcRecipients } : {}),
     conversationId: message.threadId,
   };
 

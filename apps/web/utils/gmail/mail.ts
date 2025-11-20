@@ -151,10 +151,39 @@ export async function replyToEmail(
     message,
   });
 
-  // Only replying to the original sender
+  // Default to reply-all behavior: include original TO field recipients in CC
+  const replyToAddress = message.headers["reply-to"] || message.headers.from;
+
+  // Build CC list for reply-all behavior
+  const ccList: string[] = [];
+
+  // Add original CC recipients if they exist
+  if (message.headers.cc) {
+    const originalCcAddresses = message.headers.cc
+      .split(",")
+      .map((addr) => addr.trim());
+    ccList.push(...originalCcAddresses);
+  }
+
+  // Add original TO recipients to CC (excluding the reply-to address to avoid duplicates)
+  if (message.headers.to && message.headers.to !== replyToAddress) {
+    // Split multiple TO addresses and filter out the reply-to address
+    const originalToAddresses = message.headers.to
+      .split(",")
+      .map((addr) => addr.trim());
+    const filteredToAddresses = originalToAddresses.filter(
+      (addr) => addr !== replyToAddress,
+    );
+    ccList.push(...filteredToAddresses);
+  }
+
+  // Remove duplicates and join CC list
+  const finalCcList = [...new Set(ccList)].join(", ");
+
   const raw = await createRawMailMessage(
     {
-      to: message.headers["reply-to"] || message.headers.from,
+      to: replyToAddress,
+      cc: finalCcList || undefined,
       subject: message.headers.subject,
       messageText: text,
       messageHtml: html,
