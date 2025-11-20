@@ -1,5 +1,4 @@
 import { AdminUsersManagement } from "@/app/(app)/admin/users/AdminUsersManagement";
-import { TopSection } from "@/components/TopSection";
 import { auth } from "@/utils/auth";
 import { ErrorPage } from "@/components/ErrorPage";
 import { isAdmin } from "@/utils/admin";
@@ -21,18 +20,14 @@ export default async function AdminUsersPage() {
   }
 
   return (
-    <div>
-      <TopSection
-        title="User Management"
-        descriptionComponent={
-          <p className="text-gray-700">
-            Manage admin status for users in the system
-          </p>
-        }
-      />
-      <div className="content-container">
-        <AdminUsersManagement />
+    <div className="px-4 py-8 md:px-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage admin status for users in the system
+        </p>
       </div>
+      <AdminUsersManagement />
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   RatioIcon,
   SendIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   SparklesIcon,
   TagIcon,
   Users2Icon,
@@ -246,6 +247,15 @@ export function SideNav({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <ClientOnly>
           <ReferralDialog />
         </ClientOnly> */}
+
+        {user?.isAdmin && (
+          <SidebarMenuButton asChild>
+            <Link href="/admin/users">
+              <ShieldCheckIcon className="size-4" />
+              <span className="font-semibold">Admin</span>
+            </Link>
+          </SidebarMenuButton>
+        )}
 
         {canAccessSettings && (
           <SidebarMenuButton asChild>

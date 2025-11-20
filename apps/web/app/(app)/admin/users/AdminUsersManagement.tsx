@@ -48,9 +48,8 @@ export function AdminUsersManagement() {
   return (
     <LoadingContent loading={isLoading} error={error}>
       {data && (
-        <div className="space-y-4">
-          <div className="rounded-md border">
-            <Table>
+        <div className="rounded-lg border bg-card">
+          <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
@@ -117,14 +116,13 @@ export function AdminUsersManagement() {
                 ))}
               </TableBody>
             </Table>
-          </div>
 
-          {data.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              No users found
-            </div>
-          )}
-        </div>
+            {data.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                No users found
+              </div>
+            )}
+          </div>
       )}
     </LoadingContent>
   );
