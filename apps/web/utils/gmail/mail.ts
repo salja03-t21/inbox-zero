@@ -4,7 +4,10 @@ import MailComposer from "nodemailer/lib/mail-composer";
 import type Mail from "nodemailer/lib/mailer";
 import type { Attachment } from "nodemailer/lib/mailer";
 import { zodAttachment } from "@/utils/types/mail";
-import { convertEmailHtmlToText } from "@/utils/mail";
+import {
+  convertEmailHtmlToText,
+  ensureEmailSendingEnabled,
+} from "@/utils/mail";
 import {
   forwardEmailHtml,
   forwardEmailSubject,
@@ -101,6 +104,8 @@ export async function sendEmailWithHtml(
   gmail: gmail_v1.Gmail,
   body: SendEmailBody,
 ) {
+  ensureEmailSendingEnabled();
+
   let messageText: string;
 
   try {

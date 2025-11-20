@@ -7,6 +7,7 @@ import type { EmailForAction } from "@/utils/ai/types";
 import { createReplyContent } from "@/utils/gmail/reply";
 import { forwardEmailHtml, forwardEmailSubject } from "@/utils/gmail/forward";
 import { buildReplyAllRecipients } from "@/utils/email/reply-all";
+import { ensureEmailSendingEnabled } from "@/utils/mail";
 
 interface OutlookMessageRequest {
   subject: string;
@@ -26,6 +27,8 @@ export async function sendEmailWithHtml(
   client: OutlookClient,
   body: SendEmailBody,
 ) {
+  ensureEmailSendingEnabled();
+
   const message: OutlookMessageRequest = {
     subject: body.subject,
     body: {
