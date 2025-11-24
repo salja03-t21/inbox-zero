@@ -195,7 +195,10 @@ export function AdminUsersManagement() {
                     <TableCell>
                       <div className="space-y-2">
                         {user.emailAccounts.map((account) => (
-                          <div key={account.id} className="flex items-center gap-2">
+                          <div
+                            key={account.id}
+                            className="flex items-center gap-2"
+                          >
                             <span className="text-sm">{account.email}</span>
                             {account.hasActiveRules ? (
                               <>
@@ -268,7 +271,10 @@ export function AdminUsersManagement() {
                                 id={`enabled-${account.id}`}
                                 checked={account.enabled}
                                 onCheckedChange={() =>
-                                  handleToggleEnabled(account.id, account.enabled)
+                                  handleToggleEnabled(
+                                    account.id,
+                                    account.enabled,
+                                  )
                                 }
                                 disabled={togglingAccountIds.has(account.id)}
                               />
@@ -320,8 +326,8 @@ export function AdminUsersManagement() {
             <AlertDialogDescription>
               Are you sure you want to delete the email account{" "}
               <strong>{emailAccountToDelete?.email}</strong>? This action cannot
-              be undone and will permanently delete all associated data including
-              rules, labels, and history.
+              be undone and will permanently delete all associated data
+              including rules, labels, and history.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

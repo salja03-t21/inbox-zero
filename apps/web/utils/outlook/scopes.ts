@@ -9,7 +9,7 @@ export const SCOPES = [
   "User.Read",
   "offline_access", // Required for refresh tokens
   "Mail.ReadWrite", // Read and write access to mailbox
-  "Mail.Send", // Send emails
+  ...(env.NEXT_PUBLIC_EMAIL_SEND_ENABLED ? ["Mail.Send"] : []), // Send emails
   "Mail.ReadBasic", // Read basic mail properties
   "Mail.Read", // Read mail in all mailboxes
   "Mail.Read.Shared", // Read mail in shared mailboxes

@@ -827,6 +827,11 @@ export function RuleForm({
                       toastSuccess({
                         description: "The rule has been deleted.",
                       });
+
+                      if (isDialog && onSuccess) {
+                        onSuccess();
+                      }
+
                       router.push(
                         prefixPath(emailAccountId, "/automation?tab=rules"),
                       );

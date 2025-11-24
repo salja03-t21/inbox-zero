@@ -3,6 +3,19 @@ import EmailReplyParser from "email-reply-parser";
 import { convert } from "html-to-text";
 import type { ParsedMessage } from "@/utils/types";
 import { removeExcessiveWhitespace, truncate } from "@/utils/string";
+import { env } from "@/env";
+
+/**
+ * Throws an error if email sending is disabled
+ * Used for testing/development environments
+ */
+export function ensureEmailSendingEnabled() {
+  if (!env.NEXT_PUBLIC_EMAIL_SEND_ENABLED) {
+    throw new Error(
+      "Email sending is disabled. Set NEXT_PUBLIC_EMAIL_SEND_ENABLED=true to enable.",
+    );
+  }
+}
 
 export function parseReply(plainText: string) {
   const parser = new EmailReplyParser().read(plainText);
