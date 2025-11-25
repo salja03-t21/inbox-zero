@@ -227,6 +227,50 @@ export async function isJobCancelled(jobId: string): Promise<boolean> {
 }
 
 /**
+ * Check if job is complete and mark it as such
+ * A job is complete when all queued emails have been processed (success or failure)
+ * Returns true if the job was marked as completed
+ */
+export async function checkAndMarkJobComplete(jobId: string): Promise<boolean> {
+  const job = await prisma.bulkProcessJob.findUnique({
+    where: { id: jobId },
+    select: {
+      status: true,
+      emailsQueued: true,
+      processedEmails: true,
+      failedEmails: true,
+    },
+  });
+
+  if (!job) {
+    logger.warn("Job not found when checking completion", { jobId });
+    return false;
+  }
+
+  // Only check running jobs
+  if (job.status !== BulkProcessJobStatus.RUNNING) {
+    return false;
+  }
+
+  // Job is complete when all queued emails have been processed (success or failure)
+  // Only check if we have a valid emailsQueued count (> 0)
+  const totalHandled = job.processedEmails + job.failedEmails;
+  if (job.emailsQueued > 0 && totalHandled >= job.emailsQueued) {
+    logger.info("Job complete - marking as COMPLETED", {
+      jobId,
+      emailsQueued: job.emailsQueued,
+      processedEmails: job.processedEmails,
+      failedEmails: job.failedEmails,
+    });
+
+    await markJobAsCompleted(jobId);
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Verify that the job belongs to the user's email account
  */
 export async function verifyJobOwnership(

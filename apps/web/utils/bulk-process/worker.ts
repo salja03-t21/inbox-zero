@@ -3,6 +3,7 @@ import {
   incrementProcessedEmails,
   incrementFailedEmails,
   isJobCancelled,
+  checkAndMarkJobComplete,
 } from "./job-manager";
 import { runRules } from "@/utils/ai/choose-rule/run-rules";
 import prisma from "@/utils/prisma";
@@ -74,6 +75,7 @@ export async function processEmail(params: ProcessEmailParams) {
     if (existingRules.length > 0) {
       logger.info("Rules already executed, skipping", { messageId });
       await incrementProcessedEmails(jobId);
+      await checkAndMarkJobComplete(jobId);
       return {
         success: true,
         skipped: true,
@@ -93,6 +95,7 @@ export async function processEmail(params: ProcessEmailParams) {
     if (rules.length === 0) {
       logger.info("No rules configured for account", { emailAccountId });
       await incrementProcessedEmails(jobId);
+      await checkAndMarkJobComplete(jobId);
       return {
         success: true,
         skipped: true,
@@ -116,8 +119,9 @@ export async function processEmail(params: ProcessEmailParams) {
       rulesMatched: results.length,
     });
 
-    // Increment processed counter
+    // Increment processed counter and check if job is complete
     await incrementProcessedEmails(jobId);
+    await checkAndMarkJobComplete(jobId);
 
     return {
       success: true,
@@ -132,8 +136,9 @@ export async function processEmail(params: ProcessEmailParams) {
       threadId,
     });
 
-    // Increment failed counter
+    // Increment failed counter and check if job is complete
     await incrementFailedEmails(jobId);
+    await checkAndMarkJobComplete(jobId);
 
     return {
       success: false,
