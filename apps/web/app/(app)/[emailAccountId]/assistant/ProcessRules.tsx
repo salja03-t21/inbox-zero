@@ -396,9 +396,19 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
               <SectionDescription className="mt-0">
                 Status: {bulkJobStatus.status}
                 <br />
-                Scanned: {bulkJobStatus.totalEmails} | Queued:{" "}
-                {bulkJobStatus.emailsQueued ||
-                  bulkJobStatus.processedEmails + bulkJobStatus.failedEmails}
+                {bulkJobStatus.emailsQueued > 0 ? (
+                  <>
+                    Scanned: {bulkJobStatus.totalEmails} | Remaining:{" "}
+                    {Math.max(
+                      0,
+                      bulkJobStatus.emailsQueued -
+                        bulkJobStatus.processedEmails -
+                        bulkJobStatus.failedEmails,
+                    )}
+                  </>
+                ) : (
+                  <>Scanned: {bulkJobStatus.totalEmails}</>
+                )}
                 <br />
                 Processed: {bulkJobStatus.processedEmails} | Failed:{" "}
                 {bulkJobStatus.failedEmails}
