@@ -26,7 +26,7 @@ export function PreviewStep() {
   const [isLoading, setIsLoading] = useState(true);
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>(undefined);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [_isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isLoadingFull, setIsLoadingFull] = useState(false);
 
   const action =
@@ -88,7 +88,7 @@ export function PreviewStep() {
     setIsLoading(false);
   }, [emailAccountId, buildCleanPayload]);
 
-  const handleProcessPreviewOnly = async () => {
+  const _handleProcessPreviewOnly = async () => {
     setIsLoadingPreview(true);
     const result = await cleanInboxAction(
       emailAccountId,

@@ -48,7 +48,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (chatId && emailAccountId) {
       setChatId(null);
     }
-  }, [emailAccountId]);
+  }, [emailAccountId, chatId, setChatId]);
 
   const { data } = useChatMessages(chatId);
 

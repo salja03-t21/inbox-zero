@@ -132,7 +132,7 @@ export const adminDeleteRuleAction = adminActionClient
       throw new SafeError("Email account not found");
     }
 
-    const provider = await createEmailProvider({
+    const _provider = await createEmailProvider({
       emailAccountId,
       provider: emailAccount.account.provider,
     });

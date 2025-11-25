@@ -81,7 +81,7 @@ export function AdminUserRulesModal({
           });
           mutate();
         }
-      } catch (error) {
+      } catch (_error) {
         toastError({
           title: "Error toggling rule",
           description: "An unexpected error occurred",
@@ -114,7 +114,7 @@ export function AdminUserRulesModal({
           });
           mutate();
         }
-      } catch (error) {
+      } catch (_error) {
         toastError({
           title: "Error deleting rule",
           description: "An unexpected error occurred",

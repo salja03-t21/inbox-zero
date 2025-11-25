@@ -2,7 +2,6 @@ import { createScopedLogger } from "@/utils/logger";
 import { aiParseMeetingRequest } from "@/utils/meetings/parse-meeting-request";
 import prisma from "@/utils/prisma";
 import type { EmailForLLM } from "@/utils/types";
-import type { EmailAccountWithAI } from "@/utils/llms/types";
 import { parseNaturalLanguageDateTime } from "@/utils/meetings/parse-datetime";
 
 const logger = createScopedLogger("meetings/parse-request-with-time");

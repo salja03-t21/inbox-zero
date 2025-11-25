@@ -151,7 +151,7 @@ export function useEmailStream(
         }
       }, 100);
     };
-  }, [connectToSSE]); // Removed isPaused - it's already in connectToSSE dependencies
+  }, [connectToSSE, isPaused]); // Removed isPaused - it's already in connectToSSE dependencies
 
   const togglePause = useCallback(() => {
     setIsPaused((prev) => !prev);

@@ -70,7 +70,6 @@ export const GET = withAuth(async (request) => {
     const result = await getAdminUsers({ userId });
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching admin users:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

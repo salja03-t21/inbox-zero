@@ -62,14 +62,17 @@ export function AccountConnectionSection() {
   // Only show expiration warnings if the refresh token actually expires
   // Microsoft refresh tokens don't have expiration dates (they're valid as long as they're used)
   const shouldShowExpiration = data?.hasExpiringRefreshToken ?? false;
-  
-  const isTokenExpired = shouldShowExpiration && data?.expiresAt
-    ? new Date(data.expiresAt) < new Date()
-    : false;
 
-  const isTokenExpiringSoon = shouldShowExpiration && data?.expiresAt
-    ? new Date(data.expiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 // 7 days
-    : false;
+  const isTokenExpired =
+    shouldShowExpiration && data?.expiresAt
+      ? new Date(data.expiresAt) < new Date()
+      : false;
+
+  const isTokenExpiringSoon =
+    shouldShowExpiration && data?.expiresAt
+      ? new Date(data.expiresAt).getTime() - Date.now() <
+        7 * 24 * 60 * 60 * 1000 // 7 days
+      : false;
 
   return (
     // biome-ignore lint/correctness/useUniqueElementIds: FormSection is only rendered once per settings page

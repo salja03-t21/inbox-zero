@@ -66,12 +66,12 @@ export const GET = withAuth(async (request) => {
         isControllerClosed = true;
         try {
           controller.close();
-        } catch (error) {
+        } catch (_error) {
           // Controller may already be closed, ignore
         }
         try {
           redisSubscriber.punsubscribe(pattern);
-        } catch (error) {
+        } catch (_error) {
           // Redis may already be unsubscribed, ignore
         }
       };

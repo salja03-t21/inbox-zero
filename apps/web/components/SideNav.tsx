@@ -13,7 +13,6 @@ import {
   CalendarIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  CrownIcon,
   FileIcon,
   InboxIcon,
   type LucideIcon,
@@ -51,12 +50,9 @@ import { CommandShortcut } from "@/components/ui/command";
 import { useSplitLabels } from "@/hooks/useLabels";
 import { LoadingContent } from "@/components/LoadingContent";
 import { useCleanerEnabled } from "@/hooks/useFeatureFlags";
-import { ClientOnly } from "@/components/ClientOnly";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { useAccount } from "@/providers/EmailAccountProvider";
 import { prefixPath } from "@/utils/path";
-import { ReferralDialog } from "@/components/ReferralDialog";
-import { isGoogleProvider } from "@/utils/email/provider-types";
 import { NavUser } from "@/components/NavUser";
 import { PremiumExpiredCard } from "@/components/PremiumExpiredCard";
 import { useUser } from "@/hooks/useUser";
@@ -106,7 +102,7 @@ export const useNavigation = () => {
         icon: CalendarIcon,
       },
     ],
-    [currentEmailAccountId, provider],
+    [currentEmailAccountId],
   );
 
   const navItemsFiltered = useMemo(

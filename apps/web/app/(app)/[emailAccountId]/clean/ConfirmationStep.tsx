@@ -7,7 +7,6 @@ import Image from "next/image";
 import { TypographyH3 } from "@/components/Typography";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/Badge";
-import { toastError } from "@/components/Toast";
 import { CleanAction } from "@prisma/client";
 import { PREVIEW_RUN_COUNT } from "@/app/(app)/[emailAccountId]/clean/consts";
 import { HistoryIcon, SettingsIcon } from "lucide-react";

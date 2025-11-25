@@ -52,7 +52,7 @@ export function AdminUsersManagement() {
   );
 
   const handleToggleAdmin = useCallback(
-    async (userId: string, currentStatus: boolean, userEmail: string) => {
+    async (userId: string, currentStatus: boolean, _userEmail: string) => {
       const newStatus = !currentStatus;
 
       const result = await adminSetAdminStatusAction({

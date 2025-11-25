@@ -6,7 +6,7 @@ import uniq from "lodash/uniq";
 import sumBy from "lodash/sumBy";
 import prisma from "@/utils/prisma";
 import { env } from "@/env";
-import { isAdminForPremium, isOnHigherTier, isPremium } from "@/utils/premium";
+import { isAdminForPremium, isOnHigherTier } from "@/utils/premium";
 import {
   cancelPremiumLemon,
   updateAccountSeatsForPremium,

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { FolderIcon, Loader2 } from "lucide-react";
-import { cn } from "@/utils";
 import {
   Select,
   SelectContent,

@@ -23,7 +23,6 @@ import { createScopedLogger } from "@/utils/logger";
 import { getContactsClient as getOutlookContactsClient } from "@/utils/outlook/client";
 import { SCOPES as OUTLOOK_SCOPES } from "@/utils/outlook/scopes";
 import { updateAccountSeats } from "@/utils/premium/server";
-import { createPremiumForUser } from "@/utils/premium/create-premium";
 import prisma from "@/utils/prisma";
 
 const logger = createScopedLogger("auth");

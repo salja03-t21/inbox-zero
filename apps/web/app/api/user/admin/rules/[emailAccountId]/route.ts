@@ -58,7 +58,6 @@ export const GET = withAuth(async (request, context) => {
     const result = await getAdminRules({ userId, emailAccountId });
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching admin rules:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

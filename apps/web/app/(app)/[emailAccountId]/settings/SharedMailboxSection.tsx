@@ -248,7 +248,7 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
   );
 }
 
-function OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
+function _OldAvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
   const { emailAccountId } = useAccount();
   const { data, isLoading, error } = useSWR<SharedMailboxesResponse>(
     "/api/outlook/shared-mailboxes",

@@ -46,8 +46,7 @@ export const GET = withAuth(async (req) => {
     });
 
     return NextResponse.json({ sharedMailboxes });
-  } catch (error) {
-    console.error("Error fetching shared mailboxes:", error);
+  } catch (_error) {
     return NextResponse.json(
       { error: "Failed to fetch shared mailboxes" },
       { status: 500 },
