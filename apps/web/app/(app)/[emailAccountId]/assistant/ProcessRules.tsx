@@ -28,6 +28,7 @@ import type { BatchExecutedRulesResponse } from "@/app/api/user/executed-rules/b
 import { isAIRule, isGroupRule, isStaticRule } from "@/utils/condition";
 import { BulkRunRules } from "@/app/(app)/[emailAccountId]/assistant/BulkRunRules";
 import type { BulkProcessStatusResponse } from "@/app/api/bulk-process/status/[jobId]/route";
+import type { ActiveBulkProcessJobResponse } from "@/app/api/bulk-process/active/route";
 import { fetchWithAccount } from "@/utils/fetch";
 import { cn } from "@/utils";
 import { TestCustomEmailForm } from "@/app/(app)/[emailAccountId]/assistant/TestCustomEmailForm";
@@ -128,6 +129,30 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
   const [bulkJobId, setBulkJobId] = useState<string | null>(null);
   const [bulkJobStatus, setBulkJobStatus] =
     useState<BulkProcessStatusResponse | null>(null);
+
+  // Check for existing active job on mount
+  useEffect(() => {
+    async function checkActiveJob() {
+      try {
+        const response = await fetchWithAccount({
+          url: "/api/bulk-process/active",
+          emailAccountId,
+        });
+
+        if (response.ok) {
+          const data: ActiveBulkProcessJobResponse = await response.json();
+          if (data.job) {
+            setBulkJobId(data.job.jobId);
+            setBulkJobStatus(data.job);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking for active job:", error);
+      }
+    }
+
+    checkActiveJob();
+  }, [emailAccountId]);
 
   // Poll for job status
   useEffect(() => {

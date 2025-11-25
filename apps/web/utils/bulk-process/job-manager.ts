@@ -80,6 +80,23 @@ export async function getBulkProcessJob(jobId: string) {
 }
 
 /**
+ * Get the active (PENDING or RUNNING) bulk processing job for an email account
+ */
+export async function getActiveBulkProcessJob(emailAccountId: string) {
+  return prisma.bulkProcessJob.findFirst({
+    where: {
+      emailAccountId,
+      status: {
+        in: [BulkProcessJobStatus.PENDING, BulkProcessJobStatus.RUNNING],
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+/**
  * Update the status of a bulk processing job
  */
 export async function updateJobStatus(
