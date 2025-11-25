@@ -103,6 +103,8 @@ model User {
   // Referral relationships
   referralsMade    Referral[] @relation("ReferrerUser")
   referralReceived Referral?  @relation("ReferredUser")
+
+  bulkProcessJobs BulkProcessJob[]
 }
 
 // Migrating over to the new settings model. Currently most settings are in the User model, but will be moved to this model in the future.
@@ -174,6 +176,7 @@ model EmailAccount {
   chats            Chat[]
   digests          Digest[]
   scheduledActions ScheduledAction[]
+  bulkProcessJobs  BulkProcessJob[]
 
   members             Member[]
   invitations         Invitation[]
@@ -590,6 +593,39 @@ model ScheduledAction {
   @@index([executedRuleId])
   @@index([status, scheduledFor])
   @@index([emailAccountId, messageId])
+}
+
+// Bulk email processing jobs
+// Tracks server-side bulk processing of emails through QStash queues
+model BulkProcessJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  emailAccountId String
+  emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status BulkProcessJobStatus @default(PENDING)
+
+  // Filter parameters
+  startDate  DateTime
+  endDate    DateTime?
+  onlyUnread Boolean   @default(true)
+
+  // Progress tracking
+  totalEmails     Int @default(0)
+  processedEmails Int @default(0)
+  failedEmails    Int @default(0)
+
+  completedAt DateTime?
+  error       String?   @db.Text
+
+  @@index([emailAccountId, status])
+  @@index([userId, status])
+  @@index([status, createdAt])
 }
 
 // Notes:
@@ -1150,4 +1186,12 @@ enum SchedulingStatus {
   PENDING
   SCHEDULED
   FAILED
+}
+
+enum BulkProcessJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
