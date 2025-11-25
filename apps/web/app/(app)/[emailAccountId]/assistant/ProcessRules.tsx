@@ -371,7 +371,8 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
               <SectionDescription className="mt-0">
                 Status: {bulkJobStatus.status}
                 <br />
-                Total: {bulkJobStatus.totalEmails} emails
+                Scanned: {bulkJobStatus.totalEmails} | To Process:{" "}
+                {bulkJobStatus.emailsQueued}
                 <br />
                 Processed: {bulkJobStatus.processedEmails} | Failed:{" "}
                 {bulkJobStatus.failedEmails}

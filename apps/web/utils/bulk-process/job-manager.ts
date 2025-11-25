@@ -15,6 +15,7 @@ export interface CreateJobParams {
 export interface UpdateJobProgressParams {
   jobId: string;
   totalEmails?: number;
+  emailsQueued?: number;
   processedEmails?: number;
   failedEmails?: number;
 }
@@ -144,12 +145,16 @@ export async function markJobAsCancelled(jobId: string) {
  * Update job progress counters (atomic increment)
  */
 export async function updateJobProgress(params: UpdateJobProgressParams) {
-  const { jobId, totalEmails, processedEmails, failedEmails } = params;
+  const { jobId, totalEmails, emailsQueued, processedEmails, failedEmails } =
+    params;
 
   const updateData: Record<string, unknown> = {};
 
   if (totalEmails !== undefined) {
     updateData.totalEmails = { increment: totalEmails };
+  }
+  if (emailsQueued !== undefined) {
+    updateData.emailsQueued = { increment: emailsQueued };
   }
   if (processedEmails !== undefined) {
     updateData.processedEmails = { increment: processedEmails };
@@ -169,6 +174,13 @@ export async function updateJobProgress(params: UpdateJobProgressParams) {
  */
 export async function incrementTotalEmails(jobId: string, count: number) {
   return updateJobProgress({ jobId, totalEmails: count });
+}
+
+/**
+ * Increment emails queued counter
+ */
+export async function incrementEmailsQueued(jobId: string, count: number) {
+  return updateJobProgress({ jobId, emailsQueued: count });
 }
 
 /**

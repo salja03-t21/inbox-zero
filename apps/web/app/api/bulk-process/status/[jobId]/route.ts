@@ -35,6 +35,7 @@ export const GET = withEmailAccount(async (request, { params }) => {
       jobId: job.id,
       status: job.status,
       totalEmails: job.totalEmails,
+      emailsQueued: job.emailsQueued,
       processedEmails: job.processedEmails,
       failedEmails: job.failedEmails,
       startDate: job.startDate,
@@ -57,6 +58,7 @@ export type BulkProcessStatusResponse = {
   jobId: string;
   status: string;
   totalEmails: number;
+  emailsQueued: number;
   processedEmails: number;
   failedEmails: number;
   startDate: Date;

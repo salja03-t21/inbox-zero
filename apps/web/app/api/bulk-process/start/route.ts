@@ -5,6 +5,7 @@ import {
   createBulkProcessJob,
   markJobAsRunning,
   incrementTotalEmails,
+  incrementEmailsQueued,
 } from "@/utils/bulk-process/job-manager";
 import { fetchEmailBatch } from "@/utils/bulk-process/email-fetcher";
 import { publishToQstashQueue } from "@/utils/upstash";
@@ -141,8 +142,11 @@ async function startFetchingAndQueueing(params: {
         totalFetched: batch.totalFetched,
       });
 
-      // Update total emails counter
+      // Update counters: totalEmails = all emails found, emailsQueued = emails actually needing processing
       await incrementTotalEmails(jobId, batch.totalFetched);
+      if (batch.emails.length > 0) {
+        await incrementEmailsQueued(jobId, batch.emails.length);
+      }
 
       // Enqueue each email to QStash
       for (const email of batch.emails) {

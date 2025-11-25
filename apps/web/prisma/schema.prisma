@@ -616,7 +616,8 @@ model BulkProcessJob {
   onlyUnread Boolean   @default(true)
 
   // Progress tracking
-  totalEmails     Int @default(0)
+  totalEmails     Int @default(0) // Total emails found in date range
+  emailsQueued    Int @default(0) // Emails actually queued for processing (excludes already-processed)
   processedEmails Int @default(0)
   failedEmails    Int @default(0)
 
