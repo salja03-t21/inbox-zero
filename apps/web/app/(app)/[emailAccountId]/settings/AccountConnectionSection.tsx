@@ -18,6 +18,7 @@ type AccountStatusResponse = {
   isConnected: boolean;
   expiresAt: string | null;
   provider: string;
+  hasExpiringRefreshToken: boolean;
 };
 
 export function AccountConnectionSection() {
@@ -58,11 +59,15 @@ export function AccountConnectionSection() {
     }
   };
 
-  const isTokenExpired = data?.expiresAt
+  // Only show expiration warnings if the refresh token actually expires
+  // Microsoft refresh tokens don't have expiration dates (they're valid as long as they're used)
+  const shouldShowExpiration = data?.hasExpiringRefreshToken ?? false;
+  
+  const isTokenExpired = shouldShowExpiration && data?.expiresAt
     ? new Date(data.expiresAt) < new Date()
     : false;
 
-  const isTokenExpiringSoon = data?.expiresAt
+  const isTokenExpiringSoon = shouldShowExpiration && data?.expiresAt
     ? new Date(data.expiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 // 7 days
     : false;
 
@@ -109,7 +114,7 @@ export function AccountConnectionSection() {
                     Connected
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    {data.expiresAt
+                    {shouldShowExpiration && data.expiresAt
                       ? `Expires ${new Date(data.expiresAt).toLocaleDateString()}`
                       : "Active"}
                   </span>
