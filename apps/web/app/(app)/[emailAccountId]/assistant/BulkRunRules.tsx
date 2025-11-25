@@ -48,14 +48,19 @@ export function BulkRunRules({
     try {
       const response = await fetchWithAccount({
         url: "/api/bulk-process/start",
-        method: "POST",
         emailAccountId,
-        body: JSON.stringify({
-          emailAccountId,
-          startDate: startDate.toISOString(),
-          endDate: endDate?.toISOString(),
-          onlyUnread,
-        }),
+        init: {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            emailAccountId,
+            startDate: startDate.toISOString(),
+            endDate: endDate?.toISOString(),
+            onlyUnread,
+          }),
+        },
       });
 
       if (!response.ok) {

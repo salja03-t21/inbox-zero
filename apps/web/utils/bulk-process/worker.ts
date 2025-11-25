@@ -8,7 +8,6 @@ import { runRules } from "@/utils/ai/choose-rule/run-rules";
 import prisma from "@/utils/prisma";
 import { createEmailProvider } from "@/utils/email/provider";
 import { getEmailAccountWithAi } from "@/utils/user/get";
-import type { Provider } from "@prisma/client";
 
 const logger = createScopedLogger("bulk-process-worker");
 
@@ -54,7 +53,7 @@ export async function processEmail(params: ProcessEmailParams) {
     // Create email provider
     const emailProvider = await createEmailProvider({
       emailAccountId,
-      provider: emailAccount.account.provider as Provider,
+      provider: emailAccount.account.provider,
     });
 
     // Fetch the message

@@ -296,8 +296,10 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
     try {
       const response = await fetchWithAccount({
         url: `/api/bulk-process/cancel/${bulkJobId}`,
-        method: "POST",
         emailAccountId,
+        init: {
+          method: "POST",
+        },
       });
 
       if (response.ok) {
