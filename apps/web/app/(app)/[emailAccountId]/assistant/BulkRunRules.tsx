@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { HistoryIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionDescription } from "@/components/Typography";
@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { BulkProcessStatusResponse } from "@/app/api/bulk-process/status/[jobId]/route";
 
 interface BulkRunRulesProps {
   emailAccountId: string;
@@ -38,57 +37,54 @@ export function BulkRunRules({
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [onlyUnread, setOnlyUnread] = useState(true);
 
-  const startBulkProcess = useCallback(
-    async () => {
-      if (!startDate) {
-        toastError({ description: "Please select a start date" });
-        return;
-      }
+  const startBulkProcess = useCallback(async () => {
+    if (!startDate) {
+      toastError({ description: "Please select a start date" });
+      return;
+    }
 
-      setIsStarting(true);
+    setIsStarting(true);
 
-      try {
-        const response = await fetchWithAccount({
-          url: "/api/bulk-process/start",
-          method: "POST",
+    try {
+      const response = await fetchWithAccount({
+        url: "/api/bulk-process/start",
+        method: "POST",
+        emailAccountId,
+        body: JSON.stringify({
           emailAccountId,
-          body: JSON.stringify({
-            emailAccountId,
-            startDate: startDate.toISOString(),
-            endDate: endDate?.toISOString(),
-            onlyUnread,
-          }),
-        });
+          startDate: startDate.toISOString(),
+          endDate: endDate?.toISOString(),
+          onlyUnread,
+        }),
+      });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to start bulk processing");
-        }
-
-        const result = await response.json();
-
-        toastSuccess({
-          description: "Bulk processing started! Processing will continue in the background.",
-        });
-
-        setIsOpen(false);
-
-        if (onJobCreated) {
-          onJobCreated(result.jobId);
-        }
-      } catch (error) {
-        console.error("Error starting bulk process:", error);
-        toastError({
-          title: "Failed to start bulk processing",
-          description:
-            error instanceof Error ? error.message : "Unknown error",
-        });
-      } finally {
-        setIsStarting(false);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to start bulk processing");
       }
-    },
-    [startDate, endDate, onlyUnread, emailAccountId, onJobCreated],
-  );
+
+      const result = await response.json();
+
+      toastSuccess({
+        description:
+          "Bulk processing started! Processing will continue in the background.",
+      });
+
+      setIsOpen(false);
+
+      if (onJobCreated) {
+        onJobCreated(result.jobId);
+      }
+    } catch (error) {
+      console.error("Error starting bulk process:", error);
+      toastError({
+        title: "Failed to start bulk processing",
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsStarting(false);
+    }
+  }, [startDate, endDate, onlyUnread, emailAccountId, onJobCreated]);
 
   return (
     <div>
@@ -159,4 +155,3 @@ export function BulkRunRules({
     </div>
   );
 }
-

@@ -97,7 +97,7 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
 
   const { data: rules } = useSWR<RulesResponse>("/api/user/rules");
   const { emailAccountId, userEmail } = useAccount();
-  const queue = useAiQueueState();
+  const _queue = useAiQueueState();
 
   // Fetch existing executed rules for current messages
   const messageIdsToFetch = useMemo(
@@ -372,8 +372,8 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
                 <br />
                 Total: {bulkJobStatus.totalEmails} emails
                 <br />
-                Processed: {bulkJobStatus.processedEmails} |
-                Failed: {bulkJobStatus.failedEmails}
+                Processed: {bulkJobStatus.processedEmails} | Failed:{" "}
+                {bulkJobStatus.failedEmails}
               </SectionDescription>
             </div>
             {(bulkJobStatus.status === "PENDING" ||

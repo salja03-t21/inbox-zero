@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { withEmailAccount } from "@/utils/middleware";
-import { getBulkProcessJob, verifyJobOwnership } from "@/utils/bulk-process/job-manager";
+import {
+  getBulkProcessJob,
+  verifyJobOwnership,
+} from "@/utils/bulk-process/job-manager";
 import { createScopedLogger } from "@/utils/logger";
 
 const logger = createScopedLogger("api/bulk-process/status");
@@ -8,7 +11,10 @@ const logger = createScopedLogger("api/bulk-process/status");
 export const dynamic = "force-dynamic";
 
 export const GET = withEmailAccount(
-  async (request: NextRequest, { params }: { params: Promise<{ jobId: string }> }) => {
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ jobId: string }> },
+  ) => {
     const { emailAccountId } = request.auth;
     const { jobId } = await params;
 

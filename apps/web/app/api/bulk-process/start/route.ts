@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import { withEmailProvider } from "@/utils/middleware";
 import { startBulkProcessSchema } from "@/utils/bulk-process/validation";
-import {
-  createBulkProcessJob,
-  markJobAsRunning,
-} from "@/utils/bulk-process/job-manager";
+import { createBulkProcessJob, markJobAsRunning } from "@/utils/bulk-process/job-manager";
 import { fetchEmailBatch } from "@/utils/bulk-process/email-fetcher";
 import { publishToQstashQueue } from "@/utils/upstash";
 import { env } from "@/env";
 import { incrementTotalEmails } from "@/utils/bulk-process/job-manager";
 import { createScopedLogger } from "@/utils/logger";
 import { getPremium } from "@/utils/premium";
+import type { EmailProvider } from "@/utils/email/types";
 
 const logger = createScopedLogger("api/bulk-process/start");
 
@@ -106,7 +104,7 @@ export const POST = withEmailProvider(async (request) => {
 async function startFetchingAndQueueing(params: {
   jobId: string;
   emailAccountId: string;
-  emailProvider: any;
+  emailProvider: EmailProvider;
   startDate: Date;
   endDate?: Date;
   onlyUnread: boolean;

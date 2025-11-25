@@ -11,7 +11,10 @@ import { BulkProcessJobStatus } from "@prisma/client";
 const logger = createScopedLogger("api/bulk-process/cancel");
 
 export const POST = withEmailAccount(
-  async (request: NextRequest, { params }: { params: Promise<{ jobId: string }> }) => {
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ jobId: string }> },
+  ) => {
     const { emailAccountId } = request.auth;
     const { jobId } = await params;
 

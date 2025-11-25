@@ -74,10 +74,9 @@ export const POST = verifySignatureAppRouter(
         messageId: payload.messageId,
         error: result.error,
       });
-      return new Response(
-        `Email processing failed: ${result.error}`,
-        { status: 500 },
-      );
+      return new Response(`Email processing failed: ${result.error}`, {
+        status: 500,
+      });
     } catch (error) {
       logger.error("QStash worker error", { error });
       return new Response("Internal server error", { status: 500 });
