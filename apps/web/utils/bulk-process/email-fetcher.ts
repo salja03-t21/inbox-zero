@@ -47,23 +47,19 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
   });
 
   // Build query parameters
-  const query: Record<string, unknown> = {
-    type: "inbox",
+  const query = {
+    type: "inbox" as const,
     after: startDate,
-    limit,
+    before: endDate,
+    isUnread: onlyUnread || undefined,
   };
 
-  if (endDate) {
-    query.before = endDate;
-  }
-
-  if (onlyUnread) {
-    query.isUnread = true;
-  }
-
   // Fetch threads from email provider
-  const { threads, nextPageToken } =
-    await emailProvider.getThreadsWithQuery(query);
+  const { threads, nextPageToken } = await emailProvider.getThreadsWithQuery({
+    query,
+    maxResults: limit,
+    pageToken,
+  });
 
   const threadIds = threads.map((t) => t.id);
 

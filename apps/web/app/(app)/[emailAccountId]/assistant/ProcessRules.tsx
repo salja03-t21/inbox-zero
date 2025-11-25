@@ -97,7 +97,6 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
 
   const { data: rules } = useSWR<RulesResponse>("/api/user/rules");
   const { emailAccountId, userEmail } = useAccount();
-  const _queue = useAiQueueState();
 
   // Fetch existing executed rules for current messages
   const messageIdsToFetch = useMemo(

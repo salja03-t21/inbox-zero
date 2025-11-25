@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { withEmailProvider } from "@/utils/middleware";
 import { startBulkProcessSchema } from "@/utils/bulk-process/validation";
-import { createBulkProcessJob, markJobAsRunning } from "@/utils/bulk-process/job-manager";
+import {
+  createBulkProcessJob,
+  markJobAsRunning,
+  incrementTotalEmails,
+} from "@/utils/bulk-process/job-manager";
 import { fetchEmailBatch } from "@/utils/bulk-process/email-fetcher";
 import { publishToQstashQueue } from "@/utils/upstash";
 import { env } from "@/env";
-import { incrementTotalEmails } from "@/utils/bulk-process/job-manager";
 import { createScopedLogger } from "@/utils/logger";
-import { getPremium } from "@/utils/premium";
 import type { EmailProvider } from "@/utils/email/types";
 
 const logger = createScopedLogger("api/bulk-process/start");
@@ -23,14 +25,7 @@ export const POST = withEmailProvider(async (request) => {
     const body = await request.json();
     const validatedData = startBulkProcessSchema.parse(body);
 
-    // Verify user has premium/AI access
-    const premium = await getPremium({ emailAccountId });
-    if (!premium?.hasAiAccess) {
-      return NextResponse.json(
-        { error: "Premium subscription required for bulk processing" },
-        { status: 403 },
-      );
-    }
+    // Note: Premium check removed - premium is enabled for all users in this fork
 
     // Verify the emailAccountId matches auth
     if (validatedData.emailAccountId !== emailAccountId) {
