@@ -110,7 +110,9 @@ export async function replyToEmail(
   const uniqueCcRecipients = ccRecipients.filter(
     (recipient, index, self) =>
       index ===
-      self.findIndex((r) => r.emailAddress.address === recipient.emailAddress.address),
+      self.findIndex(
+        (r) => r.emailAddress.address === recipient.emailAddress.address,
+      ),
   );
 
   const replyMessage = {
@@ -126,7 +128,9 @@ export async function replyToEmail(
         },
       },
     ],
-    ...(uniqueCcRecipients.length > 0 ? { ccRecipients: uniqueCcRecipients } : {}),
+    ...(uniqueCcRecipients.length > 0
+      ? { ccRecipients: uniqueCcRecipients }
+      : {}),
     conversationId: message.threadId,
   };
 
