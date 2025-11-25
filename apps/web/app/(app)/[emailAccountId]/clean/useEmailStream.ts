@@ -151,7 +151,8 @@ export function useEmailStream(
         }
       }, 100);
     };
-  }, [connectToSSE, isPaused]); // Removed isPaused - it's already in connectToSSE dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectToSSE]); // isPaused is already in connectToSSE dependencies
 
   const togglePause = useCallback(() => {
     setIsPaused((prev) => !prev);

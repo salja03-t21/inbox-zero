@@ -44,11 +44,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [context, setContext] = useState<MessageContext | null>(null);
 
   // Clear chatId when email account changes to prevent 403 errors
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (chatId && emailAccountId) {
       setChatId(null);
     }
-  }, [emailAccountId, chatId, setChatId]);
+  }, [emailAccountId]);
 
   const { data } = useChatMessages(chatId);
 
