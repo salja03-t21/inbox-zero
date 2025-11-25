@@ -1,5 +1,6 @@
 "use client";
 
+import { AccountConnectionSection } from "@/app/(app)/[emailAccountId]/settings/AccountConnectionSection";
 import { ApiKeysSection } from "@/app/(app)/[emailAccountId]/settings/ApiKeysSection";
 import { BillingSection } from "@/app/(app)/[emailAccountId]/settings/BillingSection";
 import { DeleteSection } from "@/app/(app)/[emailAccountId]/settings/DeleteSection";
@@ -54,6 +55,7 @@ export default function SettingsPage() {
                 </SectionDescription>
               </FormSection>
 
+              <AccountConnectionSection />
               <MeetingSchedulerSection />
               <ResetAnalyticsSection />
 
