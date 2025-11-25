@@ -1,18 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { HistoryIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionDescription } from "@/components/Typography";
 import { LoadingContent } from "@/components/LoadingContent";
-import { toastError } from "@/components/Toast";
+import { toastError, toastSuccess } from "@/components/Toast";
 import { PremiumAlertWithData, usePremium } from "@/components/PremiumAlert";
 import { SetDateDropdown } from "@/app/(app)/[emailAccountId]/assistant/SetDateDropdown";
 import { useThreads } from "@/hooks/useThreads";
-import type { ThreadsResponse } from "@/app/api/threads/route";
-import type { ThreadsQuery } from "@/app/api/threads/validation";
-import { runAiRules } from "@/utils/queue/email-actions";
-import { sleep } from "@/utils/sleep";
 import { fetchWithAccount } from "@/utils/fetch";
 import {
   Dialog,
@@ -21,28 +17,78 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { BulkProcessStatusResponse } from "@/app/api/bulk-process/status/[jobId]/route";
+
+interface BulkRunRulesProps {
+  emailAccountId: string;
+  onJobCreated?: (jobId: string) => void;
+}
 
 export function BulkRunRules({
-  onStart,
-}: {
-  onStart?: (params: {
-    startDate: Date;
-    endDate?: Date;
-    onlyUnread: boolean;
-    onDiscovered: (count: number) => void;
-    onProcessed: (count: number) => void;
-    onComplete: (aborted: boolean) => void;
-  }) => (() => void) | Promise<() => void>;
-}) {
+  emailAccountId,
+  onJobCreated,
+}: BulkRunRulesProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   const { data, isLoading, error } = useThreads({ type: "inbox" });
-
   const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [onlyUnread, setOnlyUnread] = useState(true);
+
+  const startBulkProcess = useCallback(
+    async () => {
+      if (!startDate) {
+        toastError({ description: "Please select a start date" });
+        return;
+      }
+
+      setIsStarting(true);
+
+      try {
+        const response = await fetchWithAccount({
+          url: "/api/bulk-process/start",
+          method: "POST",
+          emailAccountId,
+          body: JSON.stringify({
+            emailAccountId,
+            startDate: startDate.toISOString(),
+            endDate: endDate?.toISOString(),
+            onlyUnread,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to start bulk processing");
+        }
+
+        const result = await response.json();
+
+        toastSuccess({
+          description: "Bulk processing started! Processing will continue in the background.",
+        });
+
+        setIsOpen(false);
+
+        if (onJobCreated) {
+          onJobCreated(result.jobId);
+        }
+      } catch (error) {
+        console.error("Error starting bulk process:", error);
+        toastError({
+          title: "Failed to start bulk processing",
+          description:
+            error instanceof Error ? error.message : "Unknown error",
+        });
+      } finally {
+        setIsStarting(false);
+      }
+    },
+    [startDate, endDate, onlyUnread, emailAccountId, onJobCreated],
+  );
 
   return (
     <div>
@@ -94,32 +140,11 @@ export function BulkRunRules({
 
                       <Button
                         type="button"
-                        disabled={!startDate}
-                        onClick={async () => {
-                          if (!startDate) {
-                            toastError({
-                              description: "Please select a start date",
-                            });
-                            return;
-                          }
-
-                          // Close dialog immediately
-                          setIsOpen(false);
-
-                          // Call parent's onStart if provided
-                          if (onStart) {
-                            onStart({
-                              startDate,
-                              endDate,
-                              onlyUnread,
-                              onDiscovered: () => {},
-                              onProcessed: () => {},
-                              onComplete: () => {},
-                            });
-                          }
-                        }}
+                        disabled={!startDate || isStarting}
+                        loading={isStarting}
+                        onClick={startBulkProcess}
                       >
-                        Process Emails
+                        {isStarting ? "Starting..." : "Process Emails"}
                       </Button>
                     </div>
                   ) : (
@@ -135,122 +160,3 @@ export function BulkRunRules({
   );
 }
 
-// fetch batches of messages and add them to the ai queue
-export async function onRun(
-  emailAccountId: string,
-  {
-    startDate,
-    endDate,
-    onlyUnread,
-  }: { startDate: Date; endDate?: Date; onlyUnread: boolean },
-  callbacks: {
-    onDiscovered: (count: number) => void;
-    onProcessed: (count: number) => void;
-  },
-  onComplete: (aborted: boolean) => void,
-) {
-  let nextPageToken = "";
-  const LIMIT = 25;
-
-  let aborted = false;
-  const seenThreadIds = new Set<string>(); // Track processed threads to avoid duplicates
-
-  function abort() {
-    aborted = true;
-  }
-
-  async function run() {
-    // Cursor-based pagination: loop until no more pages or aborted
-    // No hard limit - processes all threads in date range
-    let pageCount = 0;
-    while (!aborted) {
-      pageCount++;
-      console.log(
-        `[BulkProcess] Fetching page ${pageCount}, nextPageToken:`,
-        nextPageToken || "(first page)",
-      );
-
-      const query: ThreadsQuery = {
-        type: "inbox",
-        limit: LIMIT,
-        after: startDate,
-        ...(endDate ? { before: endDate } : {}),
-        ...(onlyUnread ? { isUnread: true } : {}),
-        ...(nextPageToken ? { nextPageToken } : {}),
-      };
-
-      const res = await fetchWithAccount({
-        url: `/api/threads?${
-          // biome-ignore lint/suspicious/noExplicitAny: simplest
-          new URLSearchParams(query as any).toString()
-        }`,
-        emailAccountId,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Failed to fetch threads:", res.status, errorData);
-        toastError({
-          title: "Failed to fetch emails",
-          description:
-            typeof errorData.error === "string"
-              ? errorData.error
-              : `Error: ${res.status}`,
-        });
-        break;
-      }
-
-      const data: ThreadsResponse = await res.json();
-
-      if (!data.threads) {
-        console.error("Invalid response: missing threads", data);
-        toastError({
-          title: "Invalid response",
-          description: "Failed to process emails. Please try again.",
-        });
-        break;
-      }
-
-      nextPageToken = data.nextPageToken || "";
-      console.log(
-        `[BulkProcess] Page ${pageCount}: fetched ${data.threads.length} threads, nextPageToken:`,
-        nextPageToken || "(none - last page)",
-      );
-
-      const threadsWithoutPlan = data.threads.filter((t) => !t.plan);
-
-      // Deduplicate: filter out threads we've already seen
-      const newThreads = threadsWithoutPlan.filter(
-        (t) => !seenThreadIds.has(t.id),
-      );
-      newThreads.forEach((t) => seenThreadIds.add(t.id));
-      console.log(
-        `[BulkProcess] Page ${pageCount}: ${threadsWithoutPlan.length} without plan, ${newThreads.length} new to process`,
-      );
-
-      // Track: discovered = all fetched, processed = those queued for AI
-      callbacks.onDiscovered(data.threads.length);
-      callbacks.onProcessed(newThreads.length);
-
-      runAiRules(emailAccountId, newThreads, false);
-
-      if (!nextPageToken || aborted) {
-        console.log(
-          `[BulkProcess] Stopping: ${aborted ? "aborted" : "no more pages"}`,
-        );
-        break;
-      }
-
-      // avoid gmail api rate limits
-      // ai takes longer anyway
-      await sleep(threadsWithoutPlan.length ? 5000 : 2000);
-    }
-
-    // Fetching is done, but AI queue may still be processing
-    onComplete(aborted);
-  }
-
-  run();
-
-  return abort;
-}
