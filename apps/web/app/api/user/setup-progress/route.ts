@@ -23,12 +23,14 @@ async function getSetupProgress({
   const emailAccount = await prisma.emailAccount.findUnique({
     where: { id: emailAccountId },
     select: {
+      about: true,
       rules: { select: { id: true }, take: 1 },
       newsletters: {
         where: { status: { not: null } },
         take: 1,
       },
       calendarConnections: { select: { id: true }, take: 1 },
+      knowledge: { select: { id: true }, take: 1 },
     },
   });
 
@@ -45,6 +47,8 @@ async function getSetupProgress({
     bulkUnsubscribe: emailAccount.newsletters.length > 0,
     replyTracker: isReplyTrackerConfigured,
     calendarConnected: emailAccount.calendarConnections.length > 0,
+    draftKnowledge: emailAccount.knowledge.length > 0,
+    aboutYou: !!emailAccount.about && emailAccount.about.trim().length > 0,
   };
 
   const completed = Object.values(steps).filter(Boolean).length;

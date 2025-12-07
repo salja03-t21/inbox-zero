@@ -10,6 +10,8 @@ import {
   type LucideIcon,
   ChromeIcon,
   CalendarIcon,
+  SparklesIcon,
+  UserIcon,
 } from "lucide-react";
 import { useLocalStorage } from "usehooks-ts";
 import { PageHeading, SectionDescription } from "@/components/Typography";
@@ -213,6 +215,8 @@ function Checklist({
   isBulkUnsubscribeConfigured,
   isAiAssistantConfigured,
   isCalendarConnected,
+  isDraftKnowledgeConfigured,
+  isAboutYouConfigured,
 }: {
   emailAccountId: string;
   provider: string;
@@ -223,6 +227,8 @@ function Checklist({
   isBulkUnsubscribeConfigured: boolean;
   isAiAssistantConfigured: boolean;
   isCalendarConnected: boolean;
+  isDraftKnowledgeConfigured: boolean;
+  isAboutYouConfigured: boolean;
 }) {
   const [isExtensionInstalled, setIsExtensionInstalled] = useLocalStorage(
     "inbox-zero-extension-installed",
@@ -296,6 +302,28 @@ function Checklist({
         actionText="Connect"
       />
 
+      <StepItem
+        href={prefixPath(emailAccountId, "/assistant?tab=settings")}
+        icon={<SparklesIcon size={20} />}
+        iconBg="bg-cyan-100 dark:bg-cyan-900/50"
+        iconColor="text-cyan-500 dark:text-cyan-400"
+        title="Build your Draft Knowledge from sent emails"
+        timeEstimate="3 minutes"
+        completed={isDraftKnowledgeConfigured}
+        actionText="Set up"
+      />
+
+      <StepItem
+        href={prefixPath(emailAccountId, "/assistant?tab=settings")}
+        icon={<UserIcon size={20} />}
+        iconBg="bg-pink-100 dark:bg-pink-900/50"
+        iconColor="text-pink-500 dark:text-pink-400"
+        title="Tell us about yourself"
+        timeEstimate="2 minutes"
+        completed={isAboutYouConfigured}
+        actionText="Set up"
+      />
+
       {isGoogleProvider(provider) && (
         <StepItem
           href={EXTENSION_URL}
@@ -329,6 +357,8 @@ export function SetupContent() {
           isAiAssistantConfigured={data.steps.aiAssistant}
           isBulkUnsubscribeConfigured={data.steps.bulkUnsubscribe}
           isCalendarConnected={data.steps.calendarConnected}
+          isDraftKnowledgeConfigured={data.steps.draftKnowledge}
+          isAboutYouConfigured={data.steps.aboutYou}
           completedCount={data.completed}
           totalSteps={data.total}
           isSetupComplete={data.isComplete}
@@ -345,6 +375,8 @@ function SetupPageContent({
   isBulkUnsubscribeConfigured,
   isAiAssistantConfigured,
   isCalendarConnected,
+  isDraftKnowledgeConfigured,
+  isAboutYouConfigured,
   completedCount,
   totalSteps,
   isSetupComplete,
@@ -355,6 +387,8 @@ function SetupPageContent({
   isBulkUnsubscribeConfigured: boolean;
   isAiAssistantConfigured: boolean;
   isCalendarConnected: boolean;
+  isDraftKnowledgeConfigured: boolean;
+  isAboutYouConfigured: boolean;
   completedCount: number;
   totalSteps: number;
   isSetupComplete: boolean;
@@ -382,6 +416,8 @@ function SetupPageContent({
           isBulkUnsubscribeConfigured={isBulkUnsubscribeConfigured}
           isAiAssistantConfigured={isAiAssistantConfigured}
           isCalendarConnected={isCalendarConnected}
+          isDraftKnowledgeConfigured={isDraftKnowledgeConfigured}
+          isAboutYouConfigured={isAboutYouConfigured}
           completedCount={completedCount}
           totalSteps={totalSteps}
           progressPercentage={progressPercentage}
