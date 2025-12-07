@@ -1,6 +1,6 @@
 # Migration Plan: Upstash → Local Containers (Inngest + Redis)
 
-**Status**: Planning  
+**Status**: In Progress  
 **Created**: 2025-01-07  
 **Target**: Replace Upstash QStash with self-hosted Inngest  
 
@@ -37,26 +37,26 @@ Replace Upstash cloud services with self-hosted alternatives:
 
 ---
 
-### Phase 1: Infrastructure Setup
+### Phase 1: Infrastructure Setup ✅ COMPLETED
 
-- [ ] **1.1** Update `docker-compose.prod.yml`
+- [x] **1.1** Update `docker-compose.prod.yml`
   - Add Inngest service (port 8288/8289 internal only)
   - Configure health checks
   - Connect to existing postgres and redis
 
-- [ ] **1.2** Update `docker-compose.yml` (local dev)
+- [x] **1.2** Update `docker-compose.yml` (local dev)
   - Add Inngest service for local Docker dev
   - OR document `npx inngest-cli dev` approach
 
-- [ ] **1.3** Update environment variable documentation
+- [x] **1.3** Update environment variable documentation
   - Add INNGEST_* vars to `.env.example`
   - Update `apps/web/env.ts` with Inngest schema
 
 ---
 
-### Phase 2: Core Abstraction Layer
+### Phase 2: Core Abstraction Layer ✅ COMPLETED
 
-- [ ] **2.1** Create Inngest client
+- [x] **2.1** Create Inngest client
   - File: `apps/web/utils/inngest/client.ts`
   - Initialize Inngest with conditional config
 
@@ -65,11 +65,11 @@ Replace Upstash cloud services with self-hosted alternatives:
   - Implement provider detection (Inngest → QStash → Fallback)
   - Implement `enqueueJob()` unified interface
 
-- [ ] **2.3** Create Inngest serve endpoint
+- [x] **2.3** Create Inngest serve endpoint
   - File: `apps/web/app/api/inngest/route.ts`
   - Export GET, POST, PUT handlers
 
-- [ ] **2.4** Install dependencies
+- [x] **2.4** Install dependencies
   - Add `inngest` package to `apps/web/package.json`
 
 ---
@@ -272,6 +272,70 @@ If issues occur with Inngest:
 2. Restore `QSTASH_*` environment variables
 3. Code automatically falls back to QStash
 4. No code changes required for rollback
+
+---
+
+### Phase 9: Code Quality (Bonus)
+
+- [ ] **9.1** Fix pre-existing lint issues in test files
+  - `apps/web/__tests__/ai-choose-args.test.ts` - Replace `as any` with proper types
+  - `apps/web/__tests__/ai-summarize-email-for-digest.test.ts` - Replace `as any`
+  - `apps/web/__tests__/create-calendar-event.test.ts` - Replace `as any`
+  - `apps/web/__tests__/create-meeting-link.test.ts` - Replace `as any`
+  - `packages/tinybird-ai-analytics/src/index.ts` - Remove unused suppression
+
+---
+
+## QStash Features to Preserve in Inngest
+
+Based on code review analysis, the following QStash features must have Inngest equivalents:
+
+### Critical Features
+| QStash Feature | Inngest Equivalent | Notes |
+|---------------|-------------------|-------|
+| `publishJSON()` with retries | `inngest.send()` + function retries | Retries: 3, Retry-After: 10s |
+| Named queues with parallelism | Function concurrency config | `parallelism: 3` per user |
+| `notBefore` (delayed execution) | `step.sleepUntil()` | Unix timestamp → Date |
+| `deduplicationId` | Event `id` field or idempotency | Prevent duplicate processing |
+| `verifySignatureAppRouter` | Inngest SDK built-in auth | Automatic with serve() |
+| Rate limiting (`ratePerSecond`) | Inngest throttle config | e.g., 12 req/s for Gmail |
+
+### Edge Cases to Handle
+1. **Fallback when service unavailable**: Direct HTTP with `INTERNAL_API_KEY`
+2. **Queue cleanup**: Delete empty categorize-senders queues
+3. **Cancellation race conditions**: Handle PENDING → CANCELLED during execution
+4. **Orphaned schedules**: QStash messages with deleted DB records
+
+---
+
+## Testing Strategy Summary
+
+### Unit Tests Required
+- Queue abstraction layer (provider detection, fallback)
+- Inngest client initialization
+- Each converted function (9 total)
+- Scheduler dual-provider support
+
+### Integration Tests
+- Webhook → function conversion verification
+- Database consistency across providers
+- Error recovery and fallback behavior
+
+### Manual Testing Checklist
+- [ ] Inngest-only mode (no QSTASH_* vars)
+- [ ] QStash-only mode (no INNGEST_* vars)
+- [ ] Dual mode (both configured, Inngest preferred)
+- [ ] Fallback mode (neither configured)
+
+---
+
+## Progress Log
+
+| Date | Phase | Status | Notes |
+|------|-------|--------|-------|
+| 2025-01-07 | Plan created | ✅ | Migration plan document |
+| 2025-01-07 | Phase 1 | ✅ | Infrastructure setup complete |
+| 2025-01-07 | Phase 2 | 🔄 | Client + serve endpoint done, queue abstraction pending |
 
 ---
 

@@ -67,6 +67,10 @@ export const env = createEnv({
     QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
     QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
 
+    INNGEST_EVENT_KEY: z.string().optional(),
+    INNGEST_SIGNING_KEY: z.string().optional(),
+    INNGEST_BASE_URL: z.string().optional(),
+
     GOOGLE_PUBSUB_TOPIC_NAME: z.string().min(1),
     GOOGLE_PUBSUB_VERIFICATION_TOKEN: z.string().optional(),
 

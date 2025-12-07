@@ -114,6 +114,7 @@
     "google": "link:@next/third-parties/google",
     "he": "1.2.0",
     "html-to-text": "9.0.5",
+    "inngest": "^3.27.0",
     "ioredis": "5.8.2",
     "jotai": "2.15.0",
     "jsdom": "26.1.0",
