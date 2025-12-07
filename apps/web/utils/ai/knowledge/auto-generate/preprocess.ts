@@ -9,7 +9,7 @@ const logger = createScopedLogger("knowledge-preprocess");
 
 // Patterns that indicate auto-generated/automated emails to filter out
 const AUTO_REPLY_PATTERNS = [
-  /^(re:|fwd:|fw:)/i, // Skip replies and forwards
+  // Note: We intentionally include Re:/Fwd: emails as they contain valuable response patterns
   /out of office/i,
   /automatic reply/i,
   /auto-reply/i,
