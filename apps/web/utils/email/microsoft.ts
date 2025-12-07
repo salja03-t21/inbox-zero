@@ -748,7 +748,7 @@ export class OutlookProvider implements EmailProvider {
 
     // For Outlook, separate search queries from date filters
     // Microsoft Graph API handles these differently
-    const originalQuery = options.query || "";
+    let originalQuery = options.query || "";
 
     // Build date filter for Outlook (no quotes for DateTimeOffset comparison)
     const dateFilters: string[] = [];
@@ -759,36 +759,78 @@ export class OutlookProvider implements EmailProvider {
       dateFilters.push(`receivedDateTime gt ${options.after.toISOString()}`);
     }
 
+    // Check if the query contains a parentFolderId filter (OData syntax)
+    // This needs special handling because $search doesn't support OData filters
+    const sentItemsMatch = originalQuery.match(
+      /parentFolderId\s+eq\s+['"]?sentitems['"]?/i,
+    );
+    const inboxMatch = originalQuery.match(
+      /parentFolderId\s+eq\s+['"]?inbox['"]?/i,
+    );
+
+    // Get folder IDs
+    const folderIds = await getFolderIds(this.client);
+    let targetFolderId: string | undefined;
+
+    if (sentItemsMatch) {
+      // Query wants sent items - use the sentitems folder ID
+      targetFolderId = folderIds.sentitems;
+      // Remove the parentFolderId filter from the query since we'll handle it via folder endpoint
+      originalQuery = originalQuery
+        .replace(/parentFolderId\s+eq\s+['"]?sentitems['"]?/gi, "")
+        .replace(/\s+and\s+and\s+/gi, " and ")
+        .replace(/^\s*and\s+/i, "")
+        .replace(/\s+and\s*$/i, "")
+        .trim();
+
+      logger.info("Detected sent items folder filter", {
+        targetFolderId,
+        cleanedQuery: originalQuery,
+      });
+    } else if (inboxMatch) {
+      // Query wants inbox - use the inbox folder ID
+      targetFolderId = folderIds.inbox;
+      // Remove the parentFolderId filter from the query
+      originalQuery = originalQuery
+        .replace(/parentFolderId\s+eq\s+['"]?inbox['"]?/gi, "")
+        .replace(/\s+and\s+and\s+/gi, " and ")
+        .replace(/^\s*and\s+/i, "")
+        .replace(/\s+and\s*$/i, "")
+        .trim();
+
+      logger.info("Detected inbox folder filter", {
+        targetFolderId,
+        cleanedQuery: originalQuery,
+      });
+    } else {
+      // No folder filter in query - check for unquoted parentFolderId
+      const queryHasParentFolderId =
+        originalQuery && hasUnquotedParentFolderId(originalQuery);
+
+      if (!queryHasParentFolderId) {
+        // Default to inbox
+        targetFolderId = folderIds.inbox;
+      }
+    }
+
+    if (!targetFolderId && !originalQuery.trim()) {
+      throw new Error("Could not determine target folder");
+    }
+
     logger.info("Query parameters separated", {
       originalQuery,
       dateFilters,
       hasSearchQuery: !!originalQuery.trim(),
       hasDateFilters: dateFilters.length > 0,
+      targetFolderId,
     });
-
-    // Check if the query already contains parentFolderId as an unquoted identifier
-    // If it does, skip applying the default folder filter to avoid conflicts
-    const queryHasParentFolderId =
-      originalQuery && hasUnquotedParentFolderId(originalQuery);
-
-    // Get folder IDs to get the inbox folder ID
-    const folderIds = await getFolderIds(this.client);
-    const inboxFolderId = folderIds.inbox;
-
-    if (!queryHasParentFolderId && !inboxFolderId) {
-      throw new Error("Could not find inbox folder ID");
-    }
-
-    // Only apply folder filtering if the query doesn't already specify parentFolderId
-    const folderId = queryHasParentFolderId ? undefined : inboxFolderId;
 
     logger.info("Calling queryBatchMessages with separated parameters", {
       searchQuery: originalQuery.trim() || undefined,
       dateFilters,
       maxResults: options.maxResults || 20,
       pageToken: options.pageToken,
-      folderId,
-      queryHasParentFolderId,
+      folderId: targetFolderId,
     });
 
     const response = await queryBatchMessages(this.client, {
@@ -796,7 +838,7 @@ export class OutlookProvider implements EmailProvider {
       dateFilters,
       maxResults: options.maxResults || 20,
       pageToken: options.pageToken,
-      folderId,
+      folderId: targetFolderId,
     });
 
     return {
