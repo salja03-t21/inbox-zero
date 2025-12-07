@@ -51,11 +51,14 @@ export async function sendEmailWithHtml(
     message.conversationId = body.replyToEmail.threadId;
   }
 
-  const result: Message = await client
+  // Use sendMail endpoint to actually send the email (not just create a draft)
+  await client
     .getClient()
-    .api(`${client.getBaseUrl()}/messages`)
-    .post(message);
-  return result;
+    .api(`${client.getBaseUrl()}/sendMail`)
+    .post({ message, saveToSentItems: true });
+
+  // sendMail doesn't return the message, so we return a minimal response
+  return { id: "", internetMessageId: "" } as Message;
 }
 
 export async function sendEmailWithPlainText(
