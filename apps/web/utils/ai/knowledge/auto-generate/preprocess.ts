@@ -157,13 +157,31 @@ async function fetchSentEmailsInRange(
   let pageToken: string | undefined;
   const batchSize = 50;
 
+  let pageCount = 0;
   while (emails.length < maxEmails) {
+    pageCount++;
+    logger.info("Fetching page of sent emails", {
+      pageCount,
+      currentEmailCount: emails.length,
+      maxEmails,
+      hasPageToken: !!pageToken,
+      pageTokenLength: pageToken?.length,
+    });
+
     const response = await emailProvider.getMessagesByFields({
       type: "sent",
       after: startDate,
       before: endDate,
       maxResults: Math.min(batchSize, maxEmails - emails.length),
       pageToken,
+    });
+
+    logger.info("Received response from getMessagesByFields", {
+      pageCount,
+      messagesInResponse: response.messages.length,
+      hasNextPageToken: !!response.nextPageToken,
+      nextPageTokenLength: response.nextPageToken?.length,
+      nextPageTokenPreview: response.nextPageToken?.substring(0, 100),
     });
 
     emails.push(...response.messages);
@@ -176,11 +194,22 @@ async function fetchSentEmailsInRange(
     });
 
     if (!response.nextPageToken || emails.length >= maxEmails) {
+      logger.info("Stopping pagination", {
+        reason: !response.nextPageToken ? "no nextPageToken" : "reached maxEmails",
+        totalEmails: emails.length,
+        maxEmails,
+      });
       break;
     }
 
     pageToken = response.nextPageToken;
   }
+
+  logger.info("Finished fetching sent emails", {
+    totalPages: pageCount,
+    totalEmails: emails.length,
+    maxEmails,
+  });
 
   return emails;
 }
