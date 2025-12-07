@@ -14,7 +14,7 @@ import type {
 const logger = createScopedLogger("knowledge-extract-patterns");
 
 const MAX_EMAILS_PER_CLUSTER = 10; // Limit for context window
-const MAX_CONTENT_LENGTH = 1500; // Per email content limit
+const MAX_CONTENT_LENGTH = 2500; // Per email content limit (increased to include quoted context)
 
 export interface ExtractPatternsOptions {
   clusters: EmailCluster[];

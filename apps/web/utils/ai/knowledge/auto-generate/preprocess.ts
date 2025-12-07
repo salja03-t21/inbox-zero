@@ -338,18 +338,59 @@ function extractEmailContent(email: ParsedMessage): string {
 }
 
 function removeQuotedText(content: string): string {
-  // Remove lines starting with > (quoted replies)
+  // Keep 1 level of quoted context so the AI understands what we're replying to
+  // but remove deeper nesting (>> or more) to save tokens
+
   const lines = content.split("\n");
-  const filteredLines = lines.filter((line) => !line.trim().startsWith(">"));
+  const processedLines: string[] = [];
 
-  // Remove "On ... wrote:" patterns
-  const result = filteredLines
-    .join("\n")
-    .replace(/On .+? wrote:[\s\S]*$/i, "")
-    .replace(/From: .+?\nSent: .+?\nTo:[\s\S]*$/i, "")
-    .replace(/-{3,}\s*Original Message\s*-{3,}[\s\S]*/i, "");
+  let inDeepQuote = false;
+  let quotedContextLines = 0;
+  const MAX_QUOTED_CONTEXT_LINES = 15; // Limit quoted context to prevent token bloat
 
-  return result;
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Check quote depth
+    const quoteMatch = trimmedLine.match(/^(>+)/);
+    const quoteDepth = quoteMatch ? quoteMatch[1].length : 0;
+
+    if (quoteDepth === 0) {
+      // Not a quoted line - always include
+      inDeepQuote = false;
+      processedLines.push(line);
+    } else if (quoteDepth === 1) {
+      // Single-level quote - include for context (up to limit)
+      if (quotedContextLines < MAX_QUOTED_CONTEXT_LINES) {
+        // Clean up the quote marker for readability
+        const cleanedLine = trimmedLine.replace(/^>\s?/, "[Previous] ");
+        processedLines.push(cleanedLine);
+        quotedContextLines++;
+      }
+      inDeepQuote = false;
+    } else {
+      // Deep quote (>> or more) - skip to save tokens
+      if (!inDeepQuote) {
+        processedLines.push("[...earlier messages omitted...]");
+        inDeepQuote = true;
+      }
+    }
+  }
+
+  // Still remove the "On ... wrote:" attribution lines but keep content after
+  // We want the quoted content, not the attribution metadata
+  let result = processedLines.join("\n");
+
+  // Remove just the attribution line, not everything after it
+  result = result
+    .replace(/^On .+? wrote:\s*$/gim, "")
+    .replace(/^From: .+?\nSent: .+?\nTo: .+?\nSubject: .+?\s*$/gim, "")
+    .replace(/^-{3,}\s*Original Message\s*-{3,}\s*$/gim, "");
+
+  // Clean up multiple blank lines
+  result = result.replace(/\n{3,}/g, "\n\n");
+
+  return result.trim();
 }
 
 function removeSignature(content: string): string {
