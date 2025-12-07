@@ -16,6 +16,7 @@ Replace Upstash cloud services with self-hosted alternatives:
 1. **Dual-system support**: Code supports both Inngest and QStash based on env vars
 2. **Graceful fallback**: Inngest → QStash → Direct HTTP
 3. **Zero downtime**: Existing QStash jobs drain naturally while new jobs go to Inngest
+4. **Test coverage required**: Each phase must include unit tests before moving to next phase
 
 ---
 
