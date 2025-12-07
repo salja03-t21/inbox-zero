@@ -265,6 +265,9 @@ export function AutoGenerateKnowledge({
                         <SelectItem value="30">Last 30 days</SelectItem>
                         <SelectItem value="60">Last 60 days</SelectItem>
                         <SelectItem value="90">Last 90 days</SelectItem>
+                        <SelectItem value="180">Last 6 months</SelectItem>
+                        <SelectItem value="365">Last 1 year</SelectItem>
+                        <SelectItem value="730">Last 2 years</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

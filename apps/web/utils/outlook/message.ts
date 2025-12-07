@@ -339,6 +339,8 @@ export async function queryBatchMessages(
     logger.info("Filter results", {
       messageCount: messages.length,
       hasNextPageToken: !!nextPageToken,
+      hasOdataNextLink: !!response["@odata.nextLink"],
+      odataNextLink: response["@odata.nextLink"]?.substring(0, 100),
       combinedFilter,
     });
 
