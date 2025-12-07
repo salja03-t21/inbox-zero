@@ -253,6 +253,30 @@ function shouldIncludeEmail(email: ParsedMessage): boolean {
   return true;
 }
 
+/**
+ * Sanitize text for safe JSON serialization
+ * Removes control characters, null bytes, and other problematic characters
+ */
+function sanitizeForJson(text: string): string {
+  if (!text) return "";
+
+  return (
+    text
+      // Remove null bytes and other control characters (except newline, tab, carriage return)
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+      // Remove Unicode replacement character and other problematic chars
+      .replace(/[\uFFFD\uFFFE\uFFFF]/g, "")
+      // Remove zero-width characters that can cause issues
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      // Normalize whitespace
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      // Remove any remaining non-printable characters outside basic multilingual plane issues
+      .replace(/[^\x20-\x7E\xA0-\uFFFC\n\t]/g, " ")
+      .trim()
+  );
+}
+
 function extractEmailContent(email: ParsedMessage): string {
   // Prefer plain text, fall back to stripping HTML
   let content = email.textPlain || "";
@@ -277,6 +301,9 @@ function extractEmailContent(email: ParsedMessage): string {
   // Remove common email signatures and quoted text
   content = removeQuotedText(content);
   content = removeSignature(content);
+
+  // Sanitize for safe JSON serialization
+  content = sanitizeForJson(content);
 
   return content.trim();
 }
@@ -358,8 +385,10 @@ function createContentHash(email: SentEmail): string {
 function createSnippets(emails: SentEmail[]): EmailSnippet[] {
   return emails.map((email) => ({
     id: email.id,
-    subject: email.subject,
-    snippet: truncate(removeExcessiveWhitespace(email.content), 200),
+    subject: sanitizeForJson(email.subject),
+    snippet: sanitizeForJson(
+      truncate(removeExcessiveWhitespace(email.content), 200),
+    ),
     to: email.to,
     date: email.date,
   }));
