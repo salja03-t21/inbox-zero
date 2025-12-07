@@ -90,7 +90,7 @@ export async function enqueueJobsBatch<T>(
       );
       return { provider, count: jobs.length };
 
-    case "qstash":
+    case "qstash": {
       // QStash batch - delegate to existing implementation
       const { bulkPublishToQstash } = await import("@/utils/upstash");
       const baseUrl = env.WEBHOOK_URL || env.NEXT_PUBLIC_BASE_URL;
@@ -101,6 +101,7 @@ export async function enqueueJobsBatch<T>(
         })),
       });
       return { provider, count: jobs.length };
+    }
 
     default:
       // Fallback: send sequentially
