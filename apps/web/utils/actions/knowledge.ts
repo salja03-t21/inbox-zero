@@ -67,9 +67,9 @@ export const startAutoGenerateKnowledgeAction = actionClient
       ctx: { emailAccountId, logger },
       parsedInput: { startDate, endDate, maxEntries, groupBy },
     }) => {
-      // Rate limit: 5 auto-generate requests per hour per account
+      // Rate limit: 100 auto-generate requests per hour per account
       await checkAIRateLimit(emailAccountId, "auto-generate-knowledge", {
-        limit: 5,
+        limit: 100,
         windowSeconds: 3600,
       });
 
