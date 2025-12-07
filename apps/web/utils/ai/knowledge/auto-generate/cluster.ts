@@ -131,7 +131,7 @@ async function clusterBatchByTopic(
   snippets: EmailSnippet[],
   emailAccount: EmailAccountWithAI,
 ): Promise<EmailCluster[]> {
-  const modelOptions = getModel(emailAccount.user, "economy");
+  const modelOptions = getModel(emailAccount.user, "default");
 
   const generateObject = createGenerateObject({
     userEmail: emailAccount.email,
@@ -237,7 +237,7 @@ async function clusterBatchBySender(
   snippets: EmailSnippet[],
   emailAccount: EmailAccountWithAI,
 ): Promise<EmailCluster[]> {
-  const modelOptions = getModel(emailAccount.user, "economy");
+  const modelOptions = getModel(emailAccount.user, "default");
 
   const generateObject = createGenerateObject({
     userEmail: emailAccount.email,

@@ -94,7 +94,7 @@ async function extractClusterPattern(
   emails: SentEmail[],
   emailAccount: EmailAccountWithAI,
 ): Promise<ExtractedPattern | null> {
-  const modelOptions = getModel(emailAccount.user, "economy");
+  const modelOptions = getModel(emailAccount.user, "default");
 
   const generateObject = createGenerateObject({
     userEmail: emailAccount.email,

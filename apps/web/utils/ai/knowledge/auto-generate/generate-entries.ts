@@ -80,7 +80,7 @@ async function generateEntryFromPattern(
   pattern: ExtractedPattern,
   emailAccount: EmailAccountWithAI,
 ): Promise<Omit<GeneratedKnowledgeEntry, "sourceEmailIds"> | null> {
-  const modelOptions = getModel(emailAccount.user, "economy");
+  const modelOptions = getModel(emailAccount.user, "default");
 
   const generateObject = createGenerateObject({
     userEmail: emailAccount.email,

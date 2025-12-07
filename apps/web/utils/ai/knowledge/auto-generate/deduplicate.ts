@@ -165,7 +165,7 @@ async function findAndMergeSimilar(
   entries: GeneratedKnowledgeEntry[],
   emailAccount: EmailAccountWithAI,
 ): Promise<{ entries: GeneratedKnowledgeEntry[]; merged: number }> {
-  const modelOptions = getModel(emailAccount.user, "economy");
+  const modelOptions = getModel(emailAccount.user, "default");
 
   const generateObject = createGenerateObject({
     userEmail: emailAccount.email,
@@ -288,7 +288,7 @@ async function filterExistingKnowledge(
     return { entries, removed: 0 };
   }
 
-  const modelOptions = getModel(emailAccount.user, "economy");
+  const modelOptions = getModel(emailAccount.user, "default");
 
   const generateObject = createGenerateObject({
     userEmail: emailAccount.email,
