@@ -98,6 +98,14 @@ export async function enqueueJobsBatch<T>(
         items: jobs.map((job) => ({
           url: `${baseUrl}${job.name}`,
           body: job.data,
+          // Add flow control if queueName and concurrency are specified
+          ...(job.queueName &&
+            job.concurrency && {
+              flowControl: {
+                key: job.queueName,
+                parallelism: job.concurrency,
+              },
+            }),
         })),
       });
       return { provider, count: jobs.length };

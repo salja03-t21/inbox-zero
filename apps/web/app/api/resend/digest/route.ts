@@ -24,6 +24,7 @@ import DigestEmail, {
   generateDigestSubject,
 } from "@inboxzero/resend/emails/digest";
 import { env } from "@/env";
+import { INTERNAL_API_KEY_HEADER } from "@/utils/internal-api";
 
 export const maxDuration = 60;
 
@@ -48,39 +49,48 @@ export const GET = withEmailAccount(async (request) => {
   return NextResponse.json(result);
 });
 
-export const POST = withError(
-  verifySignatureAppRouter(async (request: NextRequest) => {
-    const json = await request.json();
-    const { success, data, error } = sendDigestEmailBody.safeParse(json);
+export const POST = withError(async (request: NextRequest) => {
+  // Check if this is an internal call (Inngest fallback mode)
+  const internalKey = request.headers.get(INTERNAL_API_KEY_HEADER);
+  if (internalKey === env.INTERNAL_API_KEY) {
+    return handleRequest(request);
+  }
 
-    let logger = createScopedLogger("resend/digest");
+  // Otherwise, verify QStash signature
+  return verifySignatureAppRouter(handleRequest)(request);
+});
 
-    if (!success) {
-      logger.error("Invalid request body", { error });
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 },
-      );
-    }
-    const { emailAccountId } = data;
+async function handleRequest(request: NextRequest) {
+  const json = await request.json();
+  const { success, data, error } = sendDigestEmailBody.safeParse(json);
 
-    logger = logger.with({ emailAccountId });
+  let logger = createScopedLogger("resend/digest");
 
-    logger.info("Sending digest email to user POST");
+  if (!success) {
+    logger.error("Invalid request body", { error });
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 },
+    );
+  }
+  const { emailAccountId } = data;
 
-    try {
-      const result = await sendEmail({ emailAccountId, logger });
-      return NextResponse.json(result);
-    } catch (error) {
-      logger.error("Error sending digest email", { error });
-      captureException(error);
-      return NextResponse.json(
-        { success: false, error: "Error sending digest email" },
-        { status: 500 },
-      );
-    }
-  }),
-);
+  logger = logger.with({ emailAccountId });
+
+  logger.info("Sending digest email to user POST");
+
+  try {
+    const result = await sendEmail({ emailAccountId, logger });
+    return NextResponse.json(result);
+  } catch (error) {
+    logger.error("Error sending digest email", { error });
+    captureException(error);
+    return NextResponse.json(
+      { success: false, error: "Error sending digest email" },
+      { status: 500 },
+    );
+  }
+}
 
 async function getDigestSchedule({
   emailAccountId,

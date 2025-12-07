@@ -8,8 +8,7 @@ import {
   incrementEmailsQueued,
 } from "@/utils/bulk-process/job-manager";
 import { fetchEmailBatch } from "@/utils/bulk-process/email-fetcher";
-import { publishToQstashQueue } from "@/utils/upstash";
-import { env } from "@/env";
+import { enqueueJob } from "@/utils/queue";
 import { createScopedLogger } from "@/utils/logger";
 import type { EmailProvider } from "@/utils/email/types";
 
@@ -148,22 +147,19 @@ async function startFetchingAndQueueing(params: {
         await incrementEmailsQueued(jobId, batch.emails.length);
       }
 
-      // Enqueue each email to QStash
+      // Enqueue each email for processing
       for (const email of batch.emails) {
         try {
-          await publishToQstashQueue({
-            queueName: "bulk-email-processing",
-            parallelism: 3, // Process 3 emails concurrently
-            url: `${env.WEBHOOK_URL || env.NEXT_PUBLIC_BASE_URL}/api/bulk-process/worker`,
-            body: {
+          await enqueueJob({
+            name: "/api/bulk-process/worker",
+            data: {
               jobId,
               emailAccountId,
               messageId: email.messageId,
               threadId: email.threadId,
             },
-            headers: {
-              "Content-Type": "application/json",
-            },
+            queueName: "bulk-email-processing",
+            concurrency: 3, // Process 3 emails concurrently
           });
 
           logger.info("Queued email for processing", {

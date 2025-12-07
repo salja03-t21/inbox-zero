@@ -2,7 +2,7 @@ import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { withError } from "@/utils/middleware";
-import { publishToQstash } from "@/utils/upstash";
+import { enqueueJob } from "@/utils/queue";
 import { getThreadMessages as getGmailThreadMessages } from "@/utils/gmail/thread";
 import { getThreadMessages as getOutlookThreadMessages } from "@/utils/outlook/thread";
 import { getGmailClientWithRefresh } from "@/utils/gmail/client";
@@ -315,7 +315,7 @@ function getPublish({
       jobId,
     };
 
-    logger.info("Publishing to Qstash", {
+    logger.info("Enqueueing clean job", {
       emailAccountId,
       threadId,
       maxRatePerSecond,
@@ -325,9 +325,11 @@ function getPublish({
     });
 
     await Promise.all([
-      publishToQstash(endpoint, cleanBody, {
-        key: queueKey,
-        ratePerSecond: maxRatePerSecond,
+      enqueueJob({
+        name: endpoint,
+        data: cleanBody,
+        queueName: queueKey,
+        concurrency: maxRatePerSecond,
       }),
       updateThread({
         emailAccountId,
@@ -341,7 +343,7 @@ function getPublish({
       }),
     ]);
 
-    logger.info("Published to Qstash", { emailAccountId, threadId, endpoint });
+    logger.info("Enqueued clean job", { emailAccountId, threadId, endpoint });
   };
 }
 
