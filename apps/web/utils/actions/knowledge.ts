@@ -16,15 +16,13 @@ import { runAutoGenerateKnowledgePipeline } from "@/utils/ai/knowledge/auto-gene
 import type { GeneratedKnowledgeEntry } from "@/utils/ai/knowledge/auto-generate/types";
 import { createKnowledgeContentHash } from "@/utils/ai/knowledge/auto-generate/generate-entries";
 import { SafeError } from "@/utils/error";
+import { checkAIRateLimit } from "@/utils/ai/rate-limit";
 
 export const createKnowledgeAction = actionClient
   .metadata({ name: "createKnowledge" })
   .schema(createKnowledgeBody)
   .action(
-    async ({
-      ctx: { emailAccountId },
-      parsedInput: { title, content },
-    }) => {
+    async ({ ctx: { emailAccountId }, parsedInput: { title, content } }) => {
       await prisma.knowledge.create({
         data: {
           title,
@@ -69,6 +67,12 @@ export const startAutoGenerateKnowledgeAction = actionClient
       ctx: { emailAccountId, logger },
       parsedInput: { startDate, endDate, maxEntries, groupBy },
     }) => {
+      // Rate limit: 5 auto-generate requests per hour per account
+      await checkAIRateLimit(emailAccountId, "auto-generate-knowledge", {
+        limit: 5,
+        windowSeconds: 3600,
+      });
+
       // Get email account with AI settings
       const emailAccount = await getEmailAccountWithAi({ emailAccountId });
       if (!emailAccount) {
@@ -191,10 +195,46 @@ export const approveGeneratedKnowledgeAction = actionClient
   .metadata({ name: "approveGeneratedKnowledge" })
   .schema(approveGeneratedKnowledgeBody)
   .action(
-    async ({
-      ctx: { emailAccountId, logger },
-      parsedInput: { jobId, approvedEntryIndices },
-    }) => {
+    async ({ ctx: { emailAccountId, logger }, parsedInput: { entries } }) => {
+      // Validate we don't have too many entries at once
+      if (entries.length > 50) {
+        throw new SafeError("Cannot approve more than 50 entries at once");
+      }
+
+      // Create the knowledge entries - map validated input to GeneratedKnowledgeEntry
+      const entriesToCreate: GeneratedKnowledgeEntry[] = entries.map(
+        (entry) => ({
+          title: entry.title,
+          content: entry.content,
+          topic: entry.topic ?? null,
+          groupType: entry.groupType ?? "TOPIC",
+          senderPattern: entry.senderPattern ?? null,
+          sourceEmailCount: entry.sourceEmailCount ?? 0,
+          confidence: entry.confidence,
+          keywords: entry.keywords ?? [],
+          sourceEmailIds: entry.sourceEmailIds ?? [],
+        }),
+      );
+
+      const createdEntries = await createKnowledgeEntriesFromGenerated(
+        emailAccountId,
+        entriesToCreate,
+      );
+
+      logger.info("Approved knowledge entries", {
+        count: createdEntries.length,
+        emailAccountId,
+      });
+
+      return { approved: createdEntries.length };
+    },
+  );
+
+export const rejectGeneratedKnowledgeAction = actionClient
+  .metadata({ name: "rejectGeneratedKnowledge" })
+  .schema(rejectGeneratedKnowledgeBody)
+  .action(
+    async ({ ctx: { emailAccountId, logger }, parsedInput: { jobId } }) => {
       // Get the job and verify ownership
       const job = await prisma.knowledgeExtractionJob.findUnique({
         where: { id: jobId, emailAccountId },
@@ -204,46 +244,17 @@ export const approveGeneratedKnowledgeAction = actionClient
         throw new SafeError("Job not found");
       }
 
-      if (job.status !== "COMPLETED") {
-        throw new SafeError("Job is not in a state that can be approved");
-      }
-
-      // The entries should be stored temporarily or re-fetched
-      // For now, we'll need to re-run with the same parameters
-      // In a production system, you'd store the generated entries in the job
-
-      logger.info("Approved entries", {
-        jobId,
-        count: approvedEntryIndices.length,
+      // Mark as rejected by setting entries to 0
+      await prisma.knowledgeExtractionJob.update({
+        where: { id: jobId },
+        data: { entriesCreated: 0 },
       });
 
-      return { approved: approvedEntryIndices.length };
+      logger.info("Rejected all entries", { jobId });
+
+      return { rejected: true };
     },
   );
-
-export const rejectGeneratedKnowledgeAction = actionClient
-  .metadata({ name: "rejectGeneratedKnowledge" })
-  .schema(rejectGeneratedKnowledgeBody)
-  .action(async ({ ctx: { emailAccountId, logger }, parsedInput: { jobId } }) => {
-    // Get the job and verify ownership
-    const job = await prisma.knowledgeExtractionJob.findUnique({
-      where: { id: jobId, emailAccountId },
-    });
-
-    if (!job) {
-      throw new SafeError("Job not found");
-    }
-
-    // Mark as rejected by setting entries to 0
-    await prisma.knowledgeExtractionJob.update({
-      where: { id: jobId },
-      data: { entriesCreated: 0 },
-    });
-
-    logger.info("Rejected all entries", { jobId });
-
-    return { rejected: true };
-  });
 
 export const updateKnowledgeSettingsAction = actionClient
   .metadata({ name: "updateKnowledgeSettings" })

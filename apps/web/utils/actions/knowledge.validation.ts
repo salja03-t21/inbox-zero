@@ -31,9 +31,23 @@ export const startAutoGenerateBody = z.object({
 
 export type StartAutoGenerateBody = z.infer<typeof startAutoGenerateBody>;
 
+// Schema for a generated knowledge entry that can be approved
+export const generatedKnowledgeEntrySchema = z.object({
+  title: z.string().min(1).max(200),
+  content: z.string().min(1).max(10000),
+  topic: z.string().optional(),
+  groupType: z.enum(["TOPIC", "SENDER"]).optional(),
+  senderPattern: z.string().optional(),
+  sourceEmailCount: z.number().optional(),
+  confidence: z.number().min(0).max(1),
+  keywords: z.array(z.string()).optional(),
+  sourceEmailIds: z.array(z.string()).optional(),
+});
+
 export const approveGeneratedKnowledgeBody = z.object({
-  jobId: z.string(),
-  approvedEntryIndices: z.array(z.number()),
+  entries: z
+    .array(generatedKnowledgeEntrySchema)
+    .min(1, "At least one entry is required"),
 });
 
 export type ApproveGeneratedKnowledgeBody = z.infer<

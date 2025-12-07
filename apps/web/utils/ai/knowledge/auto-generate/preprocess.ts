@@ -88,11 +88,23 @@ export async function preprocessSentEmails(
     maxEmails,
   });
 
-  // Create email provider
-  const emailProvider = await createEmailProvider({
-    emailAccountId,
-    provider,
-  });
+  // Create email provider with error handling
+  let emailProvider: EmailProvider;
+  try {
+    emailProvider = await createEmailProvider({
+      emailAccountId,
+      provider,
+    });
+  } catch (error) {
+    logger.error("Failed to create email provider", {
+      error: error instanceof Error ? error.message : error,
+      emailAccountId,
+      provider,
+    });
+    throw new Error(
+      `Failed to connect to email provider: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
 
   // Fetch sent emails
   const rawEmails = await fetchSentEmailsInRange(emailProvider, {

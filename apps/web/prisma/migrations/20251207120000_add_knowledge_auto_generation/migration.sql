@@ -50,3 +50,13 @@ CREATE INDEX "KnowledgeExtractionJob_emailAccountId_createdAt_idx" ON "Knowledge
 
 -- AddForeignKey
 ALTER TABLE "KnowledgeExtractionJob" ADD CONSTRAINT "KnowledgeExtractionJob_emailAccountId_fkey" FOREIGN KEY ("emailAccountId") REFERENCES "EmailAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateIndex: Add indexes for Knowledge table queries
+CREATE INDEX "Knowledge_emailAccountId_source_idx" ON "Knowledge"("emailAccountId", "source");
+CREATE INDEX "Knowledge_emailAccountId_status_idx" ON "Knowledge"("emailAccountId", "status");
+CREATE INDEX "Knowledge_contentHash_idx" ON "Knowledge"("contentHash");
+
+-- AlterTable: Add knowledge extraction settings to EmailAccount
+ALTER TABLE "EmailAccount" ADD COLUMN "knowledgeExtractionEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "EmailAccount" ADD COLUMN "knowledgeAutoApprove" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "EmailAccount" ADD COLUMN "lastKnowledgeExtractionAt" TIMESTAMP(3);

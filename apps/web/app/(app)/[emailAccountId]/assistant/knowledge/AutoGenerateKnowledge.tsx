@@ -27,10 +27,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  startAutoGenerateBody,
-  type StartAutoGenerateBody,
-} from "@/utils/actions/knowledge.validation";
+import { startAutoGenerateBody } from "@/utils/actions/knowledge.validation";
+import type { z } from "zod";
+
+// Infer the form type with defaults applied
+type FormData = z.input<typeof startAutoGenerateBody>;
 import { startAutoGenerateKnowledgeAction } from "@/utils/actions/knowledge";
 import { toastError, toastSuccess } from "@/components/Toast";
 import { useAccount } from "@/providers/EmailAccountProvider";
@@ -64,7 +65,7 @@ export function AutoGenerateKnowledge({
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<StartAutoGenerateBody>({
+  } = useForm<FormData>({
     resolver: zodResolver(startAutoGenerateBody),
     defaultValues: {
       startDate: subDays(new Date(), 30),
@@ -74,7 +75,7 @@ export function AutoGenerateKnowledge({
   });
 
   const onSubmit = useCallback(
-    async (data: StartAutoGenerateBody) => {
+    async (data: FormData) => {
       setIsGenerating(true);
       setProgress(0);
       setStage("Starting...");
@@ -121,8 +122,7 @@ export function AutoGenerateKnowledge({
       } catch (error) {
         toastError({
           title: "Error generating knowledge",
-          description:
-            error instanceof Error ? error.message : "Unknown error",
+          description: error instanceof Error ? error.message : "Unknown error",
         });
       } finally {
         setIsGenerating(false);
@@ -154,15 +154,59 @@ export function AutoGenerateKnowledge({
   }, []);
 
   const handleApproveSelected = useCallback(async () => {
-    // For now, since we have auto-approve, this just closes the dialog
-    // In a full implementation, you'd call the approve action here
-    toastSuccess({
-      description: `Added ${selectedIndices.size} knowledge entries`,
-    });
-    onEntriesAdded?.();
-    setIsOpen(false);
-    setGeneratedEntries([]);
-  }, [selectedIndices.size, onEntriesAdded]);
+    if (selectedIndices.size === 0) return;
+
+    setIsGenerating(true);
+    try {
+      // Get the selected entries
+      const selectedEntries = Array.from(selectedIndices).map(
+        (i) => generatedEntries[i],
+      );
+
+      // Import the action dynamically to avoid circular imports
+      const { approveGeneratedKnowledgeAction } = await import(
+        "@/utils/actions/knowledge"
+      );
+
+      const result = await approveGeneratedKnowledgeAction(emailAccountId, {
+        entries: selectedEntries.map((entry) => ({
+          title: entry.title,
+          content: entry.content,
+          topic: entry.topic ?? undefined,
+          groupType: entry.groupType,
+          senderPattern: entry.senderPattern ?? undefined,
+          sourceEmailCount: entry.sourceEmailCount,
+          confidence: entry.confidence,
+          keywords: entry.keywords,
+          sourceEmailIds: entry.sourceEmailIds,
+        })),
+      });
+
+      if (result?.serverError) {
+        toastError({
+          title: "Error approving entries",
+          description: result.serverError,
+        });
+        return;
+      }
+
+      toastSuccess({
+        description: `Added ${selectedIndices.size} knowledge entries`,
+      });
+      onEntriesAdded?.();
+      setIsOpen(false);
+      setGeneratedEntries([]);
+      setSelectedIndices(new Set());
+    } catch (error) {
+      toastError({
+        title: "Error approving entries",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [selectedIndices, generatedEntries, onEntriesAdded]);
 
   const handleRejectAll = useCallback(() => {
     setGeneratedEntries([]);
@@ -262,9 +306,7 @@ export function AutoGenerateKnowledge({
                   render={({ field }) => (
                     <Select
                       value={String(field.value)}
-                      onValueChange={(value) =>
-                        field.onChange(parseInt(value))
-                      }
+                      onValueChange={(value) => field.onChange(parseInt(value))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select max entries" />
@@ -285,7 +327,8 @@ export function AutoGenerateKnowledge({
             {lastJob && (
               <div className="rounded-lg border bg-muted/50 p-3 text-sm">
                 <p className="text-muted-foreground">
-                  Last extraction: {formatDateSimple(new Date(lastJob.createdAt))}
+                  Last extraction:{" "}
+                  {formatDateSimple(new Date(lastJob.createdAt))}
                   {lastJob.status === "COMPLETED" && (
                     <span className="ml-2 text-green-600">
                       ({lastJob.entriesCreated} entries from{" "}
