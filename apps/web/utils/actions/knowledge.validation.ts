@@ -20,3 +20,39 @@ export const deleteKnowledgeBody = z.object({
 });
 
 export type DeleteKnowledgeBody = z.infer<typeof deleteKnowledgeBody>;
+
+// Auto-generate knowledge validation
+export const startAutoGenerateBody = z.object({
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().optional(),
+  maxEntries: z.number().min(1).max(50).default(20),
+  groupBy: z.enum(["topic", "sender", "both"]).default("both"),
+});
+
+export type StartAutoGenerateBody = z.infer<typeof startAutoGenerateBody>;
+
+export const approveGeneratedKnowledgeBody = z.object({
+  jobId: z.string(),
+  approvedEntryIndices: z.array(z.number()),
+});
+
+export type ApproveGeneratedKnowledgeBody = z.infer<
+  typeof approveGeneratedKnowledgeBody
+>;
+
+export const rejectGeneratedKnowledgeBody = z.object({
+  jobId: z.string(),
+});
+
+export type RejectGeneratedKnowledgeBody = z.infer<
+  typeof rejectGeneratedKnowledgeBody
+>;
+
+export const updateKnowledgeSettingsBody = z.object({
+  knowledgeExtractionEnabled: z.boolean().optional(),
+  knowledgeAutoApprove: z.boolean().optional(),
+});
+
+export type UpdateKnowledgeSettingsBody = z.infer<
+  typeof updateKnowledgeSettingsBody
+>;

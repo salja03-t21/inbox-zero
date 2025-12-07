@@ -153,6 +153,11 @@ model EmailAccount {
   meetingSchedulerWorkingHoursEnd    Int     @default(17) // Working hours end (0-23)
   meetingSchedulerAutoCreate         Boolean @default(true) // Auto-create events or prompt for confirmation
 
+  // Knowledge extraction settings
+  knowledgeExtractionEnabled    Boolean   @default(false)  // Scheduled sync toggle
+  knowledgeAutoApprove          Boolean   @default(false)  // Auto-approve vs review pending entries
+  lastKnowledgeExtractionAt     DateTime?
+
   digestSchedule Schedule?
 
   userId    String
@@ -172,11 +177,12 @@ model EmailAccount {
   cleanupThreads   CleanupThread[]
   emailMessages    EmailMessage[]
   emailTokens      EmailToken[]
-  knowledge        Knowledge[]
-  chats            Chat[]
-  digests          Digest[]
-  scheduledActions ScheduledAction[]
-  bulkProcessJobs  BulkProcessJob[]
+  knowledge               Knowledge[]
+  knowledgeExtractionJobs KnowledgeExtractionJob[]
+  chats                   Chat[]
+  digests                 Digest[]
+  scheduledActions        ScheduledAction[]
+  bulkProcessJobs         BulkProcessJob[]
 
   members             Member[]
   invitations         Invitation[]
@@ -812,12 +818,48 @@ model Knowledge {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   title     String
-  content   String
+  content   String   @db.Text
+
+  // Auto-generated knowledge fields
+  source           KnowledgeSource    @default(MANUAL)
+  status           KnowledgeStatus    @default(ACTIVE)
+  topic            String?            // AI-extracted topic (e.g., "Meeting Scheduling")
+  groupType        KnowledgeGroupType? // TOPIC or SENDER
+  senderPattern    String?            // Sender email/domain pattern if SENDER type
+  sourceEmailCount Int?               // Number of emails this was derived from
+  autoMetadata     Json?              // { confidence, keywords, extractedFromEmailIds }
+  contentHash      String?            // For deduplication
 
   emailAccountId String
   emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
 
   @@unique([emailAccountId, title])
+  @@index([emailAccountId, source])
+  @@index([emailAccountId, status])
+  @@index([contentHash])
+}
+
+model KnowledgeExtractionJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status      KnowledgeExtractionJobStatus    @default(PENDING)
+  triggerType KnowledgeExtractionTriggerType  @default(MANUAL)
+
+  startDate       DateTime    // Start of date range for email analysis
+  endDate         DateTime?   // End of date range (null = now)
+  totalEmails     Int         @default(0)
+  processedEmails Int         @default(0)
+  entriesCreated  Int         @default(0)
+  completedAt     DateTime?
+  error           String?     @db.Text
+
+  emailAccountId String
+  emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+
+  @@index([emailAccountId, status])
+  @@index([emailAccountId, createdAt])
 }
 
 model ApiKey {
@@ -1195,4 +1237,33 @@ enum BulkProcessJobStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+// Knowledge extraction enums
+enum KnowledgeSource {
+  MANUAL
+  AUTO
+}
+
+enum KnowledgeStatus {
+  PENDING
+  ACTIVE
+  ARCHIVED
+}
+
+enum KnowledgeGroupType {
+  TOPIC
+  SENDER
+}
+
+enum KnowledgeExtractionJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum KnowledgeExtractionTriggerType {
+  MANUAL
+  SCHEDULED
 }
