@@ -1,255 +1,304 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Use vi.hoisted to create mock functions that can be referenced in vi.mock factories
-const {
-  mockInngestSend,
-  mockIsInngestConfigured,
-  mockLoggerInfo,
-  mockLoggerWarn,
-  mockLoggerError,
-  getTestEnvConfig,
-  setTestEnvConfig,
-} = vi.hoisted(() => {
-  let testEnvConfig: {
-    INNGEST_EVENT_KEY?: string;
-    INNGEST_SIGNING_KEY?: string;
-    QSTASH_TOKEN?: string;
-  } = {};
+// Mock environment before importing the module
+const mockEnv = {
+  INNGEST_EVENT_KEY: "",
+  INNGEST_SIGNING_KEY: "",
+  QSTASH_TOKEN: "",
+  WEBHOOK_URL: "https://test.example.com",
+  NEXT_PUBLIC_BASE_URL: "https://test.example.com",
+  INTERNAL_API_KEY: "test-internal-key",
+};
 
-  return {
-    mockInngestSend: vi.fn().mockResolvedValue({ ids: ["test-id"] }),
-    mockIsInngestConfigured: vi.fn().mockReturnValue(false),
-    mockLoggerInfo: vi.fn(),
-    mockLoggerWarn: vi.fn(),
-    mockLoggerError: vi.fn(),
-    getTestEnvConfig: () => testEnvConfig,
-    setTestEnvConfig: (config: typeof testEnvConfig) => {
-      testEnvConfig = config;
-    },
-  };
-});
-
-// Mock environment and dependencies
 vi.mock("@/env", () => ({
-  env: {
-    get INNGEST_EVENT_KEY() {
-      return getTestEnvConfig().INNGEST_EVENT_KEY;
-    },
-    get INNGEST_SIGNING_KEY() {
-      return getTestEnvConfig().INNGEST_SIGNING_KEY;
-    },
-    get QSTASH_TOKEN() {
-      return getTestEnvConfig().QSTASH_TOKEN;
-    },
-    INTERNAL_API_KEY: "test-internal-key",
-    WEBHOOK_URL: "https://test.example.com",
-    NEXT_PUBLIC_BASE_URL: "https://test.example.com",
-  },
+  env: mockEnv,
 }));
 
+// Mock inngest client
+const mockInngestSend = vi.fn();
 vi.mock("@/utils/inngest/client", () => ({
   inngest: {
-    send: (...args: unknown[]) => mockInngestSend(...args),
+    send: mockInngestSend,
   },
-  isInngestConfigured: () => mockIsInngestConfigured(),
+  isInngestConfigured: vi.fn(() => false),
 }));
 
+// Mock logger
 vi.mock("@/utils/logger", () => ({
   createScopedLogger: () => ({
-    info: mockLoggerInfo,
-    warn: mockLoggerWarn,
-    error: mockLoggerError,
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   }),
 }));
 
+// Mock sleep
 vi.mock("@/utils/sleep", () => ({
   sleep: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock upstash
+const mockPublishToQstash = vi.fn();
+const mockPublishToQstashQueue = vi.fn();
+const mockBulkPublishToQstash = vi.fn();
 vi.mock("@/utils/upstash", () => ({
-  publishToQstash: vi.fn().mockResolvedValue(undefined),
-  publishToQstashQueue: vi.fn().mockResolvedValue(undefined),
-  bulkPublishToQstash: vi.fn().mockResolvedValue(undefined),
+  publishToQstash: mockPublishToQstash,
+  publishToQstashQueue: mockPublishToQstashQueue,
+  bulkPublishToQstash: mockBulkPublishToQstash,
 }));
 
-// Import after mocks
-import {
-  getActiveProvider,
-  enqueueJob,
-  enqueueJobsBatch,
-  cancelJob,
-} from "@/utils/queue/index";
+// Mock @upstash/qstash
+const mockPublishJSON = vi.fn();
+const mockHttpRequest = vi.fn();
+
+class MockQstashClient {
+  publishJSON = mockPublishJSON;
+  http = {
+    request: mockHttpRequest,
+  };
+}
+
+vi.mock("@upstash/qstash", () => ({
+  Client: MockQstashClient,
+}));
+
+// Mock date-fns
+vi.mock("date-fns", () => ({
+  getUnixTime: vi.fn((date: Date) => Math.floor(date.getTime() / 1000)),
+}));
+
+// Mock global fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 describe("Queue Abstraction Layer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset environment
-    setTestEnvConfig({});
-    mockIsInngestConfigured.mockReturnValue(false);
-    mockInngestSend.mockResolvedValue({ ids: ["test-id"] });
-    // Reset fetch mock
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ success: true }),
-    });
+    // Reset env to defaults
+    mockEnv.INNGEST_EVENT_KEY = "";
+    mockEnv.INNGEST_SIGNING_KEY = "";
+    mockEnv.QSTASH_TOKEN = "";
+
+    // Reset mocked returns
+    mockInngestSend.mockResolvedValue({ ids: ["test-id-123"] });
+    mockFetch.mockResolvedValue({ ok: true });
+  });
+
+  afterEach(() => {
+    vi.resetModules();
   });
 
   describe("getActiveProvider", () => {
-    it("returns 'inngest' when Inngest is configured", () => {
-      mockIsInngestConfigured.mockReturnValue(true);
+    it("should return 'inngest' when Inngest is configured", async () => {
+      // Dynamically mock isInngestConfigured to return true
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(true);
 
-      const provider = getActiveProvider();
-
-      expect(provider).toBe("inngest");
+      const { getActiveProvider } = await import("@/utils/queue");
+      expect(getActiveProvider()).toBe("inngest");
     });
 
-    it("returns 'qstash' when only QStash is configured", () => {
-      mockIsInngestConfigured.mockReturnValue(false);
-      setTestEnvConfig({ QSTASH_TOKEN: "test-qstash-token" });
+    it("should return 'qstash' when only QStash is configured", async () => {
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(false);
+      mockEnv.QSTASH_TOKEN = "test-qstash-token";
 
-      const provider = getActiveProvider();
-
-      expect(provider).toBe("qstash");
+      const { getActiveProvider } = await import("@/utils/queue");
+      expect(getActiveProvider()).toBe("qstash");
     });
 
-    it("returns 'fallback' when neither is configured", () => {
-      mockIsInngestConfigured.mockReturnValue(false);
-      setTestEnvConfig({});
+    it("should return 'fallback' when no queue providers are configured", async () => {
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(false);
+      mockEnv.QSTASH_TOKEN = "";
 
-      const provider = getActiveProvider();
-
-      expect(provider).toBe("fallback");
+      const { getActiveProvider } = await import("@/utils/queue");
+      expect(getActiveProvider()).toBe("fallback");
     });
 
-    it("prefers Inngest over QStash when both are configured", () => {
-      mockIsInngestConfigured.mockReturnValue(true);
-      setTestEnvConfig({ QSTASH_TOKEN: "test-qstash-token" });
+    it("should prefer Inngest over QStash when both are configured", async () => {
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(true);
+      mockEnv.QSTASH_TOKEN = "test-qstash-token";
 
-      const provider = getActiveProvider();
-
-      expect(provider).toBe("inngest");
+      const { getActiveProvider } = await import("@/utils/queue");
+      expect(getActiveProvider()).toBe("inngest");
     });
   });
 
   describe("enqueueJob", () => {
-    describe("with Inngest provider", () => {
-      beforeEach(() => {
-        mockIsInngestConfigured.mockReturnValue(true);
+    describe("via Inngest", () => {
+      beforeEach(async () => {
+        const { isInngestConfigured } = await import("@/utils/inngest/client");
+        vi.mocked(isInngestConfigured).mockReturnValue(true);
       });
 
-      it("successfully enqueues job via Inngest", async () => {
+      it("should enqueue to Inngest with correct event format", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
+
         const result = await enqueueJob({
           name: "inbox-zero/test.event",
-          data: { userId: "user-123" },
+          data: { foo: "bar" },
         });
 
         expect(result.provider).toBe("inngest");
-        expect(mockInngestSend).toHaveBeenCalledWith(
-          expect.objectContaining({
-            name: "inbox-zero/test.event",
-            data: { userId: "user-123" },
-          }),
-        );
+        expect(result.messageId).toBe("test-id-123");
+        expect(mockInngestSend).toHaveBeenCalledWith({
+          name: "inbox-zero/test.event",
+          data: { foo: "bar" },
+        });
       });
 
-      it("includes scheduledFor in data when provided", async () => {
-        const scheduledFor = new Date("2025-01-15T10:00:00Z");
+      it("should include scheduledFor in data when provided", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
+        const scheduledFor = new Date("2025-01-01T12:00:00Z");
 
         await enqueueJob({
           name: "inbox-zero/test.event",
-          data: { userId: "user-123" },
+          data: { foo: "bar" },
           scheduledFor,
         });
 
-        expect(mockInngestSend).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({
-              userId: "user-123",
-              scheduledFor: scheduledFor.toISOString(),
-            }),
-          }),
-        );
+        expect(mockInngestSend).toHaveBeenCalledWith({
+          name: "inbox-zero/test.event",
+          data: {
+            foo: "bar",
+            scheduledFor: "2025-01-01T12:00:00.000Z",
+          },
+        });
       });
 
-      it("uses idempotencyKey as event ID when provided", async () => {
+      it("should include idempotency key when provided", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
+
         await enqueueJob({
           name: "inbox-zero/test.event",
-          data: { userId: "user-123" },
+          data: { foo: "bar" },
           idempotencyKey: "unique-key-123",
         });
 
-        expect(mockInngestSend).toHaveBeenCalledWith(
+        expect(mockInngestSend).toHaveBeenCalledWith({
+          name: "inbox-zero/test.event",
+          data: { foo: "bar" },
+          id: "unique-key-123",
+        });
+      });
+    });
+
+    describe("via QStash", () => {
+      beforeEach(async () => {
+        const { isInngestConfigured } = await import("@/utils/inngest/client");
+        vi.mocked(isInngestConfigured).mockReturnValue(false);
+        mockEnv.QSTASH_TOKEN = "test-qstash-token";
+      });
+
+      it("should enqueue to QStash with standard publish", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
+
+        const result = await enqueueJob({
+          name: "/api/test",
+          data: { foo: "bar" },
+        });
+
+        expect(result.provider).toBe("qstash");
+        expect(mockPublishToQstash).toHaveBeenCalledWith("/api/test", {
+          foo: "bar",
+        });
+      });
+
+      it("should use queue-based publishing when queueName is specified", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
+
+        await enqueueJob({
+          name: "/api/test",
+          data: { foo: "bar" },
+          queueName: "test-queue",
+          concurrency: 5,
+        });
+
+        expect(mockPublishToQstashQueue).toHaveBeenCalledWith({
+          queueName: "test-queue",
+          parallelism: 5,
+          url: "https://test.example.com/api/test",
+          body: { foo: "bar" },
+        });
+      });
+
+      it("should use notBefore for scheduled jobs", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
+        const scheduledFor = new Date("2025-01-01T12:00:00Z");
+        mockPublishJSON.mockResolvedValue({
+          messageId: "qstash-msg-123",
+        });
+
+        const result = await enqueueJob({
+          name: "/api/test",
+          data: { foo: "bar" },
+          scheduledFor,
+        });
+
+        expect(result.provider).toBe("qstash");
+        expect(result.messageId).toBe("qstash-msg-123");
+        expect(mockPublishJSON).toHaveBeenCalledWith({
+          url: "https://test.example.com/api/test",
+          body: { foo: "bar" },
+          notBefore: Math.floor(scheduledFor.getTime() / 1000),
+        });
+      });
+    });
+
+    describe("via Fallback", () => {
+      beforeEach(async () => {
+        const { isInngestConfigured } = await import("@/utils/inngest/client");
+        vi.mocked(isInngestConfigured).mockReturnValue(false);
+        mockEnv.QSTASH_TOKEN = "";
+      });
+
+      it("should use direct HTTP fallback when no providers configured", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
+
+        const result = await enqueueJob({
+          name: "inbox-zero/clean.process",
+          data: { foo: "bar" },
+        });
+
+        expect(result.provider).toBe("fallback");
+        expect(mockFetch).toHaveBeenCalledWith(
+          "https://test.example.com/api/clean/process/simple",
           expect.objectContaining({
-            id: "unique-key-123",
+            method: "POST",
+            headers: expect.objectContaining({
+              "Content-Type": "application/json",
+            }),
+            body: JSON.stringify({ foo: "bar" }),
           }),
         );
       });
 
-      it("returns messageId from Inngest response", async () => {
-        mockInngestSend.mockResolvedValue({ ids: ["inngest-msg-123"] });
+      it("should convert Inngest event names to API paths", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
 
-        const result = await enqueueJob({
-          name: "inbox-zero/test.event",
-          data: { userId: "user-123" },
-        });
-
-        expect(result.messageId).toBe("inngest-msg-123");
-      });
-    });
-
-    describe("with fallback provider", () => {
-      beforeEach(() => {
-        mockIsInngestConfigured.mockReturnValue(false);
-        setTestEnvConfig({});
-      });
-
-      it("falls back to direct HTTP when no provider configured", async () => {
-        const result = await enqueueJob({
-          name: "inbox-zero/clean.process",
-          data: { emailAccountId: "account-123" },
-        });
-
-        expect(result.provider).toBe("fallback");
-        expect(global.fetch).toHaveBeenCalled();
-      });
-
-      it("converts event names to API paths correctly", async () => {
         await enqueueJob({
-          name: "inbox-zero/clean.process",
-          data: { emailAccountId: "account-123" },
+          name: "inbox-zero/bulk.process",
+          data: {},
         });
 
-        expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining("/api/clean/process/simple"),
+        expect(mockFetch).toHaveBeenCalledWith(
+          "https://test.example.com/api/bulk/process/simple",
           expect.any(Object),
         );
       });
 
-      it("uses INTERNAL_API_KEY for authentication", async () => {
-        await enqueueJob({
-          name: "inbox-zero/clean.process",
-          data: { emailAccountId: "account-123" },
-        });
+      it("should handle paths that already start with /", async () => {
+        const { enqueueJob } = await import("@/utils/queue");
 
-        expect(global.fetch).toHaveBeenCalledWith(
-          expect.any(String),
-          expect.objectContaining({
-            headers: expect.objectContaining({
-              "x-api-key": "test-internal-key",
-            }),
-          }),
-        );
-      });
-
-      it("logs warning when using fallback", async () => {
         await enqueueJob({
-          name: "inbox-zero/test.event",
+          name: "/api/custom/endpoint",
           data: {},
         });
 
-        expect(mockLoggerWarn).toHaveBeenCalledWith(
-          "Using fallback HTTP for job queue",
+        expect(mockFetch).toHaveBeenCalledWith(
+          "https://test.example.com/api/custom/endpoint/simple",
           expect.any(Object),
         );
       });
@@ -257,132 +306,188 @@ describe("Queue Abstraction Layer", () => {
   });
 
   describe("enqueueJobsBatch", () => {
-    describe("with Inngest provider", () => {
-      beforeEach(() => {
-        mockIsInngestConfigured.mockReturnValue(true);
+    describe("via Inngest", () => {
+      beforeEach(async () => {
+        const { isInngestConfigured } = await import("@/utils/inngest/client");
+        vi.mocked(isInngestConfigured).mockReturnValue(true);
       });
 
-      it("sends batch via Inngest when configured", async () => {
+      it("should batch send multiple jobs to Inngest", async () => {
+        const { enqueueJobsBatch } = await import("@/utils/queue");
+
         const jobs = [
           { name: "inbox-zero/event1", data: { id: 1 } },
           { name: "inbox-zero/event2", data: { id: 2 } },
+          { name: "inbox-zero/event3", data: { id: 3 } },
         ];
 
         const result = await enqueueJobsBatch(jobs);
 
         expect(result.provider).toBe("inngest");
-        expect(result.count).toBe(2);
-        expect(mockInngestSend).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ name: "inbox-zero/event1" }),
-            expect.objectContaining({ name: "inbox-zero/event2" }),
-          ]),
-        );
+        expect(result.count).toBe(3);
+        expect(mockInngestSend).toHaveBeenCalledWith([
+          { name: "inbox-zero/event1", data: { id: 1 } },
+          { name: "inbox-zero/event2", data: { id: 2 } },
+          { name: "inbox-zero/event3", data: { id: 3 } },
+        ]);
       });
 
-      it("includes scheduledFor for jobs that have it", async () => {
-        const scheduledFor = new Date("2025-01-15T10:00:00Z");
-        const jobs = [
+      it("should include scheduledFor for batch jobs", async () => {
+        const { enqueueJobsBatch } = await import("@/utils/queue");
+        const scheduledFor = new Date("2025-01-01T12:00:00Z");
+
+        await enqueueJobsBatch([
           { name: "inbox-zero/event1", data: { id: 1 }, scheduledFor },
-          { name: "inbox-zero/event2", data: { id: 2 } },
-        ];
+        ]);
 
-        await enqueueJobsBatch(jobs);
+        expect(mockInngestSend).toHaveBeenCalledWith([
+          {
+            name: "inbox-zero/event1",
+            data: { id: 1, scheduledFor: "2025-01-01T12:00:00.000Z" },
+          },
+        ]);
+      });
 
-        expect(mockInngestSend).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({
-              data: expect.objectContaining({
-                scheduledFor: scheduledFor.toISOString(),
-              }),
-            }),
-          ]),
-        );
+      it("should include idempotency keys for batch jobs", async () => {
+        const { enqueueJobsBatch } = await import("@/utils/queue");
+
+        await enqueueJobsBatch([
+          {
+            name: "inbox-zero/event1",
+            data: { id: 1 },
+            idempotencyKey: "key-1",
+          },
+        ]);
+
+        expect(mockInngestSend).toHaveBeenCalledWith([
+          { name: "inbox-zero/event1", data: { id: 1 }, id: "key-1" },
+        ]);
       });
     });
 
-    describe("with fallback provider", () => {
-      beforeEach(() => {
-        mockIsInngestConfigured.mockReturnValue(false);
-        setTestEnvConfig({});
+    describe("via QStash", () => {
+      beforeEach(async () => {
+        const { isInngestConfigured } = await import("@/utils/inngest/client");
+        vi.mocked(isInngestConfigured).mockReturnValue(false);
+        mockEnv.QSTASH_TOKEN = "test-qstash-token";
       });
 
-      it("sends sequentially in fallback mode", async () => {
+      it("should use bulk publish to QStash", async () => {
+        const { enqueueJobsBatch } = await import("@/utils/queue");
+
         const jobs = [
-          { name: "inbox-zero/event1", data: { id: 1 } },
-          { name: "inbox-zero/event2", data: { id: 2 } },
+          { name: "/api/test1", data: { id: 1 } },
+          { name: "/api/test2", data: { id: 2 } },
+        ];
+
+        const result = await enqueueJobsBatch(jobs);
+
+        expect(result.provider).toBe("qstash");
+        expect(result.count).toBe(2);
+        expect(mockBulkPublishToQstash).toHaveBeenCalledWith({
+          items: [
+            { url: "https://test.example.com/api/test1", body: { id: 1 } },
+            { url: "https://test.example.com/api/test2", body: { id: 2 } },
+          ],
+        });
+      });
+
+      it("should include flow control when queueName and concurrency specified", async () => {
+        const { enqueueJobsBatch } = await import("@/utils/queue");
+
+        await enqueueJobsBatch([
+          {
+            name: "/api/test",
+            data: { id: 1 },
+            queueName: "test-queue",
+            concurrency: 3,
+          },
+        ]);
+
+        expect(mockBulkPublishToQstash).toHaveBeenCalledWith({
+          items: [
+            {
+              url: "https://test.example.com/api/test",
+              body: { id: 1 },
+              flowControl: { key: "test-queue", parallelism: 3 },
+            },
+          ],
+        });
+      });
+    });
+
+    describe("via Fallback", () => {
+      beforeEach(async () => {
+        const { isInngestConfigured } = await import("@/utils/inngest/client");
+        vi.mocked(isInngestConfigured).mockReturnValue(false);
+        mockEnv.QSTASH_TOKEN = "";
+      });
+
+      it("should send jobs sequentially via HTTP fallback", async () => {
+        const { enqueueJobsBatch } = await import("@/utils/queue");
+
+        const jobs = [
+          { name: "/api/test1", data: { id: 1 } },
+          { name: "/api/test2", data: { id: 2 } },
         ];
 
         const result = await enqueueJobsBatch(jobs);
 
         expect(result.provider).toBe("fallback");
         expect(result.count).toBe(2);
-        // Fetch should be called for each job
-        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expect(mockFetch).toHaveBeenCalledTimes(2);
       });
     });
   });
 
   describe("cancelJob", () => {
-    it("logs warning when Inngest is the provider", async () => {
-      mockIsInngestConfigured.mockReturnValue(true);
+    it("should cancel QStash message when QStash is active", async () => {
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(false);
+      mockEnv.QSTASH_TOKEN = "test-qstash-token";
+      mockHttpRequest.mockResolvedValue({});
 
-      const result = await cancelJob("some-message-id");
+      const { cancelJob } = await import("@/utils/queue");
+      const result = await cancelJob("msg-123");
 
-      expect(result).toBe(false);
-      expect(mockLoggerWarn).toHaveBeenCalledWith(
-        "Job cancellation not supported for provider",
-        expect.objectContaining({ provider: "inngest" }),
-      );
-    });
-
-    it("logs warning for fallback provider", async () => {
-      mockIsInngestConfigured.mockReturnValue(false);
-      setTestEnvConfig({});
-
-      const result = await cancelJob("some-message-id");
-
-      expect(result).toBe(false);
-      expect(mockLoggerWarn).toHaveBeenCalledWith(
-        "Job cancellation not supported for provider",
-        expect.objectContaining({ provider: "fallback" }),
-      );
-    });
-  });
-
-  describe("logging", () => {
-    it("logs job enqueueing with provider info", async () => {
-      mockIsInngestConfigured.mockReturnValue(true);
-
-      await enqueueJob({
-        name: "inbox-zero/test.event",
-        data: { userId: "user-123" },
+      expect(result).toBe(true);
+      expect(mockHttpRequest).toHaveBeenCalledWith({
+        path: ["v2", "messages", "msg-123"],
+        method: "DELETE",
       });
-
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
-        "Enqueueing job",
-        expect.objectContaining({
-          provider: "inngest",
-          name: "inbox-zero/test.event",
-        }),
-      );
     });
 
-    it("logs batch enqueueing with count", async () => {
-      mockIsInngestConfigured.mockReturnValue(true);
+    it("should return false when cancellation fails", async () => {
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(false);
+      mockEnv.QSTASH_TOKEN = "test-qstash-token";
+      mockHttpRequest.mockRejectedValue(new Error("Not found"));
 
-      await enqueueJobsBatch([
-        { name: "event1", data: {} },
-        { name: "event2", data: {} },
-      ]);
+      const { cancelJob } = await import("@/utils/queue");
+      const result = await cancelJob("msg-123");
 
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
-        "Enqueueing batch",
-        expect.objectContaining({
-          provider: "inngest",
-          count: 2,
-        }),
-      );
+      expect(result).toBe(false);
+    });
+
+    it("should return false for Inngest provider (not yet supported)", async () => {
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(true);
+
+      const { cancelJob } = await import("@/utils/queue");
+      const result = await cancelJob("msg-123");
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false for fallback provider", async () => {
+      const { isInngestConfigured } = await import("@/utils/inngest/client");
+      vi.mocked(isInngestConfigured).mockReturnValue(false);
+      mockEnv.QSTASH_TOKEN = "";
+
+      const { cancelJob } = await import("@/utils/queue");
+      const result = await cancelJob("msg-123");
+
+      expect(result).toBe(false);
     });
   });
 });

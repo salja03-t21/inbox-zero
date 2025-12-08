@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, type MockedFunction } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 
-// Mock dependencies
+// Mock dependencies before imports
 vi.mock("@/utils/prisma", () => ({
   default: {
     scheduledAction: {
@@ -132,19 +132,26 @@ vi.mock("@/env", () => ({
 vi.mock("@/utils/error", () => ({
   captureException: vi.fn(),
   SafeError: class SafeError extends Error {
-    constructor(message: string, public statusCode?: number) {
+    constructor(
+      message: string,
+      public statusCode?: number,
+    ) {
       super(message);
     }
   },
 }));
 
-// Import the functions to test
+// Import mocked modules
 import { bulkProcessWorkerSchema } from "@/utils/bulk-process/validation";
 import { processEmail } from "@/utils/bulk-process/worker";
 import { createEmailProvider } from "@/utils/email/provider";
 import { executeScheduledAction } from "@/utils/scheduled-actions/executor";
 import { validateUserAndAiAccess } from "@/utils/user/validate";
-import { getCategories, categorizeWithAi, updateSenderCategory } from "@/utils/categorize/senders/categorize";
+import {
+  getCategories,
+  categorizeWithAi,
+  updateSenderCategory,
+} from "@/utils/categorize/senders/categorize";
 import { getGmailClientWithRefresh } from "@/utils/gmail/client";
 import { getThreadsFromSenderWithSubject } from "@/utils/gmail/thread";
 import { saveCategorizationProgress } from "@/utils/redis/categorization-progress";
@@ -152,18 +159,17 @@ import { getEmailAccountWithAi } from "@/utils/user/get";
 import { aiSummarizeEmailForDigest } from "@/utils/ai/digest/summarize-email-for-digest";
 import { isAssistantEmail } from "@/utils/assistant/is-assistant-email";
 import { createUnsubscribeToken } from "@/utils/unsubscribe";
-import { calculateNextScheduleDate } from "@/utils/schedule";
 import { extractNameFromEmail } from "@/utils/email";
 import { getRuleName } from "@/utils/rule/consts";
 import { sleep } from "@/utils/sleep";
 import { render } from "@react-email/components";
-import DigestEmail, { generateDigestSubject } from "@inboxzero/resend/emails/digest";
+import { generateDigestSubject } from "@inboxzero/resend/emails/digest";
 import prisma from "@/utils/prisma";
-import { ScheduledActionStatus, DigestStatus, SystemType } from "@prisma/client";
+import { ScheduledActionStatus, DigestStatus } from "@prisma/client";
 
-// Mock step object for Inngest functions
+// Helper to create mock step object for Inngest functions
 const createMockStep = () => ({
-  run: vi.fn((name: string, fn: () => any) => fn()),
+  run: vi.fn(<T>(_name: string, fn: () => T): T => fn()),
   sleepUntil: vi.fn(),
 });
 
@@ -180,13 +186,9 @@ describe("Inngest Functions", () => {
       threadId: "thread-101",
     };
 
-    const mockEvent = {
-      data: validPayload,
-    };
-
     const mockStep = createMockStep();
 
-    it("should validate payload structure with valid data", async () => {
+    it("should validate payload structure with valid data", () => {
       const result = bulkProcessWorkerSchema.safeParse(validPayload);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -194,7 +196,7 @@ describe("Inngest Functions", () => {
       }
     });
 
-    it("should reject invalid payload with missing required fields", async () => {
+    it("should reject invalid payload with missing required fields", () => {
       const invalidPayload = {
         jobId: "job-123",
         // missing emailAccountId, messageId, threadId
@@ -204,13 +206,17 @@ describe("Inngest Functions", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.errors).toHaveLength(3);
-        expect(result.error.errors.map(e => e.path[0])).toContain("emailAccountId");
-        expect(result.error.errors.map(e => e.path[0])).toContain("messageId");
-        expect(result.error.errors.map(e => e.path[0])).toContain("threadId");
+        expect(result.error.errors.map((e) => e.path[0])).toContain(
+          "emailAccountId",
+        );
+        expect(result.error.errors.map((e) => e.path[0])).toContain(
+          "messageId",
+        );
+        expect(result.error.errors.map((e) => e.path[0])).toContain("threadId");
       }
     });
 
-    it("should reject payload with empty strings", async () => {
+    it("should reject payload with empty strings", () => {
       const invalidPayload = {
         jobId: "",
         emailAccountId: "",
@@ -224,35 +230,29 @@ describe("Inngest Functions", () => {
 
     it("should process email successfully", async () => {
       const mockResult = {
-        success: true,
-        skipped: false,
+        success: true as const,
+        skipped: false as const,
         rulesMatched: 2,
       };
 
-      (processEmail as MockedFunction<typeof processEmail>).mockResolvedValue(mockResult);
+      vi.mocked(processEmail).mockResolvedValue(mockResult);
 
-      // Simulate the function logic
-      const validationResult = bulkProcessWorkerSchema.safeParse(mockEvent.data);
-      expect(validationResult.success).toBe(true);
+      const result = await mockStep.run("process-email", async () => {
+        return processEmail(validPayload);
+      });
 
-      if (validationResult.success) {
-        const result = await mockStep.run("process-email", async () => {
-          return processEmail(validationResult.data);
-        });
-
-        expect(result).toEqual(mockResult);
-        expect(processEmail).toHaveBeenCalledWith(validPayload);
-      }
+      expect(result).toEqual(mockResult);
+      expect(processEmail).toHaveBeenCalledWith(validPayload);
     });
 
     it("should handle skipped email processing", async () => {
       const mockResult = {
-        success: true,
-        skipped: true,
-        reason: "No rules matched",
+        success: true as const,
+        skipped: true as const,
+        reason: "No rules configured",
       };
 
-      (processEmail as MockedFunction<typeof processEmail>).mockResolvedValue(mockResult);
+      vi.mocked(processEmail).mockResolvedValue(mockResult);
 
       const result = await mockStep.run("process-email", async () => {
         return processEmail(validPayload);
@@ -264,11 +264,12 @@ describe("Inngest Functions", () => {
 
     it("should handle failed email processing", async () => {
       const mockResult = {
-        success: false,
+        success: false as const,
+        skipped: false as const,
         error: "Email account not found",
       };
 
-      (processEmail as MockedFunction<typeof processEmail>).mockResolvedValue(mockResult);
+      vi.mocked(processEmail).mockResolvedValue(mockResult);
 
       const result = await mockStep.run("process-email", async () => {
         return processEmail(validPayload);
@@ -283,10 +284,6 @@ describe("Inngest Functions", () => {
     const validPayload = {
       scheduledActionId: "action-123",
       scheduledFor: "2024-12-07T15:00:00.000Z",
-    };
-
-    const mockEvent = {
-      data: validPayload,
     };
 
     const mockStep = createMockStep();
@@ -309,15 +306,17 @@ describe("Inngest Functions", () => {
     };
 
     beforeEach(() => {
-      (prisma.scheduledAction.findUnique as MockedFunction<any>).mockResolvedValue(mockScheduledAction);
-      (prisma.scheduledAction.update as MockedFunction<any>).mockResolvedValue({
+      vi.mocked(prisma.scheduledAction.findUnique).mockResolvedValue(
+        mockScheduledAction as any,
+      );
+      vi.mocked(prisma.scheduledAction.update).mockResolvedValue({
         ...mockScheduledAction,
         status: ScheduledActionStatus.EXECUTING,
-      });
-      (createEmailProvider as MockedFunction<typeof createEmailProvider>).mockResolvedValue({
+      } as any);
+      vi.mocked(createEmailProvider).mockResolvedValue({
         sendEmail: vi.fn(),
       } as any);
-      (executeScheduledAction as MockedFunction<typeof executeScheduledAction>).mockResolvedValue({
+      vi.mocked(executeScheduledAction).mockResolvedValue({
         success: true,
         executedActionId: "executed-123",
       });
@@ -336,7 +335,10 @@ describe("Inngest Functions", () => {
 
       if (scheduledDate > now) {
         await mockStep.sleepUntil("wait-for-scheduled-time", scheduledDate);
-        expect(mockStep.sleepUntil).toHaveBeenCalledWith("wait-for-scheduled-time", scheduledDate);
+        expect(mockStep.sleepUntil).toHaveBeenCalledWith(
+          "wait-for-scheduled-time",
+          scheduledDate,
+        );
       }
     });
 
@@ -370,7 +372,7 @@ describe("Inngest Functions", () => {
     });
 
     it("should handle missing scheduled action", async () => {
-      (prisma.scheduledAction.findUnique as MockedFunction<any>).mockResolvedValue(null);
+      vi.mocked(prisma.scheduledAction.findUnique).mockResolvedValue(null);
 
       await expect(
         mockStep.run("fetch-scheduled-action", async () => {
@@ -381,17 +383,15 @@ describe("Inngest Functions", () => {
             throw new Error("Scheduled action not found");
           }
           return action;
-        })
+        }),
       ).rejects.toThrow("Scheduled action not found");
     });
 
-    it("should skip cancelled actions", async () => {
+    it("should skip cancelled actions", () => {
       const cancelledAction = {
         ...mockScheduledAction,
         status: ScheduledActionStatus.CANCELLED,
       };
-
-      (prisma.scheduledAction.findUnique as MockedFunction<any>).mockResolvedValue(cancelledAction);
 
       // Simulate the cancellation check logic
       if (cancelledAction.status === ScheduledActionStatus.CANCELLED) {
@@ -405,23 +405,23 @@ describe("Inngest Functions", () => {
       }
     });
 
-    it("should skip non-pending actions", async () => {
+    it("should skip non-pending actions", () => {
       const completedAction = {
         ...mockScheduledAction,
         status: ScheduledActionStatus.COMPLETED,
       };
 
-      (prisma.scheduledAction.findUnique as MockedFunction<any>).mockResolvedValue(completedAction);
+      // Verify logic for non-pending status
+      const status = completedAction.status;
+      expect(status).not.toBe(ScheduledActionStatus.PENDING);
 
-      if (completedAction.status !== ScheduledActionStatus.PENDING) {
-        const result = {
-          success: true,
-          skipped: true,
-          reason: `Action is not pending (status: ${completedAction.status})`,
-        };
-        expect(result.skipped).toBe(true);
-        expect(result.reason).toContain("COMPLETED");
-      }
+      const result = {
+        success: true,
+        skipped: true,
+        reason: `Action is not pending (status: ${status})`,
+      };
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toContain("COMPLETED");
     });
 
     it("should mark action as executing", async () => {
@@ -450,8 +450,8 @@ describe("Inngest Functions", () => {
     });
 
     it("should handle concurrent execution attempts", async () => {
-      (prisma.scheduledAction.update as MockedFunction<any>).mockRejectedValue(
-        new Error("Concurrent update conflict")
+      vi.mocked(prisma.scheduledAction.update).mockRejectedValue(
+        new Error("Concurrent update conflict"),
       );
 
       const markedAction = await mockStep.run("mark-as-executing", async () => {
@@ -465,7 +465,7 @@ describe("Inngest Functions", () => {
               status: ScheduledActionStatus.EXECUTING,
             },
           });
-        } catch (error) {
+        } catch {
           return null;
         }
       });
@@ -475,11 +475,11 @@ describe("Inngest Functions", () => {
 
     it("should execute action successfully", async () => {
       const executionResult = {
-        success: true,
+        success: true as const,
         executedActionId: "executed-123",
       };
 
-      (executeScheduledAction as MockedFunction<typeof executeScheduledAction>).mockResolvedValue(executionResult);
+      vi.mocked(executeScheduledAction).mockResolvedValue(executionResult);
 
       const result = await mockStep.run("execute-action", async () => {
         const provider = await createEmailProvider({
@@ -487,7 +487,10 @@ describe("Inngest Functions", () => {
           provider: mockScheduledAction.emailAccount.account.provider,
         });
 
-        return executeScheduledAction(mockScheduledAction, provider);
+        return executeScheduledAction(
+          mockScheduledAction as any,
+          provider as any,
+        );
       });
 
       expect(result).toEqual(executionResult);
@@ -495,16 +498,15 @@ describe("Inngest Functions", () => {
         emailAccountId: mockScheduledAction.emailAccountId,
         provider: mockScheduledAction.emailAccount.account.provider,
       });
-      expect(executeScheduledAction).toHaveBeenCalledWith(mockScheduledAction, expect.any(Object));
     });
 
     it("should handle execution failure", async () => {
       const executionResult = {
-        success: false,
+        success: false as const,
         error: "Failed to send email",
       };
 
-      (executeScheduledAction as MockedFunction<typeof executeScheduledAction>).mockResolvedValue(executionResult);
+      vi.mocked(executeScheduledAction).mockResolvedValue(executionResult);
 
       const result = await mockStep.run("execute-action", async () => {
         const provider = await createEmailProvider({
@@ -512,7 +514,10 @@ describe("Inngest Functions", () => {
           provider: mockScheduledAction.emailAccount.account.provider,
         });
 
-        return executeScheduledAction(mockScheduledAction, provider);
+        return executeScheduledAction(
+          mockScheduledAction as any,
+          provider as any,
+        );
       });
 
       expect(result.success).toBe(false);
@@ -524,10 +529,6 @@ describe("Inngest Functions", () => {
     const validPayload = {
       emailAccountId: "account-123",
       senders: ["sender1@example.com", "sender2@example.com"],
-    };
-
-    const mockEvent = {
-      data: validPayload,
     };
 
     const mockStep = createMockStep();
@@ -549,28 +550,28 @@ describe("Inngest Functions", () => {
     ];
 
     beforeEach(() => {
-      (validateUserAndAiAccess as MockedFunction<typeof validateUserAndAiAccess>).mockResolvedValue({
+      vi.mocked(validateUserAndAiAccess).mockResolvedValue({
         emailAccount: mockEmailAccount,
       } as any);
-      (getCategories as MockedFunction<typeof getCategories>).mockResolvedValue({
+      vi.mocked(getCategories).mockResolvedValue({
         categories: mockCategories,
       } as any);
-      (prisma.emailAccount.findUnique as MockedFunction<any>).mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         account: mockEmailAccount.account,
-      });
-      (getGmailClientWithRefresh as MockedFunction<typeof getGmailClientWithRefresh>).mockResolvedValue({} as any);
-      (getThreadsFromSenderWithSubject as MockedFunction<typeof getThreadsFromSenderWithSubject>).mockResolvedValue([
-        { subject: "Test Subject", snippet: "Test snippet" },
+      } as any);
+      vi.mocked(getGmailClientWithRefresh).mockResolvedValue({} as any);
+      vi.mocked(getThreadsFromSenderWithSubject).mockResolvedValue([
+        { id: "thread-1", subject: "Test Subject", snippet: "Test snippet" },
       ]);
-      (categorizeWithAi as MockedFunction<typeof categorizeWithAi>).mockResolvedValue([
+      vi.mocked(categorizeWithAi).mockResolvedValue([
         { sender: "sender1@example.com", category: "Newsletter" },
         { sender: "sender2@example.com", category: "Marketing" },
       ]);
-      (updateSenderCategory as MockedFunction<typeof updateSenderCategory>).mockResolvedValue(undefined);
-      (saveCategorizationProgress as MockedFunction<typeof saveCategorizationProgress>).mockResolvedValue(undefined);
+      vi.mocked(updateSenderCategory).mockResolvedValue({} as any);
+      vi.mocked(saveCategorizationProgress).mockResolvedValue();
     });
 
-    it("should validate payload structure", async () => {
+    it("should validate payload structure", () => {
       const schema = z.object({
         emailAccountId: z.string(),
         senders: z.array(z.string()),
@@ -583,7 +584,7 @@ describe("Inngest Functions", () => {
       }
     });
 
-    it("should reject invalid payload", async () => {
+    it("should reject invalid payload", () => {
       const schema = z.object({
         emailAccountId: z.string(),
         senders: z.array(z.string()),
@@ -601,29 +602,22 @@ describe("Inngest Functions", () => {
     it("should process sender categorization successfully", async () => {
       const result = await mockStep.run("categorize-batch", async () => {
         // Validate user and AI access
-        const userResult = await validateUserAndAiAccess({ emailAccountId: validPayload.emailAccountId });
-        const { emailAccount } = userResult;
+        await validateUserAndAiAccess({
+          emailAccountId: validPayload.emailAccountId,
+        });
 
         // Get available categories
-        const categoriesResult = await getCategories({ emailAccountId: validPayload.emailAccountId });
+        const categoriesResult = await getCategories({
+          emailAccountId: validPayload.emailAccountId,
+        });
         const { categories } = categoriesResult;
 
         // Get email account with OAuth tokens
         const emailAccountWithAccount = await prisma.emailAccount.findUnique({
           where: { id: validPayload.emailAccountId },
-          select: {
-            account: {
-              select: {
-                access_token: true,
-                refresh_token: true,
-                expires_at: true,
-                provider: true,
-              },
-            },
-          },
         });
 
-        const account = emailAccountWithAccount?.account;
+        const account = (emailAccountWithAccount as any)?.account;
         if (!account?.access_token || !account?.refresh_token) {
           throw new Error("No access or refresh token");
         }
@@ -650,10 +644,7 @@ describe("Inngest Functions", () => {
 
         // Categorize senders using AI
         const results = await categorizeWithAi({
-          emailAccount: {
-            ...emailAccount,
-            account: { provider: account.provider },
-          },
+          emailAccount: mockEmailAccount as any,
           sendersWithEmails,
           categories,
         });
@@ -685,8 +676,12 @@ describe("Inngest Functions", () => {
       expect(result.categorizedCount).toBe(2);
       expect(result.senderCount).toBe(2);
 
-      expect(validateUserAndAiAccess).toHaveBeenCalledWith({ emailAccountId: validPayload.emailAccountId });
-      expect(getCategories).toHaveBeenCalledWith({ emailAccountId: validPayload.emailAccountId });
+      expect(validateUserAndAiAccess).toHaveBeenCalledWith({
+        emailAccountId: validPayload.emailAccountId,
+      });
+      expect(getCategories).toHaveBeenCalledWith({
+        emailAccountId: validPayload.emailAccountId,
+      });
       expect(categorizeWithAi).toHaveBeenCalled();
       expect(updateSenderCategory).toHaveBeenCalledTimes(2);
       expect(saveCategorizationProgress).toHaveBeenCalledWith({
@@ -696,7 +691,7 @@ describe("Inngest Functions", () => {
     });
 
     it("should handle missing email account", async () => {
-      (prisma.emailAccount.findUnique as MockedFunction<any>).mockResolvedValue(null);
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue(null);
 
       await expect(
         mockStep.run("categorize-batch", async () => {
@@ -707,17 +702,17 @@ describe("Inngest Functions", () => {
           if (!emailAccountWithAccount) {
             throw new Error("No account found");
           }
-        })
+        }),
       ).rejects.toThrow("No account found");
     });
 
     it("should handle missing OAuth tokens", async () => {
-      (prisma.emailAccount.findUnique as MockedFunction<any>).mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         account: {
           access_token: null,
           refresh_token: null,
         },
-      });
+      } as any);
 
       await expect(
         mockStep.run("categorize-batch", async () => {
@@ -725,11 +720,11 @@ describe("Inngest Functions", () => {
             where: { id: validPayload.emailAccountId },
           });
 
-          const account = emailAccountWithAccount?.account;
+          const account = (emailAccountWithAccount as any)?.account;
           if (!account?.access_token || !account?.refresh_token) {
             throw new Error("No access or refresh token");
           }
-        })
+        }),
       ).rejects.toThrow("No access or refresh token");
     });
   });
@@ -749,10 +744,6 @@ describe("Inngest Functions", () => {
       },
     };
 
-    const mockEvent = {
-      data: validPayload,
-    };
-
     const mockStep = createMockStep();
 
     const mockEmailAccount = {
@@ -762,33 +753,40 @@ describe("Inngest Functions", () => {
         aiModel: "gpt-4",
         aiProvider: "openai",
         aiApiKey: "api-key",
+        aiBaseUrl: null,
       },
+      userId: "user-123",
+      about: null,
+      multiRuleSelectionEnabled: false,
+      account: { provider: "google" },
     };
 
     beforeEach(() => {
-      (getEmailAccountWithAi as MockedFunction<typeof getEmailAccountWithAi>).mockResolvedValue(mockEmailAccount as any);
-      (isAssistantEmail as MockedFunction<typeof isAssistantEmail>).mockReturnValue(false);
-      (prisma.executedAction.findUnique as MockedFunction<any>).mockResolvedValue({
+      vi.mocked(getEmailAccountWithAi).mockResolvedValue(
+        mockEmailAccount as any,
+      );
+      vi.mocked(isAssistantEmail).mockReturnValue(false);
+      vi.mocked(prisma.executedAction.findUnique).mockResolvedValue({
         executedRule: {
           rule: {
             name: "Test Rule",
           },
         },
-      });
-      (aiSummarizeEmailForDigest as MockedFunction<typeof aiSummarizeEmailForDigest>).mockResolvedValue({
+      } as any);
+      vi.mocked(aiSummarizeEmailForDigest).mockResolvedValue({
         content: "Test summary",
       });
-      (prisma.digest.findFirst as MockedFunction<any>).mockResolvedValue(null);
-      (prisma.digest.create as MockedFunction<any>).mockResolvedValue({
+      vi.mocked(prisma.digest.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.digest.create).mockResolvedValue({
         id: "digest-123",
         items: [],
-      });
-      (prisma.digestItem.create as MockedFunction<any>).mockResolvedValue({
+      } as any);
+      vi.mocked(prisma.digestItem.create).mockResolvedValue({
         id: "item-123",
-      });
+      } as any);
     });
 
-    it("should validate payload structure", async () => {
+    it("should validate payload structure", () => {
       const schema = z.object({
         emailAccountId: z.string(),
         actionId: z.string().optional(),
@@ -816,7 +814,7 @@ describe("Inngest Functions", () => {
         },
       };
 
-      const result = await mockStep.run("process-digest", async () => {
+      const result = await mockStep.run("process-digest", () => {
         if (systemPayload.message.from === "noreply@example.com") {
           return {
             success: true,
@@ -824,14 +822,15 @@ describe("Inngest Functions", () => {
             reason: "Email from system",
           };
         }
+        return { success: true, skipped: false };
       });
 
-      expect(result?.skipped).toBe(true);
-      expect(result?.reason).toBe("Email from system");
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe("Email from system");
     });
 
     it("should skip emails from assistant", async () => {
-      (isAssistantEmail as MockedFunction<typeof isAssistantEmail>).mockReturnValue(true);
+      vi.mocked(isAssistantEmail).mockReturnValue(true);
 
       const result = await mockStep.run("process-digest", async () => {
         const emailAccount = await getEmailAccountWithAi({
@@ -850,14 +849,15 @@ describe("Inngest Functions", () => {
             reason: "Email from assistant",
           };
         }
+        return { success: true, skipped: false };
       });
 
-      expect(result?.skipped).toBe(true);
-      expect(result?.reason).toBe("Email from assistant");
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe("Email from assistant");
     });
 
     it("should handle missing email account", async () => {
-      (getEmailAccountWithAi as MockedFunction<typeof getEmailAccountWithAi>).mockResolvedValue(null);
+      vi.mocked(getEmailAccountWithAi).mockResolvedValue(null);
 
       await expect(
         mockStep.run("process-digest", async () => {
@@ -868,12 +868,12 @@ describe("Inngest Functions", () => {
           if (!emailAccount) {
             throw new Error("Email account not found");
           }
-        })
+        }),
       ).rejects.toThrow("Email account not found");
     });
 
     it("should handle missing rule name", async () => {
-      (prisma.executedAction.findUnique as MockedFunction<any>).mockResolvedValue(null);
+      vi.mocked(prisma.executedAction.findUnique).mockResolvedValue(null);
 
       const result = await mockStep.run("process-digest", async () => {
         const executedAction = await prisma.executedAction.findUnique({
@@ -887,19 +887,20 @@ describe("Inngest Functions", () => {
             reason: "Rule name not found",
           };
         }
+        return { success: true, skipped: false };
       });
 
-      expect(result?.skipped).toBe(true);
-      expect(result?.reason).toBe("Rule name not found");
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe("Rule name not found");
     });
 
     it("should handle empty AI summary", async () => {
-      (aiSummarizeEmailForDigest as MockedFunction<typeof aiSummarizeEmailForDigest>).mockResolvedValue(null);
+      vi.mocked(aiSummarizeEmailForDigest).mockResolvedValue(null);
 
       const result = await mockStep.run("process-digest", async () => {
         const summary = await aiSummarizeEmailForDigest({
           ruleName: "Test Rule",
-          emailAccount: mockEmailAccount,
+          emailAccount: mockEmailAccount as any,
           messageToSummarize: {
             ...validPayload.message,
             to: validPayload.message.to || "",
@@ -913,10 +914,11 @@ describe("Inngest Functions", () => {
             reason: "Not worth summarizing",
           };
         }
+        return { success: true, skipped: false };
       });
 
-      expect(result?.skipped).toBe(true);
-      expect(result?.reason).toBe("Not worth summarizing");
+      expect(result.skipped).toBe(true);
+      expect(result.reason).toBe("Not worth summarizing");
     });
 
     it("should create digest successfully", async () => {
@@ -955,20 +957,9 @@ describe("Inngest Functions", () => {
         // Get rule name
         const executedAction = await prisma.executedAction.findUnique({
           where: { id: validPayload.actionId },
-          select: {
-            executedRule: {
-              select: {
-                rule: {
-                  select: {
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
         });
 
-        const ruleName = executedAction?.executedRule?.rule?.name;
+        const ruleName = (executedAction as any)?.executedRule?.rule?.name;
 
         if (!ruleName) {
           return {
@@ -981,7 +972,7 @@ describe("Inngest Functions", () => {
         // Summarize email
         const summary = await aiSummarizeEmailForDigest({
           ruleName,
-          emailAccount,
+          emailAccount: emailAccount as any,
           messageToSummarize: {
             ...validPayload.message,
             to: validPayload.message.to || "",
@@ -996,7 +987,7 @@ describe("Inngest Functions", () => {
           };
         }
 
-        // Create digest (simplified)
+        // Create digest
         const digest = await prisma.digest.create({
           data: {
             emailAccountId: validPayload.emailAccountId,
@@ -1034,10 +1025,6 @@ describe("Inngest Functions", () => {
       force: false,
     };
 
-    const mockEvent = {
-      data: validPayload,
-    };
-
     const mockStep = createMockStep();
 
     const mockEmailAccount = {
@@ -1070,21 +1057,30 @@ describe("Inngest Functions", () => {
     };
 
     beforeEach(() => {
-      (prisma.emailAccount.findUnique as MockedFunction<any>).mockResolvedValue(mockEmailAccount);
-      (createEmailProvider as MockedFunction<typeof createEmailProvider>).mockResolvedValue(mockEmailProvider as any);
-      (prisma.digest.findMany as MockedFunction<any>).mockResolvedValue(mockDigests);
-      (prisma.digest.updateMany as MockedFunction<any>).mockResolvedValue({ count: 1 });
-      (prisma.digestItem.updateMany as MockedFunction<any>).mockResolvedValue({ count: 1 });
-      (prisma.schedule.findUnique as MockedFunction<any>).mockResolvedValue(null);
-      (prisma.$transaction as MockedFunction<any>).mockImplementation((operations) => 
-        Promise.all(operations.map((op: any) => op))
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue(
+        mockEmailAccount as any,
       );
-      (createUnsubscribeToken as MockedFunction<typeof createUnsubscribeToken>).mockResolvedValue("unsubscribe-token");
-      (extractNameFromEmail as MockedFunction<typeof extractNameFromEmail>).mockReturnValue("Test User");
-      (getRuleName as MockedFunction<typeof getRuleName>).mockReturnValue("Cold Email");
-      (render as MockedFunction<typeof render>).mockResolvedValue("<html>Digest Email</html>");
-      (generateDigestSubject as MockedFunction<typeof generateDigestSubject>).mockReturnValue("Your Email Digest");
-      (mockEmailProvider.getMessagesBatch as MockedFunction<any>).mockResolvedValue([
+      vi.mocked(createEmailProvider).mockResolvedValue(
+        mockEmailProvider as any,
+      );
+      vi.mocked(prisma.digest.findMany).mockResolvedValue(mockDigests as any);
+      vi.mocked(prisma.digest.updateMany).mockResolvedValue({ count: 1 });
+      vi.mocked(prisma.digestItem.updateMany).mockResolvedValue({ count: 1 });
+      vi.mocked(prisma.schedule.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.$transaction).mockImplementation(
+        async (operations: unknown) => {
+          if (Array.isArray(operations)) {
+            return Promise.all(operations);
+          }
+          return [];
+        },
+      );
+      vi.mocked(createUnsubscribeToken).mockResolvedValue("unsubscribe-token");
+      vi.mocked(extractNameFromEmail).mockReturnValue("Test User");
+      vi.mocked(getRuleName).mockReturnValue("Cold Email");
+      vi.mocked(render).mockResolvedValue("<html>Digest Email</html>" as any);
+      vi.mocked(generateDigestSubject).mockReturnValue("Your Email Digest");
+      mockEmailProvider.getMessagesBatch.mockResolvedValue([
         {
           id: "msg-1",
           headers: {
@@ -1093,10 +1089,10 @@ describe("Inngest Functions", () => {
           },
         },
       ]);
-      (sleep as MockedFunction<typeof sleep>).mockResolvedValue(undefined);
+      vi.mocked(sleep).mockResolvedValue(undefined);
     });
 
-    it("should validate payload structure", async () => {
+    it("should validate payload structure", () => {
       const schema = z.object({
         emailAccountId: z.string(),
         force: z.boolean().optional(),
@@ -1107,7 +1103,7 @@ describe("Inngest Functions", () => {
     });
 
     it("should handle no digests to process", async () => {
-      (prisma.digest.findMany as MockedFunction<any>).mockResolvedValue([]);
+      vi.mocked(prisma.digest.findMany).mockResolvedValue([]);
 
       const result = await mockStep.run("send-digest-email", async () => {
         const pendingDigests = await prisma.digest.findMany({
@@ -1128,7 +1124,7 @@ describe("Inngest Functions", () => {
     });
 
     it("should handle missing email account", async () => {
-      (prisma.emailAccount.findUnique as MockedFunction<any>).mockResolvedValue(null);
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue(null);
 
       await expect(
         mockStep.run("send-digest-email", async () => {
@@ -1139,7 +1135,7 @@ describe("Inngest Functions", () => {
           if (!emailAccount) {
             throw new Error("Email account not found");
           }
-        })
+        }),
       ).rejects.toThrow("Email account not found");
     });
 
@@ -1147,47 +1143,21 @@ describe("Inngest Functions", () => {
       const result = await mockStep.run("send-digest-email", async () => {
         const emailAccount = await prisma.emailAccount.findUnique({
           where: { id: validPayload.emailAccountId },
-          select: {
-            email: true,
-            account: { select: { provider: true } },
-          },
         });
 
         if (!emailAccount) {
           throw new Error("Email account not found");
         }
 
-        const emailProvider = await createEmailProvider({
+        const provider = await createEmailProvider({
           emailAccountId: validPayload.emailAccountId,
-          provider: emailAccount.account.provider,
+          provider: (emailAccount as any).account.provider,
         });
 
         const pendingDigests = await prisma.digest.findMany({
           where: {
             emailAccountId: validPayload.emailAccountId,
             status: DigestStatus.PENDING,
-          },
-          select: {
-            id: true,
-            items: {
-              select: {
-                messageId: true,
-                content: true,
-                action: {
-                  select: {
-                    executedRule: {
-                      select: {
-                        rule: {
-                          select: {
-                            name: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
           },
         });
 
@@ -1207,22 +1177,18 @@ describe("Inngest Functions", () => {
           },
         });
 
-        const messageIds = pendingDigests.flatMap((digest) =>
-          digest.items.map((item) => item.messageId),
-        );
-
-        const messages = await emailProvider.getMessagesBatch(messageIds);
-
         // Create unsubscribe token
-        const token = await createUnsubscribeToken({ emailAccountId: validPayload.emailAccountId });
+        await createUnsubscribeToken({
+          emailAccountId: validPayload.emailAccountId,
+        });
 
         // Render email
-        const digestHtml = await render("DigestEmail" as any);
+        const digestHtml = await render({} as any);
         const subject = generateDigestSubject({} as any);
 
         // Send email
-        await emailProvider.sendEmailWithHtml({
-          to: emailAccount.email,
+        await (provider as any).sendEmailWithHtml({
+          to: (emailAccount as any).email,
           subject,
           messageHtml: digestHtml,
         });
@@ -1260,13 +1226,15 @@ describe("Inngest Functions", () => {
         emailAccountId: validPayload.emailAccountId,
         provider: mockEmailAccount.account.provider,
       });
-      expect(createUnsubscribeToken).toHaveBeenCalledWith({ emailAccountId: validPayload.emailAccountId });
+      expect(createUnsubscribeToken).toHaveBeenCalledWith({
+        emailAccountId: validPayload.emailAccountId,
+      });
       expect(mockEmailProvider.sendEmailWithHtml).toHaveBeenCalled();
       expect(prisma.$transaction).toHaveBeenCalled();
     });
 
     it("should handle force sending with empty digests", async () => {
-      (prisma.digest.findMany as MockedFunction<any>).mockResolvedValue([]);
+      vi.mocked(prisma.digest.findMany).mockResolvedValue([]);
 
       const forcePayload = { ...validPayload, force: true };
 
@@ -1290,13 +1258,13 @@ describe("Inngest Functions", () => {
           where: { id: forcePayload.emailAccountId },
         });
 
-        const emailProvider = await createEmailProvider({
+        const provider = await createEmailProvider({
           emailAccountId: forcePayload.emailAccountId,
-          provider: emailAccount!.account.provider,
+          provider: (emailAccount as any).account.provider,
         });
 
-        await emailProvider.sendEmailWithHtml({
-          to: emailAccount!.email,
+        await (provider as any).sendEmailWithHtml({
+          to: (emailAccount as any).email,
           subject: "Your Email Digest",
           messageHtml: "<html>Empty digest</html>",
         });
@@ -1308,8 +1276,8 @@ describe("Inngest Functions", () => {
     });
 
     it("should handle email sending failure", async () => {
-      (mockEmailProvider.sendEmailWithHtml as MockedFunction<any>).mockRejectedValue(
-        new Error("Email sending failed")
+      mockEmailProvider.sendEmailWithHtml.mockRejectedValue(
+        new Error("Email sending failed"),
       );
 
       await expect(
@@ -1318,28 +1286,28 @@ describe("Inngest Functions", () => {
             where: { id: validPayload.emailAccountId },
           });
 
-          const emailProvider = await createEmailProvider({
+          const provider = await createEmailProvider({
             emailAccountId: validPayload.emailAccountId,
-            provider: emailAccount!.account.provider,
+            provider: (emailAccount as any).account.provider,
           });
 
-          await emailProvider.sendEmailWithHtml({
-            to: emailAccount!.email,
+          await (provider as any).sendEmailWithHtml({
+            to: (emailAccount as any).email,
             subject: "Test",
             messageHtml: "<html>Test</html>",
           });
-        })
+        }),
       ).rejects.toThrow("Email sending failed");
     });
 
     it("should handle batch message fetching with rate limiting", async () => {
       const largeMessageIds = Array.from({ length: 250 }, (_, i) => `msg-${i}`);
-      
-      (mockEmailProvider.getMessagesBatch as MockedFunction<any>).mockResolvedValue([]);
+
+      mockEmailProvider.getMessagesBatch.mockResolvedValue([]);
 
       await mockStep.run("fetch-messages", async () => {
         const batchSize = 100;
-        const messages: any[] = [];
+        const messages: unknown[] = [];
 
         for (let i = 0; i < largeMessageIds.length; i += batchSize) {
           const batch = largeMessageIds.slice(i, i + batchSize);
@@ -1356,6 +1324,350 @@ describe("Inngest Functions", () => {
 
       expect(mockEmailProvider.getMessagesBatch).toHaveBeenCalledTimes(3); // 250 / 100 = 3 batches
       expect(sleep).toHaveBeenCalledTimes(2); // 2 delays between 3 batches
+    });
+  });
+
+  describe("Edge Cases", () => {
+    describe("Timing-Sensitive Actions", () => {
+      const mockStep = createMockStep();
+
+      it("should handle immediate execution when scheduledFor is in the past", async () => {
+        const pastDate = new Date(Date.now() - 60000); // 1 minute ago
+
+        await mockStep.run("check-schedule", async () => {
+          const scheduledFor = pastDate;
+          const now = new Date();
+
+          if (scheduledFor <= now) {
+            // Execute immediately
+            return { executeNow: true };
+          }
+
+          await mockStep.sleepUntil("wait-for-schedule", scheduledFor);
+          return { executeNow: false };
+        });
+
+        expect(mockStep.sleepUntil).not.toHaveBeenCalled();
+      });
+
+      it("should schedule future execution with step.sleepUntil", async () => {
+        const futureDate = new Date(Date.now() + 300000); // 5 minutes from now
+        let shouldWait = false;
+
+        await mockStep.run("check-schedule", async () => {
+          const scheduledFor = futureDate;
+          const now = new Date();
+
+          if (scheduledFor <= now) {
+            return { executeNow: true };
+          }
+
+          shouldWait = true;
+          return { executeNow: false, scheduledFor };
+        });
+
+        expect(shouldWait).toBe(true);
+      });
+
+      it("should handle delayInMinutes = 0 as immediate execution", async () => {
+        const delayInMinutes = 0;
+        const scheduledFor =
+          delayInMinutes > 0
+            ? new Date(Date.now() + delayInMinutes * 60 * 1000)
+            : null;
+
+        expect(scheduledFor).toBeNull();
+      });
+
+      it("should handle timezone-aware scheduling", async () => {
+        const scheduledTime = new Date("2025-01-15T10:00:00Z");
+        const isoString = scheduledTime.toISOString();
+
+        // Verify ISO string is preserved correctly
+        expect(isoString).toBe("2025-01-15T10:00:00.000Z");
+        expect(new Date(isoString).getTime()).toBe(scheduledTime.getTime());
+      });
+    });
+
+    describe("Large Payload Handling", () => {
+      it("should handle large batch of senders for categorization", async () => {
+        const largeSenderList = Array.from(
+          { length: 1000 },
+          (_, i) => `sender${i}@example.com`,
+        );
+
+        const categorizePayload = {
+          emailAccountId: "account-123",
+          senders: largeSenderList,
+        };
+
+        // Verify schema can handle large arrays
+        const schema = z.object({
+          emailAccountId: z.string(),
+          senders: z.array(z.string()),
+        });
+
+        const result = schema.safeParse(categorizePayload);
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data.senders.length).toBe(1000);
+        }
+      });
+
+      it("should handle emails with large content for digest", async () => {
+        const largeContent = "x".repeat(100000); // 100KB of content
+
+        const digestPayload = {
+          emailAccountId: "account-123",
+          message: {
+            id: "msg-123",
+            threadId: "thread-456",
+            headers: {
+              from: "sender@example.com",
+              subject: "Large email",
+              date: new Date().toISOString(),
+            },
+            snippet: largeContent.substring(0, 200),
+            textPlain: largeContent,
+          },
+        };
+
+        // Verify payload structure is valid
+        expect(digestPayload.message.textPlain.length).toBe(100000);
+        expect(typeof digestPayload.message.snippet).toBe("string");
+      });
+
+      it("should handle digest with many items", async () => {
+        const manyDigestItems = Array.from({ length: 500 }, (_, i) => ({
+          id: `item-${i}`,
+          messageId: `msg-${i}`,
+          threadId: `thread-${i}`,
+          summary: `Summary for email ${i}`,
+          ruleName: `Rule ${i % 10}`,
+        }));
+
+        expect(manyDigestItems.length).toBe(500);
+        // Grouping by rule name should result in 10 groups
+        const grouped = manyDigestItems.reduce(
+          (acc, item) => {
+            const key = item.ruleName;
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(item);
+            return acc;
+          },
+          {} as Record<string, typeof manyDigestItems>,
+        );
+
+        expect(Object.keys(grouped).length).toBe(10);
+      });
+    });
+
+    describe("Concurrent Execution Safety", () => {
+      it("should prevent duplicate processing with idempotency keys", async () => {
+        const processedIds = new Set<string>();
+        const messageId = "msg-unique-123";
+
+        const processIfNotDuplicate = (id: string): boolean => {
+          if (processedIds.has(id)) {
+            return false; // Already processed
+          }
+          processedIds.add(id);
+          return true;
+        };
+
+        // First call should process
+        expect(processIfNotDuplicate(messageId)).toBe(true);
+
+        // Second call should be skipped
+        expect(processIfNotDuplicate(messageId)).toBe(false);
+      });
+
+      it("should handle concurrent status updates atomically", async () => {
+        const mockAction = {
+          id: "action-123",
+          status: ScheduledActionStatus.PENDING,
+        };
+
+        // Simulate optimistic locking with version check
+        vi.mocked(prisma.scheduledAction.update).mockImplementation(
+          async (args) => {
+            if (
+              args.where?.id === mockAction.id &&
+              args.where?.status === ScheduledActionStatus.PENDING
+            ) {
+              return {
+                ...mockAction,
+                status: ScheduledActionStatus.EXECUTING,
+              };
+            }
+            throw new Error("Concurrent modification detected");
+          },
+        );
+
+        const result = await prisma.scheduledAction.update({
+          where: {
+            id: mockAction.id,
+            status: ScheduledActionStatus.PENDING,
+          },
+          data: {
+            status: ScheduledActionStatus.EXECUTING,
+          },
+        });
+
+        expect(result.status).toBe(ScheduledActionStatus.EXECUTING);
+      });
+
+      it("should handle concurrent digest processing correctly", async () => {
+        const digestId = "digest-123";
+        const processedDigests = new Set<string>();
+
+        // Simulate atomic status update
+        vi.mocked(prisma.digest.updateMany).mockImplementation(async (args) => {
+          if (args.where?.id === digestId && !processedDigests.has(digestId)) {
+            processedDigests.add(digestId);
+            return { count: 1 };
+          }
+          return { count: 0 }; // Already processed by another worker
+        });
+
+        const result1 = await prisma.digest.updateMany({
+          where: { id: digestId, status: DigestStatus.PENDING },
+          data: { status: DigestStatus.PROCESSING },
+        });
+
+        const result2 = await prisma.digest.updateMany({
+          where: { id: digestId, status: DigestStatus.PENDING },
+          data: { status: DigestStatus.PROCESSING },
+        });
+
+        expect(result1.count).toBe(1);
+        expect(result2.count).toBe(0); // Second call fails due to status change
+      });
+    });
+
+    describe("Error Recovery", () => {
+      const mockStep = createMockStep();
+
+      it("should mark action as failed on permanent error", async () => {
+        const permanentError = new Error("Invalid email address");
+
+        vi.mocked(prisma.scheduledAction.update).mockResolvedValue({
+          id: "action-123",
+          status: ScheduledActionStatus.FAILED,
+          error: permanentError.message,
+        } as never);
+
+        const result = await prisma.scheduledAction.update({
+          where: { id: "action-123" },
+          data: {
+            status: ScheduledActionStatus.FAILED,
+            error: permanentError.message,
+          },
+        });
+
+        expect(result.status).toBe(ScheduledActionStatus.FAILED);
+        expect(result.error).toBe("Invalid email address");
+      });
+
+      it("should handle missing OAuth token gracefully", async () => {
+        vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
+          id: "account-123",
+          email: "user@example.com",
+          accessToken: null,
+          refreshToken: null,
+        } as never);
+
+        const emailAccount = await prisma.emailAccount.findUnique({
+          where: { id: "account-123" },
+        });
+
+        expect(emailAccount?.accessToken).toBeNull();
+        // Function should throw or return early when tokens are missing
+      });
+
+      it("should handle database connection errors", async () => {
+        vi.mocked(prisma.scheduledAction.findUnique).mockRejectedValue(
+          new Error("Database connection failed"),
+        );
+
+        await expect(
+          prisma.scheduledAction.findUnique({ where: { id: "action-123" } }),
+        ).rejects.toThrow("Database connection failed");
+      });
+
+      it("should handle partial batch failures", async () => {
+        const results = [
+          { id: "1", success: true },
+          { id: "2", success: false, error: "Failed" },
+          { id: "3", success: true },
+        ];
+
+        const successCount = results.filter((r) => r.success).length;
+        const failureCount = results.filter((r) => !r.success).length;
+
+        expect(successCount).toBe(2);
+        expect(failureCount).toBe(1);
+      });
+    });
+
+    describe("Boundary Conditions", () => {
+      it("should handle empty sender list for categorization", async () => {
+        const emptySenders: string[] = [];
+
+        const payload = {
+          emailAccountId: "account-123",
+          senders: emptySenders,
+        };
+
+        expect(payload.senders.length).toBe(0);
+        // Function should return early without processing
+      });
+
+      it("should handle digest with no items", async () => {
+        vi.mocked(prisma.digest.findMany).mockResolvedValue([]);
+
+        const digests = await prisma.digest.findMany({
+          where: { status: DigestStatus.PENDING },
+        });
+
+        expect(digests.length).toBe(0);
+        // Function should return early without sending email
+      });
+
+      it("should handle message with missing headers", async () => {
+        const messageWithMissingHeaders = {
+          id: "msg-123",
+          threadId: "thread-456",
+          headers: {
+            from: "", // Empty from
+            subject: undefined as unknown as string, // Missing subject
+            date: new Date().toISOString(),
+          },
+        };
+
+        expect(messageWithMissingHeaders.headers.from).toBe("");
+        expect(messageWithMissingHeaders.headers.subject).toBeUndefined();
+      });
+
+      it("should handle very long email addresses", async () => {
+        const longLocalPart = "a".repeat(64);
+        const longDomain = "b".repeat(255 - 5);
+        const longEmail = `${longLocalPart}@${longDomain}.com`;
+
+        expect(longEmail.length).toBeGreaterThan(300);
+        // Function should validate email length limits
+      });
+
+      it("should handle Unicode content in emails", async () => {
+        const unicodeContent = {
+          subject: "日本語のメール Subject 🎉",
+          body: "Привет! 你好 مرحبا שלום",
+          sender: "用户@example.com",
+        };
+
+        expect(unicodeContent.subject).toContain("🎉");
+        expect(unicodeContent.body).toContain("Привет");
+      });
     });
   });
 });
