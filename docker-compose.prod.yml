@@ -12,9 +12,15 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Inngest configuration - app connects to inngest container internally
+      INNGEST_BASE_URL: http://inngest:8288
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
     depends_on:
       - postgres
       - redis
+      - inngest
     networks:
       - inbox-zero-network
       - ai_network
