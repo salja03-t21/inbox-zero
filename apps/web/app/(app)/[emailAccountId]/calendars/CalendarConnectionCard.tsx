@@ -171,6 +171,7 @@ export function CalendarConnectionCard({
                     ? optimisticUpdates[cal.id]
                     : cal.isEnabled,
               }))}
+              connectionEmail={connection.email}
               onToggleCalendar={handleToggleCalendar}
             />
           ) : (
