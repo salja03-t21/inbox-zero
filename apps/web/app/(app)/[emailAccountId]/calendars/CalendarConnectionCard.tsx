@@ -46,13 +46,10 @@ const getProviderInfo = (provider: string) => {
 };
 
 const getMailboxDisplayName = (connection: CalendarConnection) => {
-  // For shared mailboxes, show the shared mailbox owner
-  if (connection.emailAccount.isSharedMailbox && connection.emailAccount.sharedMailboxOwner) {
-    return connection.emailAccount.sharedMailboxOwner;
-  }
-  
-  // Use the account name if available, otherwise use the email
-  return connection.emailAccount.name || connection.emailAccount.email;
+  // Always use the EmailAccount email - this correctly shows:
+  // - Regular mailboxes: the user's email
+  // - Shared mailboxes: the shared mailbox email
+  return connection.emailAccount.email;
 };
 
 export function CalendarConnectionCard({
