@@ -40,7 +40,7 @@ services:
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.path=/api/health/simple"
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.interval=30s"
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.timeout=5s"
-        - "traefik.docker.network=traefik-public"
+        - "traefik.docker.network=traefik-network"
       placement:
         constraints:
           - node.role == worker
@@ -73,7 +73,7 @@ services:
       - .env.tiger21
     networks:
       - inbox-zero-network
-      - traefik-public
+      - traefik-network
     volumes:
       - app-data:/app/data
     healthcheck:
@@ -189,7 +189,7 @@ networks:
   inbox-zero-network:
     driver: overlay
     attachable: true
-  traefik-public:
+  traefik-network:
     external: true
 
 volumes:
