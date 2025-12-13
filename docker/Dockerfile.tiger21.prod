@@ -1,6 +1,7 @@
 # Multi-stage hardened production Dockerfile for TIGER 21
 # Based on Node.js 22 Alpine with security best practices
 # Built for Docker Swarm deployment
+# Uses pnpm deploy for proper dependency handling
 
 # Stage 1: Base image with security updates
 FROM node:22-alpine AS base
@@ -16,21 +17,25 @@ RUN apk update && \
         wget && \
     rm -rf /var/cache/apk/*
 
+# Enable corepack for pnpm (more reliable than npm install -g)
+RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+
 # Create non-root user for running the application
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001 -G nodejs
 
+# Stage 2: Builder - install deps, build, and create deployment
+FROM base AS builder
+
 WORKDIR /app
 
-# Install specific pnpm version
-RUN npm install -g pnpm@10.15.0 && \
-    npm cache clean --force
+# Copy package manager files first (for layer caching)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Stage 2: Dependencies installation
-FROM base AS deps
-
-# Copy package manager files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc* ./
+# Copy .npmrc and add inject-workspace-packages setting
+# This is REQUIRED for pnpm deploy to work with workspaces
+COPY .npmrc* ./
+RUN echo "inject-workspace-packages=true" >> .npmrc
 
 # Create directory structure and copy package.json files
 COPY apps/web/package.json apps/web/package.json
@@ -44,30 +49,22 @@ COPY packages/tsconfig/package.json packages/tsconfig/package.json
 # Copy patches directory
 COPY patches/ patches/
 
-# Copy Prisma schema
+# Copy Prisma schema (needed for postinstall)
 COPY apps/web/prisma/schema.prisma apps/web/prisma/schema.prisma
 
-# Install dependencies with security audit
-RUN pnpm install --no-frozen-lockfile --prefer-offline && \
-    pnpm audit --audit-level=high || true
+# Install all dependencies with cache mount for faster rebuilds
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
-# Stage 3: Builder
-FROM base AS builder
-
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps ./apps
-COPY --from=deps /app/packages ./packages
-
-# Copy application code
+# Copy all source code
 COPY . .
 
 # Build-time environment variables
 ARG NEXT_PUBLIC_BASE_URL="https://iz.tiger21.com"
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+ENV NODE_ENV=production
 
 # Dummy build-time variables (required for build, overridden at runtime)
-ENV NODE_ENV=production
 ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy?schema=public"
 ENV DIRECT_URL="postgresql://dummy:dummy@dummy:5432/dummy?schema=public"
 ENV AUTH_SECRET="dummy_secret_for_build_only_minimum_32_characters_required"
@@ -89,10 +86,26 @@ ENV QSTASH_NEXT_SIGNING_KEY="dummy_qstash_next_key_for_build"
 # Generate Prisma client
 RUN pnpm --filter inbox-zero-ai exec -- prisma generate
 
-# Build the application
+# Build the Next.js application
 RUN pnpm --filter inbox-zero-ai exec -- next build
 
-# Stage 4: Production runtime
+# Create production deployment using pnpm deploy
+# This creates a self-contained directory with all dependencies (no symlinks!)
+RUN pnpm --filter inbox-zero-ai deploy --prod /prod/app
+
+# Copy the built .next directory to the deployment
+RUN cp -r apps/web/.next /prod/app/.next
+
+# Copy Prisma schema and generated client to deployment
+RUN mkdir -p /prod/app/prisma && \
+    cp -r apps/web/prisma/schema.prisma /prod/app/prisma/ && \
+    cp -r apps/web/node_modules/.prisma /prod/app/node_modules/.prisma && \
+    cp -r apps/web/node_modules/@prisma /prod/app/node_modules/@prisma
+
+# Copy public directory if it exists
+RUN if [ -d "apps/web/public" ]; then cp -r apps/web/public /prod/app/public; fi
+
+# Stage 3: Production runtime
 FROM base AS runner
 
 # Security: Run as non-root user
@@ -100,19 +113,9 @@ USER nextjs
 
 WORKDIR /app
 
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next ./apps/web/.next
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json ./apps/web/package.json
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma ./apps/web/prisma
-
-# Copy node_modules (production dependencies only would be better, but this works)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-
-# Copy packages that are dependencies
-COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
+# Copy the self-contained deployment from builder
+# This includes node_modules with real files (not symlinks!)
+COPY --from=builder --chown=nextjs:nodejs /prod/app ./
 
 # Set production environment
 ENV NODE_ENV=production
@@ -124,10 +127,10 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health/simple || exit 1
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
-# Start the application
-CMD ["pnpm", "--filter", "inbox-zero-ai", "start"]
+# Start the application using node directly (most reliable)
+CMD ["node", "node_modules/next/dist/bin/next", "start"]
