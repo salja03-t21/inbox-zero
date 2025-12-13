@@ -88,3 +88,5 @@ memory-bank/
 .env.production
 deploy.log
 .serena/
+.opencode/
+.specify/
