@@ -29,7 +29,12 @@ Inbox Zero is an AI email assistant that helps you:
 - **Cache**: Redis 7 (containerized)
 - **Background Jobs**: Inngest
 - **Reverse Proxy**: Traefik with automatic SSL via Cloudflare
-- **Authentication**: Better Auth with Microsoft OAuth only
+- **Authentication**: Better Auth with Microsoft OAuth and SSO
+
+### Access Control
+
+- **Allowed Domains**: Only `tiger21.com` and `tiger21chair.com` email addresses can register
+- **Authentication Methods**: Microsoft OAuth and SSO enabled, Gmail disabled
 
 ### Email Provider Support
 
@@ -98,6 +103,12 @@ Environment variables are managed in `.env.tiger21` on the server. Key configura
 # Application
 NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com
 NEXT_PUBLIC_DISABLE_GMAIL=true
+
+# Access Control
+ALLOWED_EMAIL_DOMAINS=tiger21.com,tiger21chair.com
+ENABLE_GOOGLE_AUTH=false
+ENABLE_MICROSOFT_AUTH=true
+ENABLE_SSO_AUTH=true
 
 # Database (DigitalOcean Managed PostgreSQL)
 DATABASE_URL=postgresql://inbox_zero_user:PASSWORD@db-postgres-do-user-13034382-0.b.db.ondigitalocean.com:25060/inbox-zero?sslmode=require
