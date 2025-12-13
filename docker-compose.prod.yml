@@ -92,6 +92,8 @@ services:
       INNGEST_POSTGRES_URI: postgres://${POSTGRES_USER:-inboxzero}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-inboxzero}
       INNGEST_REDIS_URI: redis://redis:6379
       INNGEST_POLL_INTERVAL: 60
+      # Tell Inngest where to find the app's function definitions
+      INNGEST_DEV: "1"
     depends_on:
       postgres:
         condition: service_healthy
