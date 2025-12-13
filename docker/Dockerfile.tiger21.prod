@@ -131,5 +131,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
-# Start the application using node directly (most reliable)
-CMD ["node", "node_modules/next/dist/bin/next", "start"]
+# Start the application 
+# Change to apps/web directory and use pnpm to run next (handles workspace resolution)
+WORKDIR /app/apps/web
+CMD ["pnpm", "exec", "next", "start"]
