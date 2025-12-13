@@ -151,7 +151,7 @@ async function startFetchingAndQueueing(params: {
       for (const email of batch.emails) {
         try {
           await enqueueJob({
-            name: "/api/bulk-process/worker",
+            name: "inbox-zero/bulk-process.worker",
             data: {
               jobId,
               emailAccountId,
