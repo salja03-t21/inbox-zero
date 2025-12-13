@@ -12,5 +12,7 @@ export const inngest = new Inngest({
 
 // Helper to check if Inngest is configured
 export function isInngestConfigured(): boolean {
-  return Boolean(env.INNGEST_BASE_URL || (env.INNGEST_EVENT_KEY && env.INNGEST_SIGNING_KEY));
+  return Boolean(
+    env.INNGEST_BASE_URL || (env.INNGEST_EVENT_KEY && env.INNGEST_SIGNING_KEY),
+  );
 }
