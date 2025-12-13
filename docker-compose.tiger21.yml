@@ -37,7 +37,7 @@ services:
         - "traefik.http.routers.inbox-zero-tiger21.tls=true"
         - "traefik.http.routers.inbox-zero-tiger21.tls.certresolver=cloudflare"
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.server.port=3000"
-        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.path=/api/health"
+        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.path=/api/health/simple"
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.interval=30s"
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.timeout=5s"
         - "traefik.docker.network=traefik-public"
@@ -77,7 +77,7 @@ services:
     volumes:
       - app-data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health/simple"]
       interval: 30s
       timeout: 10s
       retries: 3
