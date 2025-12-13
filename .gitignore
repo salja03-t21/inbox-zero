@@ -33,6 +33,8 @@ yarn-error.log*
 .env.development
 deploy.log
 .env*
+# But allow .example files (templates with no credentials)
+!.env*.example
 
 # vercel
 .vercel
