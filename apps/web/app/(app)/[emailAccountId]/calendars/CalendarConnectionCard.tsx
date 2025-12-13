@@ -45,6 +45,16 @@ const getProviderInfo = (provider: string) => {
   return providers[provider as keyof typeof providers] || providers.google;
 };
 
+const getMailboxDisplayName = (connection: CalendarConnection) => {
+  // For shared mailboxes, show the shared mailbox owner
+  if (connection.emailAccount.isSharedMailbox && connection.emailAccount.sharedMailboxOwner) {
+    return connection.emailAccount.sharedMailboxOwner;
+  }
+  
+  // Use the account name if available, otherwise use the email
+  return connection.emailAccount.name || connection.emailAccount.email;
+};
+
 export function CalendarConnectionCard({
   connection,
 }: CalendarConnectionCardProps) {
@@ -55,6 +65,7 @@ export function CalendarConnectionCard({
   >({});
 
   const providerInfo = getProviderInfo(connection.provider);
+  const mailboxName = getMailboxDisplayName(connection);
 
   const { execute: executeDisconnect, isExecuting: isDisconnecting } =
     useAction(disconnectCalendarAction.bind(null, emailAccountId));
@@ -171,7 +182,7 @@ export function CalendarConnectionCard({
                     ? optimisticUpdates[cal.id]
                     : cal.isEnabled,
               }))}
-              connectionEmail={connection.email}
+              connectionEmail={mailboxName}
               onToggleCalendar={handleToggleCalendar}
             />
           ) : (

@@ -10,7 +10,7 @@ type Calendar = GetCalendarsResponse["connections"][0]["calendars"][0];
 
 interface CalendarListProps {
   calendars: Calendar[];
-  connectionEmail?: string;
+  connectionEmail?: string; // Actually displays mailbox name (can be name or email)
   onToggleCalendar: (calendarId: string, isEnabled: boolean) => void;
 }
 
