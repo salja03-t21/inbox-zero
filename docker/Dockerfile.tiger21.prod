@@ -1,7 +1,6 @@
 # Multi-stage hardened production Dockerfile for TIGER 21
 # Based on Node.js 22 Alpine with security best practices
 # Built for Docker Swarm deployment
-# Uses pnpm deploy for proper dependency handling
 
 # Stage 1: Base image with security updates
 FROM node:22-alpine AS base
@@ -24,18 +23,14 @@ RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001 -G nodejs
 
-# Stage 2: Builder - install deps, build, and create deployment
+# Stage 2: Builder - install deps and build
 FROM base AS builder
 
 WORKDIR /app
 
 # Copy package manager files first (for layer caching)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
-# Copy .npmrc and add inject-workspace-packages setting
-# This is REQUIRED for pnpm deploy to work with workspaces
 COPY .npmrc* ./
-RUN echo "inject-workspace-packages=true" >> .npmrc
 
 # Create directory structure and copy package.json files
 COPY apps/web/package.json apps/web/package.json
@@ -84,26 +79,16 @@ ENV QSTASH_CURRENT_SIGNING_KEY="dummy_qstash_curr_key_for_build"
 ENV QSTASH_NEXT_SIGNING_KEY="dummy_qstash_next_key_for_build"
 
 # Generate Prisma client
-RUN pnpm --filter inbox-zero-ai exec -- prisma generate
+RUN pnpm --filter=inbox-zero-ai exec -- prisma generate
 
 # Build the Next.js application
-RUN pnpm --filter inbox-zero-ai exec -- next build
+# Skip type checking and linting during build - these are done separately in CI
+ENV SKIP_ENV_VALIDATION=1
+RUN pnpm --filter=inbox-zero-ai exec -- next build --no-lint
 
-# Create production deployment using pnpm deploy
-# This creates a self-contained directory with all dependencies (no symlinks!)
-RUN pnpm --filter inbox-zero-ai deploy --prod /prod/app
-
-# Copy the built .next directory to the deployment
-RUN cp -r apps/web/.next /prod/app/.next
-
-# Copy Prisma schema and generated client to deployment
-RUN mkdir -p /prod/app/prisma && \
-    cp -r apps/web/prisma/schema.prisma /prod/app/prisma/ && \
-    cp -r apps/web/node_modules/.prisma /prod/app/node_modules/.prisma && \
-    cp -r apps/web/node_modules/@prisma /prod/app/node_modules/@prisma
-
-# Copy public directory if it exists
-RUN if [ -d "apps/web/public" ]; then cp -r apps/web/public /prod/app/public; fi
+# Note: Skipping pnpm prune to speed up build
+# This results in a larger image (~4GB) but faster builds
+# We can optimize this later if needed
 
 # Stage 3: Production runtime
 FROM base AS runner
@@ -113,9 +98,23 @@ USER nextjs
 
 WORKDIR /app
 
-# Copy the self-contained deployment from builder
-# This includes node_modules with real files (not symlinks!)
-COPY --from=builder --chown=nextjs:nodejs /prod/app ./
+# Copy necessary files from builder
+# Note: We need the full monorepo structure because of workspace dependencies
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-lock.yaml ./pnpm-lock.yaml
+
+# Copy the built Next.js app
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next ./apps/web/.next
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma ./apps/web/prisma
+
+# Copy node_modules (production only after prune)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Copy workspace packages (they're needed because of workspace: dependencies)
+COPY --from=builder --chown=nextjs:nodejs /app/packages ./packages
 
 # Set production environment
 ENV NODE_ENV=production

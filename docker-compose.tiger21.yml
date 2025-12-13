@@ -1,5 +1,3 @@
-version: "3.9"
-
 # TIGER 21 Docker Swarm Stack Configuration
 # Domain: iz.tiger21.com
 # Server: 167.99.116.99 (DigitalOcean)
@@ -43,13 +41,13 @@ services:
         - "traefik.docker.network=traefik-network"
       placement:
         constraints:
-          - node.role == worker
+          - node.role == manager
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 4G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 1G
     environment:
       # Node environment
@@ -96,10 +94,10 @@ services:
           - node.role == manager
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 128M
     command: 
       - redis-server
@@ -132,10 +130,10 @@ services:
         max_attempts: 3
       resources:
         limits:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
         reservations:
-          cpus: '0.05'
+          cpus: "0.05"
           memory: 64M
     environment:
       SRH_MODE: env
@@ -162,10 +160,10 @@ services:
           - node.role == manager
       resources:
         limits:
-          cpus: '1'
+          cpus: "1"
           memory: 1G
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
     command: inngest start
     environment:
