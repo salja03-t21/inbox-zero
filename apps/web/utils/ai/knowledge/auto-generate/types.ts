@@ -75,7 +75,12 @@ export interface DeduplicationResult {
 
 // Pipeline progress tracking
 export interface PipelineProgress {
-  stage: "preprocessing" | "clustering" | "extraction" | "generation" | "deduplication";
+  stage:
+    | "preprocessing"
+    | "clustering"
+    | "extraction"
+    | "generation"
+    | "deduplication";
   stageProgress: number; // 0-100
   totalEmails: number;
   processedEmails: number;

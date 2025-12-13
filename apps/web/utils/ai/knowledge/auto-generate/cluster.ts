@@ -51,7 +51,11 @@ export async function clusterEmails(
 
   // Cluster by topic if requested
   if (groupBy === "topic" || groupBy === "both") {
-    const topicClusters = await clusterByTopic(snippets, emailAccount, onProgress);
+    const topicClusters = await clusterByTopic(
+      snippets,
+      emailAccount,
+      onProgress,
+    );
     for (const cluster of topicClusters) {
       allClusters.push(cluster);
       cluster.emailIds.forEach((id) => clusteredEmailIds.add(id));
@@ -176,7 +180,9 @@ Identify clusters of emails with similar topics. Return JSON with the clusters f
       schema: z.object({
         clusters: z.array(
           z.object({
-            name: z.string().describe("Descriptive name for this topic cluster"),
+            name: z
+              .string()
+              .describe("Descriptive name for this topic cluster"),
             emailIds: z
               .array(z.string())
               .describe("IDs of emails belonging to this cluster"),

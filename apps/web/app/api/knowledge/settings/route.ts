@@ -21,7 +21,10 @@ export const GET = withEmailAccount(async (request) => {
   });
 
   if (!emailAccount) {
-    return NextResponse.json({ error: "Email account not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Email account not found" },
+      { status: 404 },
+    );
   }
 
   const result: GetKnowledgeSettingsResponse = {

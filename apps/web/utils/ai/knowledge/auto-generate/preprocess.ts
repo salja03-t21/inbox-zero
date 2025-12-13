@@ -195,7 +195,9 @@ async function fetchSentEmailsInRange(
 
     if (!response.nextPageToken || emails.length >= maxEmails) {
       logger.info("Stopping pagination", {
-        reason: !response.nextPageToken ? "no nextPageToken" : "reached maxEmails",
+        reason: !response.nextPageToken
+          ? "no nextPageToken"
+          : "reached maxEmails",
         totalEmails: emails.length,
         maxEmails,
       });

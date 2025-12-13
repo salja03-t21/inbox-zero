@@ -151,7 +151,7 @@ export function useEmailStream(
         }
       }, 100);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectToSSE]); // isPaused is already in connectToSSE dependencies
 
   const togglePause = useCallback(() => {

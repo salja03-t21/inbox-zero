@@ -180,7 +180,9 @@ Extract response patterns and business context from these emails. Return valid J
           .number()
           .min(0.5)
           .max(1)
-          .describe("How confident are you in these extracted patterns (0.5-1.0)"),
+          .describe(
+            "How confident are you in these extracted patterns (0.5-1.0)",
+          ),
       }),
     });
 

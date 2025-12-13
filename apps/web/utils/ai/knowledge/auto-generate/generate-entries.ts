@@ -187,8 +187,7 @@ function findSourceEmailIds(
     .filter((email) => {
       // Match by topic keywords
       if (pattern.businessContext.commonTopics.length > 0) {
-        const emailText =
-          `${email.subject} ${email.content}`.toLowerCase();
+        const emailText = `${email.subject} ${email.content}`.toLowerCase();
         return pattern.businessContext.commonTopics.some((topic) =>
           emailText.includes(topic.toLowerCase()),
         );
