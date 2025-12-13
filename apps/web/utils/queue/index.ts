@@ -23,7 +23,7 @@ export function getActiveProvider(): QueueProvider {
 }
 
 export interface EnqueueJobOptions<T> {
-  /** Event name for Inngest, path for QStash (e.g., 'inbox-zero/clean.process' or '/api/clean') */
+  /** Event name - use Inngest format (e.g., 'inbox-zero/clean.process'). Legacy paths like '/api/clean' also supported. */
   name: string;
   /** Job payload data */
   data: T;
@@ -151,7 +151,11 @@ async function enqueueViaQstash<T>(
   const { Client } = await import("@upstash/qstash");
 
   const baseUrl = env.WEBHOOK_URL || env.NEXT_PUBLIC_BASE_URL;
-  const url = `${baseUrl}${options.name}`;
+  // Convert Inngest event names to API paths (same as fallback)
+  const path = options.name.startsWith("/")
+    ? options.name
+    : `/${options.name.replace("inbox-zero/", "api/").replace(".", "/")}`;
+  const url = `${baseUrl}${path}`;
 
   // If queue name is specified, use queue-based publishing
   if (options.queueName) {
