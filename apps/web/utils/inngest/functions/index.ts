@@ -3,6 +3,7 @@
 
 import { bulkProcessWorker } from "./bulk-process-worker";
 import { scheduledActionExecute } from "./scheduled-action-execute";
+import { scheduledActionCleanup } from "./scheduled-action-cleanup";
 import { cleanProcess } from "./clean-process";
 import { cleanGmail } from "./clean-gmail";
 import { cleanOutlook } from "./clean-outlook";
@@ -16,6 +17,7 @@ export const allFunctions = [
   bulkProcessWorker,
   // Phase 3.7: Scheduled actions
   scheduledActionExecute,
+  scheduledActionCleanup,
   // Phase 3.3, 3.4, 3.5: Clean operations
   cleanProcess,
   cleanGmail,
