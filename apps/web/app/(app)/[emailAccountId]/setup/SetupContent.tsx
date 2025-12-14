@@ -303,7 +303,7 @@ function Checklist({
       />
 
       <StepItem
-        href={prefixPath(emailAccountId, "/assistant?tab=settings")}
+        href={prefixPath(emailAccountId, "/automation?tab=settings")}
         icon={<SparklesIcon size={20} />}
         iconBg="bg-cyan-100 dark:bg-cyan-900/50"
         iconColor="text-cyan-500 dark:text-cyan-400"
@@ -314,7 +314,7 @@ function Checklist({
       />
 
       <StepItem
-        href={prefixPath(emailAccountId, "/assistant?tab=settings")}
+        href={prefixPath(emailAccountId, "/automation?tab=settings")}
         icon={<UserIcon size={20} />}
         iconBg="bg-pink-100 dark:bg-pink-900/50"
         iconColor="text-pink-500 dark:text-pink-400"
