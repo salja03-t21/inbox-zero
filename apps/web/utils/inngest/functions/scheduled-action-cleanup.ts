@@ -61,11 +61,12 @@ export const scheduledActionCleanup = inngest.createFunction(
 
       for (const action of overdueActions) {
         try {
+          const scheduledForDate = new Date(action.scheduledFor);
           logger.info("Re-triggering overdue action", {
             scheduledActionId: action.id,
             scheduledFor: action.scheduledFor,
             actionType: action.actionType,
-            overdueBy: Date.now() - action.scheduledFor.getTime(),
+            overdueBy: Date.now() - scheduledForDate.getTime(),
           });
 
           // Send event to execute immediately (no scheduledFor delay)
