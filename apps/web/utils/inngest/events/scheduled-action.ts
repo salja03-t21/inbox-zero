@@ -11,7 +11,7 @@ const logger = createScopedLogger("inngest/events/scheduled-action");
  * we send an Inngest event that will be processed by the scheduled-action-execute function.
  *
  * @param scheduledActionId - The ID of the scheduled action to execute
- * @param scheduledFor - When the action should execute (ISO date string)
+ * @param scheduledFor - When the action should execute (optional - if not provided, executes immediately)
  * @returns The event ID from Inngest
  */
 export async function sendScheduledActionExecuteEvent({
@@ -19,12 +19,12 @@ export async function sendScheduledActionExecuteEvent({
   scheduledFor,
 }: {
   scheduledActionId: string;
-  scheduledFor: Date;
+  scheduledFor?: Date;
 }): Promise<string> {
   try {
     const payload: ScheduledActionExecutePayload = {
       scheduledActionId,
-      scheduledFor: scheduledFor.toISOString(),
+      scheduledFor: scheduledFor?.toISOString(),
     };
 
     logger.info("Sending scheduled action execute event", {
