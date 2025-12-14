@@ -7,9 +7,16 @@ import { sendScheduledActionExecuteEvent } from "../events/scheduled-action";
 const logger = createScopedLogger("inngest/scheduled-action-cleanup");
 
 /**
- * Cron function to clean up stuck scheduled actions.
+ * Event-based cleanup for stuck scheduled actions.
  *
- * This function runs every 5 minutes and checks for:
+ * This function is triggered by the "inbox-zero/cleanup.scheduled-actions" event
+ * and runs every time the event is received. Each run schedules the next cleanup
+ * event 5 minutes in the future, creating a self-perpetuating cleanup cycle.
+ *
+ * This approach works reliably with self-hosted Inngest without requiring
+ * cron support or function registration polling.
+ *
+ * The function checks for:
  * 1. PENDING actions that are past their scheduledFor time
  * 2. Re-triggers them by sending a new execute event
  *
@@ -23,7 +30,7 @@ export const scheduledActionCleanup = inngest.createFunction(
     id: "scheduled-action-cleanup",
     name: "Cleanup Stuck Scheduled Actions",
   },
-  { cron: "*/5 * * * *" }, // Every 5 minutes
+  { event: "inbox-zero/cleanup.scheduled-actions" },
   async ({ step }) => {
     logger.info("Starting scheduled action cleanup");
 
@@ -95,6 +102,19 @@ export const scheduledActionCleanup = inngest.createFunction(
       retriggered: results.retriggered.length,
       failed: results.failed.length,
     });
+
+    // Schedule the next cleanup in 5 minutes to create a self-perpetuating cycle
+    await step.sendEvent("schedule-next-cleanup", {
+      name: "inbox-zero/cleanup.scheduled-actions",
+      data: {
+        scheduledBy: "cleanup-cycle",
+        timestamp: new Date().toISOString(),
+      },
+      // Use Inngest's built-in delay to schedule 5 minutes from now
+      ts: Date.now() + 5 * 60 * 1000, // 5 minutes in milliseconds
+    });
+
+    logger.info("Scheduled next cleanup in 5 minutes");
 
     return {
       processed: overdueActions.length,
