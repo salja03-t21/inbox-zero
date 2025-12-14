@@ -53,6 +53,9 @@ services:
       # Node environment
       NODE_ENV: production
       
+      # Next.js internal API calls (server-side fetches)
+      NEXTAUTH_URL: http://localhost:3000
+      
       # Inngest configuration - app connects to inngest service internally
       INNGEST_BASE_URL: http://inngest:8288
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
