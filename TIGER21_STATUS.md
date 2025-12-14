@@ -1,20 +1,22 @@
 # TIGER 21 Inbox Zero Deployment - Current Status
 
-**Last Updated**: December 14, 2025
+**Last Updated**: December 14, 2025 (Evening Hotfix)
 **Production URL**: https://iz.tiger21.com
 **Server**: 167.99.116.99 (DigitalOcean Swarm)
 **Repository**: salja03-t21/inbox-zero (fork)
 **Branch**: production
 
-## Deployment Status: ✅ FULLY OPERATIONAL
+## Deployment Status: ✅ FULLY OPERATIONAL (Restored)
 
 ### Services Running (4/4)
+
 - ✅ inbox-zero-tiger21_app (2 replicas) - Next.js application
-- ✅ inbox-zero-tiger21_inngest (1 replica) - Background job processor  
+- ✅ inbox-zero-tiger21_inngest (1 replica) - Background job processor
 - ✅ inbox-zero-tiger21_redis (1 replica) - Cache
 - ✅ inbox-zero-tiger21_serverless-redis-http (1 replica) - Redis HTTP API
 
 ### Infrastructure
+
 - **Docker Swarm**: 3-node cluster (all managers)
   - Node 01: 167.99.116.99 (primary - SSH accessible)
   - Node 02: 104.236.232.69
@@ -30,13 +32,24 @@
 
 ### Recent Changes & Fixes
 
-#### Security Updates (Dec 14, 2025)
+#### HOTFIX: Inngest Signing Key Issue (Dec 14, 2025 - Evening)
+
+- ✅ **Critical Fix**: Inngest service was failing with "signing-key is required" error
+- ✅ Modified command to pass `--signing-key` as CLI argument instead of relying on env var only
+- ✅ Changed from: `inngest start --queue-workers 50`
+- ✅ Changed to: `sh -c 'inngest start --queue-workers 50 --signing-key "$INNGEST_SIGNING_KEY"'`
+- ✅ Pinned app image to working SHA256 to avoid platform mismatch issues
+- ✅ All services restored to full operational status
+
+#### Security Updates (Dec 14, 2025 - Morning)
+
 - ✅ **Critical**: Next.js updated from 15.5.6 → 15.5.7 (fixes RCE vulnerability)
 - ✅ Updated @modelcontextprotocol/sdk to 1.24.0+ (DNS rebinding protection)
 - ✅ Updated glob and valibot packages (security patches)
 - ✅ All vulnerabilities patched, production secure
 
 #### Application Fixes
+
 1. **Inngest Service** - Fixed health check configuration
    - Changed from `wget` to `curl`
    - Increased interval: 10s → 30s
@@ -69,16 +82,19 @@
 ### Configuration Files
 
 #### Server: /root/IT-Configs/docker_swarm/inbox-zero/
+
 - `docker-compose.tiger21.yml` - Stack configuration
 - `.env.tiger21` - Environment variables (secrets)
 - `deploy-tiger21.sh` - Deployment helper script
 
 #### Repository: /Users/jamessalmon/WebstormProjects/inbox-zero/
+
 - `docker-compose.tiger21.yml` - Source of truth for stack config
 - `docker/Dockerfile.tiger21.prod` - Production Dockerfile
 - `.env.tiger21.example` - Environment template
 
 ### Key Environment Variables
+
 ```bash
 NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com
 NEXTAUTH_URL=http://localhost:3000  # For internal API calls
@@ -92,12 +108,14 @@ MICROSOFT_TENANT_ID=89f2f6c3-aa52-4af9-953e-02a633d0da4d
 ### Deployment Commands
 
 #### Deploy to Production
+
 ```bash
 cd /Users/jamessalmon/WebstormProjects/inbox-zero
 ./deploy-tiger21.sh
 ```
 
 #### Manual Stack Update (without rebuild)
+
 ```bash
 ssh root@167.99.116.99
 cd ~/IT-Configs/docker_swarm/inbox-zero
@@ -107,6 +125,7 @@ docker compose --env-file .env.tiger21 -f docker-compose.tiger21.yml config | \
 ```
 
 #### Database Migrations
+
 ```bash
 # From local machine
 cd /Users/jamessalmon/WebstormProjects/inbox-zero/apps/web
@@ -114,6 +133,7 @@ DATABASE_URL="..." DIRECT_URL="..." npx prisma migrate deploy
 ```
 
 #### Useful Monitoring Commands
+
 ```bash
 # Check services
 ssh root@167.99.116.99 'docker service ls | grep inbox-zero'
@@ -132,11 +152,13 @@ curl https://iz.tiger21.com/api/health/simple
 ### Git Workflow
 
 #### Branch Structure
+
 - `main` - Mirrors upstream (elie222/inbox-zero) - NEVER deploy from here
 - `feature/*` - Custom TIGER 21 features
 - `production` - Integration branch (main + all features) - **DEPLOY FROM HERE**
 
 #### Safety Rules
+
 - ✅ Always deploy from `production` branch
 - ✅ Always verify remote before commit: `git remote -v`
 - ✅ Repository: origin = salja03-t21/inbox-zero (NOT upstream)
@@ -169,11 +191,13 @@ curl https://iz.tiger21.com/api/health/simple
 **App Registration ID**: d5886e83-a14e-4213-8615-74d2146e318f
 
 **Required Redirect URIs**:
+
 - https://iz.tiger21.com/api/auth/callback/microsoft
-- https://iz.tiger21.com/api/outlook/linking/callback  
+- https://iz.tiger21.com/api/outlook/linking/callback
 - https://iz.tiger21.com/api/outlook/calendar/callback
 
 **Required API Permissions** (Microsoft Graph Delegated):
+
 - offline_access
 - User.Read
 - Mail.ReadWrite
@@ -181,6 +205,7 @@ curl https://iz.tiger21.com/api/health/simple
 - Calendars.ReadWrite
 
 ### Version Information
+
 - Next.js: 15.5.7 (security patched)
 - React: 19.1.1
 - Node: 22-alpine
@@ -189,29 +214,34 @@ curl https://iz.tiger21.com/api/health/simple
 - Inngest: latest
 
 ### Testing User
+
 - Email: james.salmon@tiger21.com
 - Calendar: Connected ✅
 - Knowledge: Enabled ✅
 - Admin: Yes ✅
 
 ### Next Steps / Future Improvements
-1. Consider moving to Next.js 16 (once MDX/Turbopack issues resolved)
-2. Optimize Inngest memory usage
-3. Add monitoring/alerting for service health
-4. Document backup/restore procedures
-5. Set up automated security scanning
+
+1. **Fix multi-arch Docker builds** - Recent builds create ARM64/AMD64 images that fail on swarm nodes
+2. Consider moving to Next.js 16 (once MDX/Turbopack issues resolved)
+3. Optimize Inngest memory usage
+4. Add monitoring/alerting for service health (would have caught this issue faster)
+5. Document backup/restore procedures
+6. Set up automated security scanning
 
 ### Important Files Modified
+
 ```
 apps/web/next.config.ts - Added standalone output mode
-docker/Dockerfile.tiger21.prod - Production build configuration  
-docker-compose.tiger21.yml - Service definitions, health checks
+docker/Dockerfile.tiger21.prod - Production build configuration
+docker-compose.tiger21.yml - Service definitions, health checks, Inngest command fix
 apps/web/app/api/user/email-accounts/route.ts - Added isAdmin field
 apps/web/app/(app)/[emailAccountId]/assistant/knowledge/AutoGenerateKnowledge.tsx - 3-month limit
 apps/web/components/MultiSelectFilter.tsx - Scrollable dropdown
 ```
 
 ### Troubleshooting Resources
+
 - CLAUDE.md - Development guidelines
 - Warp.md - Comprehensive project documentation
 - .cursor/rules/ - Feature-specific context
@@ -220,6 +250,6 @@ apps/web/components/MultiSelectFilter.tsx - Scrollable dropdown
 ---
 
 **Status**: PRODUCTION READY ✅
-**Last Successful Deployment**: December 14, 2025
+**Last Successful Deployment**: December 14, 2025 (Evening Hotfix)
 **Deployed By**: Claude/James Salmon
-**Commit**: d57fdd482 (production branch)
+**Commit**: bb8389bfa (production branch)
