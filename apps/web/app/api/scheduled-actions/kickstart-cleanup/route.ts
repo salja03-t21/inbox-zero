@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { inngest } from "@/utils/inngest/client";
 import { createScopedLogger } from "@/utils/logger";
-import { auth } from "@/app/api/auth/[...nextauth]/auth";
+import { auth } from "@/utils/auth";
 
 const logger = createScopedLogger("api/scheduled-actions/kickstart-cleanup");
 
