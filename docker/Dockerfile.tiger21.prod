@@ -84,8 +84,7 @@ RUN pnpm --filter=inbox-zero-ai exec -- prisma generate
 # Build the Next.js application
 # Skip type checking and linting during build - these are done separately in CI
 ENV SKIP_ENV_VALIDATION=1
-# Disable Turbopack for production builds (MDX support issues in Next.js 16)
-RUN pnpm --filter=inbox-zero-ai exec -- next build --experimental-no-turbopack
+RUN pnpm --filter=inbox-zero-ai exec -- next build
 
 # Note: Skipping pnpm prune to speed up build
 # This results in a larger image (~4GB) but faster builds
