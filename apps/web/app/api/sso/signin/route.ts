@@ -110,13 +110,22 @@ export const GET = withError(async (request) => {
   // Construct the Better Auth SSO sign-in URL
   const authUrl = new URL(proxiedRequest.url);
   authUrl.pathname = "/api/auth/sso/sign-in";
-  authUrl.searchParams.set("providerId", provider.providerId);
-  authUrl.searchParams.set("callbackURL", "/accounts");
+
+  // Create request body with SSO parameters
+  const requestBody = JSON.stringify({
+    providerId: provider.providerId,
+    callbackURL: "/accounts",
+  });
+
+  // Create headers with content-type
+  const authHeaders = new Headers(proxiedRequest.headers);
+  authHeaders.set("content-type", "application/json");
 
   // Create the request to Better Auth
   const authRequest = new Request(authUrl.toString(), {
     method: "POST",
-    headers: proxiedRequest.headers,
+    headers: authHeaders,
+    body: requestBody,
     // @ts-expect-error - Required for POST requests
     duplex: "half",
   });
@@ -124,6 +133,7 @@ export const GET = withError(async (request) => {
   logger.info("SSO: Calling Better Auth handler", {
     authUrl: authUrl.toString(),
     host: authRequest.headers.get("host"),
+    body: requestBody,
   });
 
   // Call Better Auth's handler directly
