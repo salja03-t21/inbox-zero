@@ -77,9 +77,15 @@ jobs:
           echo "$NEW_VERSION" > version.txt
           git config --local user.email "github-actions@tiger21.com"
           git config --local user.name "github-actions"
-          git tag -a "$VERSION" -m "Release version $VERSION"
+          # Only create tag if it doesn't exist
+          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            git tag -a "$VERSION" -m "Release version $VERSION"
+            echo "Created tag $VERSION" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Tag $VERSION already exists, skipping" >> $GITHUB_STEP_SUMMARY
+          fi
           git commit -a -m "Bump version from $VERSION to $NEW_VERSION"
-          echo "Tagged version $VERSION. Updated version.txt to $NEW_VERSION on main." >> $GITHUB_STEP_SUMMARY
+          echo "Updated version.txt to $NEW_VERSION on main." >> $GITHUB_STEP_SUMMARY
 
       - name: Push changes
         uses: ad-m/github-push-action@v0.8.0
