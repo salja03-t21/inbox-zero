@@ -139,6 +139,21 @@ export const betterAuthConfig = betterAuth({
     signIn: handleSignIn,
   },
   databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          // Block user creation if email domain is not allowed
+          if (user.email && !isEmailDomainAllowed(user.email)) {
+            logger.warn("Blocked user creation from unauthorized domain", {
+              email: user.email,
+              domain: user.email.split("@")[1],
+            });
+            throw new Error("DomainNotAllowed");
+          }
+          return user;
+        },
+      },
+    },
     account: {
       create: {
         after: async (account: Account) => {
@@ -168,14 +183,8 @@ async function handleSignIn({
   user: User;
   isNewUser: boolean;
 }) {
-  // Check if email domain is allowed
-  if (user.email && !isEmailDomainAllowed(user.email)) {
-    logger.warn("Sign-in attempt from unauthorized domain", {
-      email: user.email,
-      domain: user.email.split("@")[1],
-    });
-    throw new Error("DomainNotAllowed");
-  }
+  // Domain check now happens in user.create.before hook
+  // This ensures users are blocked BEFORE creation
 
   if (isNewUser && user.email) {
     const loops = async () => {
