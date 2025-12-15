@@ -69,6 +69,7 @@ export const deleteEmailAccountAction = actionClientUser
       select: {
         email: true,
         accountId: true,
+        isSharedMailbox: true,
         user: { select: { email: true } },
       },
     });
@@ -81,9 +82,18 @@ export const deleteEmailAccountAction = actionClientUser
         "Cannot delete primary email account. Go to the Settings page to delete your entire account.",
       );
 
-    await prisma.account.delete({
-      where: { id: emailAccount.accountId, userId },
-    });
+    // For shared mailboxes, only delete the EmailAccount entry, not the Account
+    // The Account (OAuth tokens) should remain for other mailboxes using the same credentials
+    if (emailAccount.isSharedMailbox) {
+      await prisma.emailAccount.delete({
+        where: { id: emailAccountId },
+      });
+    } else {
+      // For non-shared mailboxes, delete the Account (which cascades to EmailAccount)
+      await prisma.account.delete({
+        where: { id: emailAccount.accountId, userId },
+      });
+    }
 
     after(async () => {
       await updateAccountSeats({ userId });

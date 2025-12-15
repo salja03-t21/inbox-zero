@@ -58,22 +58,38 @@ function selectModel(
     aiProvider,
     aiModel,
     aiApiKey,
+    aiBaseUrl,
   }: {
     aiProvider: string;
     aiModel: string | null;
     aiApiKey: string | null;
+    aiBaseUrl?: string | null;
   },
   providerOptions?: Record<string, any>,
 ): SelectModel {
   switch (aiProvider) {
     case Provider.OPEN_AI: {
       const modelName = aiModel || Model.GPT_4O;
+      const baseURL = aiBaseUrl || env.OPENAI_BASE_URL;
+      const apiKey = aiApiKey || env.OPENAI_API_KEY;
+
+      logger.info("Creating OpenAI model", {
+        modelName,
+        baseURL,
+        apiKeyLength: apiKey?.length || 0,
+        hasCustomBaseUrl: !!aiBaseUrl,
+        hasCustomApiKey: !!aiApiKey,
+      });
+
       return {
         provider: Provider.OPEN_AI,
         modelName,
-        model: createOpenAI({ apiKey: aiApiKey || env.OPENAI_API_KEY })(
-          modelName,
-        ),
+        // Use .chat() to force chat completions API instead of responses API
+        // which is needed for OpenAI-compatible providers like Nebius
+        model: createOpenAI({
+          apiKey,
+          baseURL,
+        }).chat(modelName),
         backupModel: getBackupModel(aiApiKey),
       };
     }
@@ -98,7 +114,7 @@ function selectModel(
       };
     }
     case Provider.OPENROUTER: {
-      const modelName = aiModel || Model.CLAUDE_4_SONNET_OPENROUTER;
+      const modelName = aiModel || Model.CLAUDE_4_5_SONNET_OPENROUTER;
       const openrouter = createOpenRouter({
         apiKey: aiApiKey || env.OPENROUTER_API_KEY,
         headers: {
@@ -235,6 +251,7 @@ function selectEconomyModel(userAi: UserAIFields): SelectModel {
         aiProvider: env.ECONOMY_LLM_PROVIDER,
         aiModel: env.ECONOMY_LLM_MODEL,
         aiApiKey: apiKey,
+        aiBaseUrl: undefined,
       },
       providerOptions,
     );
@@ -272,6 +289,7 @@ function selectChatModel(userAi: UserAIFields): SelectModel {
         aiProvider: env.CHAT_LLM_PROVIDER,
         aiModel: env.CHAT_LLM_MODEL,
         aiApiKey: apiKey,
+        aiBaseUrl: undefined,
       },
       providerOptions,
     );
@@ -284,6 +302,7 @@ function selectDefaultModel(userAi: UserAIFields): SelectModel {
   let aiProvider: string;
   let aiModel: string | null = null;
   const aiApiKey = userAi.aiApiKey;
+  const aiBaseUrl = userAi.aiBaseUrl || null;
 
   const providerOptions: Record<string, any> = {};
 
@@ -319,6 +338,7 @@ function selectDefaultModel(userAi: UserAIFields): SelectModel {
       aiProvider,
       aiModel,
       aiApiKey,
+      aiBaseUrl,
     },
     providerOptions,
   );

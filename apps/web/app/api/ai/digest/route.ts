@@ -10,79 +10,89 @@ import type { StoredDigestContent } from "@/app/api/resend/digest/validation";
 import { withError } from "@/utils/middleware";
 import { isAssistantEmail } from "@/utils/assistant/is-assistant-email";
 import { env } from "@/env";
+import { INTERNAL_API_KEY_HEADER } from "@/utils/internal-api";
 
-export const POST = withError(
-  verifySignatureAppRouter(async (request: Request) => {
-    const logger = createScopedLogger("digest");
+export const POST = withError(async (request: Request) => {
+  // Check if this is an internal call (Inngest fallback mode)
+  const internalKey = request.headers.get(INTERNAL_API_KEY_HEADER);
+  if (internalKey === env.INTERNAL_API_KEY) {
+    return handleRequest(request);
+  }
 
-    try {
-      const body = digestBody.parse(await request.json());
-      const { emailAccountId, coldEmailId, actionId, message } = body;
+  // Otherwise, verify QStash signature
+  return verifySignatureAppRouter(handleRequest)(request);
+});
 
-      logger.with({ emailAccountId, messageId: message.id });
+async function handleRequest(request: Request) {
+  const logger = createScopedLogger("digest");
 
-      const emailAccount = await getEmailAccountWithAi({
-        emailAccountId,
-      });
-      if (!emailAccount) {
-        throw new Error("Email account not found");
-      }
+  try {
+    const body = digestBody.parse(await request.json());
+    const { emailAccountId, coldEmailId, actionId, message } = body;
 
-      // Don't summarize Digest emails (this will actually block all emails that we send, but that's okay)
-      if (message.from === env.RESEND_FROM_EMAIL) {
-        logger.info("Skipping digest item because it is from us");
-        return new NextResponse("OK", { status: 200 });
-      }
+    logger.with({ emailAccountId, messageId: message.id });
 
-      const isFromAssistant = isAssistantEmail({
-        userEmail: emailAccount.email,
-        emailToCheck: message.from,
-      });
-
-      if (isFromAssistant) {
-        logger.info("Skipping digest item because it is from the assistant");
-        return new NextResponse("OK", { status: 200 });
-      }
-
-      const ruleName = actionId
-        ? await getRuleNameByExecutedAction(actionId)
-        : null;
-
-      if (!ruleName) {
-        logger.warn("Rule name not found for executed action", { actionId });
-        return new NextResponse("OK", { status: 200 });
-      }
-
-      const summary = await aiSummarizeEmailForDigest({
-        ruleName,
-        emailAccount,
-        messageToSummarize: {
-          ...message,
-          to: message.to || "",
-        },
-      });
-
-      if (!summary?.content) {
-        logger.info("Skipping digest item because it is not worth summarizing");
-        return new NextResponse("OK", { status: 200 });
-      }
-
-      await upsertDigest({
-        messageId: message.id || "",
-        threadId: message.threadId || "",
-        emailAccountId,
-        actionId,
-        coldEmailId,
-        content: summary,
-      });
-
-      return new NextResponse("OK", { status: 200 });
-    } catch (error) {
-      logger.error("Failed to process digest", { error });
-      return new NextResponse("Internal Server Error", { status: 500 });
+    const emailAccount = await getEmailAccountWithAi({
+      emailAccountId,
+    });
+    if (!emailAccount) {
+      throw new Error("Email account not found");
     }
-  }),
-);
+
+    // Don't summarize Digest emails (this will actually block all emails that we send, but that's okay)
+    if (message.from === env.RESEND_FROM_EMAIL) {
+      logger.info("Skipping digest item because it is from us");
+      return new NextResponse("OK", { status: 200 });
+    }
+
+    const isFromAssistant = isAssistantEmail({
+      userEmail: emailAccount.email,
+      emailToCheck: message.from,
+    });
+
+    if (isFromAssistant) {
+      logger.info("Skipping digest item because it is from the assistant");
+      return new NextResponse("OK", { status: 200 });
+    }
+
+    const ruleName = actionId
+      ? await getRuleNameByExecutedAction(actionId)
+      : null;
+
+    if (!ruleName) {
+      logger.warn("Rule name not found for executed action", { actionId });
+      return new NextResponse("OK", { status: 200 });
+    }
+
+    const summary = await aiSummarizeEmailForDigest({
+      ruleName,
+      emailAccount,
+      messageToSummarize: {
+        ...message,
+        to: message.to || "",
+      },
+    });
+
+    if (!summary?.content) {
+      logger.info("Skipping digest item because it is not worth summarizing");
+      return new NextResponse("OK", { status: 200 });
+    }
+
+    await upsertDigest({
+      messageId: message.id || "",
+      threadId: message.threadId || "",
+      emailAccountId,
+      actionId,
+      coldEmailId,
+      content: summary,
+    });
+
+    return new NextResponse("OK", { status: 200 });
+  } catch (error) {
+    logger.error("Failed to process digest", { error });
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
 
 async function findOrCreateDigest(
   emailAccountId: string,

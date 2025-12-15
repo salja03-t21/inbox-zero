@@ -164,7 +164,7 @@ export class OutlookProvider implements EmailProvider {
 
     const response = await this.client
       .getClient()
-      .api("/me/messages")
+      .api(`${this.client.getBaseUrl()}/messages`)
       .filter(
         `internetMessageId eq '${escapeODataString(messageIdWithBrackets)}'`,
       )
@@ -265,7 +265,7 @@ export class OutlookProvider implements EmailProvider {
 
     // Get messages from Microsoft Graph API (well-known Sent Items folder)
     let request = client
-      .api("/me/mailFolders('sentitems')/messages")
+      .api(`${this.client.getBaseUrl()}/mailFolders('sentitems')/messages`)
       .select(
         "id,conversationId,subject,bodyPreview,receivedDateTime,from,toRecipients",
       )
@@ -356,6 +356,18 @@ export class OutlookProvider implements EmailProvider {
       usedFallback = true;
     }
 
+    // If category still doesn't exist and we have a name, create it
+    // This happens when using rules created in one mailbox on another mailbox (e.g., shared mailboxes)
+    if (!category && labelName) {
+      logger.info("Category doesn't exist in this mailbox, creating it", {
+        labelId,
+        labelName,
+      });
+      const createdLabel = await this.createLabel(labelName);
+      category = await this.getLabelById(createdLabel.id);
+      usedFallback = true;
+    }
+
     if (!category) {
       throw new Error(
         `Category with ID ${labelId}${labelName ? ` or name ${labelName}` : ""} not found`,
@@ -365,7 +377,7 @@ export class OutlookProvider implements EmailProvider {
     // Get current message categories to avoid replacing them
     const message = await this.client
       .getClient()
-      .api(`/me/messages/${messageId}`)
+      .api(`${this.client.getBaseUrl()}/messages/${messageId}`)
       .select("categories")
       .get();
 
@@ -477,9 +489,12 @@ export class OutlookProvider implements EmailProvider {
   }
 
   async markReadMessage(messageId: string): Promise<void> {
-    await this.client.getClient().api(`/me/messages/${messageId}`).patch({
-      isRead: true,
-    });
+    await this.client
+      .getClient()
+      .api(`${this.client.getBaseUrl()}/messages/${messageId}`)
+      .patch({
+        isRead: true,
+      });
   }
 
   async blockUnsubscribedEmail(messageId: string): Promise<void> {
@@ -509,7 +524,7 @@ export class OutlookProvider implements EmailProvider {
     try {
       const escapedThreadId = escapeODataString(threadId);
       const response = await client
-        .api("/me/messages")
+        .api(`${this.client.getBaseUrl()}/messages`)
         .filter(
           `conversationId eq '${escapedThreadId}' and parentFolderId eq 'inbox'`,
         )
@@ -592,7 +607,7 @@ export class OutlookProvider implements EmailProvider {
       this.getLabels(),
       this.client
         .getClient()
-        .api("/me/messages")
+        .api(`${this.client.getBaseUrl()}/messages`)
         .filter(`conversationId eq '${escapeODataString(threadId)}'`)
         .select("id,categories")
         .get() as Promise<{
@@ -639,7 +654,7 @@ export class OutlookProvider implements EmailProvider {
   async deleteLabel(labelId: string): Promise<void> {
     await this.client
       .getClient()
-      .api(`/me/outlook/masterCategories/${labelId}`)
+      .api(`${this.client.getBaseUrl()}/outlook/masterCategories/${labelId}`)
       .delete();
   }
 
@@ -733,7 +748,7 @@ export class OutlookProvider implements EmailProvider {
 
     // For Outlook, separate search queries from date filters
     // Microsoft Graph API handles these differently
-    const originalQuery = options.query || "";
+    let originalQuery = options.query || "";
 
     // Build date filter for Outlook (no quotes for DateTimeOffset comparison)
     const dateFilters: string[] = [];
@@ -744,36 +759,78 @@ export class OutlookProvider implements EmailProvider {
       dateFilters.push(`receivedDateTime gt ${options.after.toISOString()}`);
     }
 
+    // Check if the query contains a parentFolderId filter (OData syntax)
+    // This needs special handling because $search doesn't support OData filters
+    const sentItemsMatch = originalQuery.match(
+      /parentFolderId\s+eq\s+['"]?sentitems['"]?/i,
+    );
+    const inboxMatch = originalQuery.match(
+      /parentFolderId\s+eq\s+['"]?inbox['"]?/i,
+    );
+
+    // Get folder IDs
+    const folderIds = await getFolderIds(this.client);
+    let targetFolderId: string | undefined;
+
+    if (sentItemsMatch) {
+      // Query wants sent items - use the sentitems folder ID
+      targetFolderId = folderIds.sentitems;
+      // Remove the parentFolderId filter from the query since we'll handle it via folder endpoint
+      originalQuery = originalQuery
+        .replace(/parentFolderId\s+eq\s+['"]?sentitems['"]?/gi, "")
+        .replace(/\s+and\s+and\s+/gi, " and ")
+        .replace(/^\s*and\s+/i, "")
+        .replace(/\s+and\s*$/i, "")
+        .trim();
+
+      logger.info("Detected sent items folder filter", {
+        targetFolderId,
+        cleanedQuery: originalQuery,
+      });
+    } else if (inboxMatch) {
+      // Query wants inbox - use the inbox folder ID
+      targetFolderId = folderIds.inbox;
+      // Remove the parentFolderId filter from the query
+      originalQuery = originalQuery
+        .replace(/parentFolderId\s+eq\s+['"]?inbox['"]?/gi, "")
+        .replace(/\s+and\s+and\s+/gi, " and ")
+        .replace(/^\s*and\s+/i, "")
+        .replace(/\s+and\s*$/i, "")
+        .trim();
+
+      logger.info("Detected inbox folder filter", {
+        targetFolderId,
+        cleanedQuery: originalQuery,
+      });
+    } else {
+      // No folder filter in query - check for unquoted parentFolderId
+      const queryHasParentFolderId =
+        originalQuery && hasUnquotedParentFolderId(originalQuery);
+
+      if (!queryHasParentFolderId) {
+        // Default to inbox
+        targetFolderId = folderIds.inbox;
+      }
+    }
+
+    if (!targetFolderId && !originalQuery.trim()) {
+      throw new Error("Could not determine target folder");
+    }
+
     logger.info("Query parameters separated", {
       originalQuery,
       dateFilters,
       hasSearchQuery: !!originalQuery.trim(),
       hasDateFilters: dateFilters.length > 0,
+      targetFolderId,
     });
-
-    // Check if the query already contains parentFolderId as an unquoted identifier
-    // If it does, skip applying the default folder filter to avoid conflicts
-    const queryHasParentFolderId =
-      originalQuery && hasUnquotedParentFolderId(originalQuery);
-
-    // Get folder IDs to get the inbox folder ID
-    const folderIds = await getFolderIds(this.client);
-    const inboxFolderId = folderIds.inbox;
-
-    if (!queryHasParentFolderId && !inboxFolderId) {
-      throw new Error("Could not find inbox folder ID");
-    }
-
-    // Only apply folder filtering if the query doesn't already specify parentFolderId
-    const folderId = queryHasParentFolderId ? undefined : inboxFolderId;
 
     logger.info("Calling queryBatchMessages with separated parameters", {
       searchQuery: originalQuery.trim() || undefined,
       dateFilters,
       maxResults: options.maxResults || 20,
       pageToken: options.pageToken,
-      folderId,
-      queryHasParentFolderId,
+      folderId: targetFolderId,
     });
 
     const response = await queryBatchMessages(this.client, {
@@ -781,7 +838,7 @@ export class OutlookProvider implements EmailProvider {
       dateFilters,
       maxResults: options.maxResults || 20,
       pageToken: options.pageToken,
-      folderId,
+      folderId: targetFolderId,
     });
 
     return {
@@ -1026,12 +1083,12 @@ export class OutlookProvider implements EmailProvider {
       const client = this.client.getClient();
 
       // Determine endpoint and build filters based on query type
-      let endpoint = "/me/messages";
+      let endpoint = `${this.client.getBaseUrl()}/messages`;
       const filters: string[] = [];
 
       // Route to appropriate endpoint based on type
       if (type === "sent") {
-        endpoint = "/me/mailFolders('sentitems')/messages";
+        endpoint = `${this.client.getBaseUrl()}/mailFolders('sentitems')/messages`;
       } else if (type === "all") {
         // For "all" type, use default messages endpoint with folder filter
         filters.push(
@@ -1086,11 +1143,33 @@ export class OutlookProvider implements EmailProvider {
         request = request.orderby("receivedDateTime DESC");
       }
 
+      // Handle pagination token - can be either $skiptoken or numeric $skip value
       if (options.pageToken) {
-        request = request.skipToken(options.pageToken);
+        // Try to parse as number for $skip, otherwise use as $skiptoken
+        const skipNum = Number.parseInt(options.pageToken, 10);
+        if (!Number.isNaN(skipNum)) {
+          request = request.skip(skipNum);
+        } else {
+          request = request.skipToken(options.pageToken);
+        }
       }
 
+      logger.info("Executing Graph API request", {
+        endpoint,
+        filter,
+        maxResults: options.maxResults || 50,
+        hasPageToken: !!options.pageToken,
+        pageToken: options.pageToken,
+      });
+
       const response = await request.get();
+
+      logger.info("Microsoft Graph API response", {
+        messageCount: response.value?.length || 0,
+        hasNextLink: !!response["@odata.nextLink"],
+        nextLinkUrl: response["@odata.nextLink"],
+        responseKeys: Object.keys(response),
+      });
 
       // Sort messages by receivedDateTime if we filtered by fromEmail (since we couldn't use orderby)
       let sortedMessages = response.value;
@@ -1185,13 +1264,38 @@ export class OutlookProvider implements EmailProvider {
           };
         });
 
+      // Extract nextPageToken from @odata.nextLink
+      // Microsoft Graph returns a full URL with $skip parameter for pagination
+      let nextPageToken: string | undefined;
+      if (response["@odata.nextLink"]) {
+        try {
+          const nextUrl = new URL(response["@odata.nextLink"]);
+          // Try $skiptoken first (used in some Graph API endpoints)
+          nextPageToken = nextUrl.searchParams.get("$skiptoken") || undefined;
+          // Fall back to $skip if $skiptoken not present
+          if (!nextPageToken) {
+            const skipValue = nextUrl.searchParams.get("$skip");
+            if (skipValue) {
+              nextPageToken = skipValue;
+            }
+          }
+        } catch (error) {
+          logger.warn("Failed to parse nextLink URL", {
+            nextLink: response["@odata.nextLink"],
+            error,
+          });
+        }
+      }
+
+      logger.info("Returning pagination result", {
+        threadCount: threads.length,
+        hasNextPageToken: !!nextPageToken,
+        nextPageToken,
+      });
+
       return {
         threads,
-        nextPageToken: response["@odata.nextLink"]
-          ? new URL(response["@odata.nextLink"]).searchParams.get(
-              "$skiptoken",
-            ) || undefined
-          : undefined,
+        nextPageToken,
       };
     } catch (error) {
       logger.error("getThreadsWithQuery failed", {
@@ -1217,7 +1321,7 @@ export class OutlookProvider implements EmailProvider {
     try {
       const response: { value: Message[] } = await this.client
         .getClient()
-        .api("/me/messages")
+        .api(`${this.client.getBaseUrl()}/messages`)
         .filter(
           `from/emailAddress/address eq '${escapeODataString(options.from)}' and receivedDateTime lt ${options.date.toISOString()}`,
         )
@@ -1279,7 +1383,7 @@ export class OutlookProvider implements EmailProvider {
     expirationDate: Date;
     subscriptionId?: string;
   } | null> {
-    const subscription = await watchOutlook(this.client.getClient());
+    const subscription = await watchOutlook(this.client);
 
     if (subscription.expirationDateTime) {
       const expirationDate = new Date(subscription.expirationDateTime);
@@ -1296,7 +1400,7 @@ export class OutlookProvider implements EmailProvider {
       logger.warn("No subscription ID provided for Outlook unwatch");
       return;
     }
-    await unwatchOutlook(this.client.getClient(), subscriptionId);
+    await unwatchOutlook(this.client, subscriptionId);
   }
 
   isReplyInThread(message: ParsedMessage): boolean {

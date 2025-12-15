@@ -43,6 +43,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [chatId, setChatId] = useQueryState("chatId", parseAsString);
   const [context, setContext] = useState<MessageContext | null>(null);
 
+  // Clear chatId when email account changes to prevent 403 errors
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (chatId && emailAccountId) {
+      setChatId(null);
+    }
+  }, [emailAccountId]);
+
   const { data } = useChatMessages(chatId);
 
   const setNewChat = useCallback(() => {
@@ -71,10 +79,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     experimental_throttle: 100,
     generateId: generateUUID,
     onFinish: () => {
+      console.log("[Chat] onFinish called");
       mutate("/api/user/rules");
     },
     onError: (error) => {
-      console.error(error);
+      console.error("[Chat] onError called", error);
       toastError({
         title: "An error occured!",
         description: error.message || "",

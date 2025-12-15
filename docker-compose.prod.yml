@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   app:
@@ -12,9 +12,17 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Inngest configuration - app connects to inngest container internally
+      INNGEST_BASE_URL: http://inngest:8288
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      # Enable dev mode to disable signature verification for self-hosted server
+      INNGEST_DEV: "1"
     depends_on:
       - postgres
       - redis
+      - inngest
     networks:
       - inbox-zero-network
       - ai_network
@@ -74,6 +82,32 @@ services:
       - redis
     networks:
       - inbox-zero-network
+
+  inngest:
+    image: inngest/inngest:latest
+    container_name: inbox-zero-inngest
+    restart: unless-stopped
+    command: inngest start
+    environment:
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      INNGEST_POSTGRES_URI: postgres://${POSTGRES_USER:-inboxzero}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-inboxzero}
+      INNGEST_REDIS_URI: redis://redis:6379
+      INNGEST_POLL_INTERVAL: 60
+      # Tell Inngest where to find the app's function definitions
+      INNGEST_DEV: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - inbox-zero-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8288/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   inbox-zero-network:

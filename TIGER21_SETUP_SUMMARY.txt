@@ -1,0 +1,208 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║                  TIGER 21 DEPLOYMENT - COMPLETE SETUP                     ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+OVERVIEW
+========
+A clean, production-ready Inbox Zero repository has been prepared specifically
+for TIGER 21 LLC with:
+  • Single initial commit (no upstream history)
+  • TIGER 21 deployment configuration
+  • Docker Swarm stack ready
+  • No personal deployment information
+  • No AI code review tools (CodeRabbit, Claude AI removed)
+
+REPOSITORY SETUP STEPS
+=======================
+
+1. Create TIGER21-LLC Repository on GitHub
+-------------------------------------------
+   Go to: https://github.com/organizations/TIGER21-LLC/repositories/new
+   
+   Settings:
+   - Repository name: inbox-zero
+   - Description: AI-powered email assistant for TIGER 21
+   - Visibility: Private (recommended)
+   - Do NOT initialize (we'll push existing code)
+   
+2. Add TIGER 21 Remote
+----------------------
+   cd /Users/jamessalmon/WebstormProjects/inbox-zero
+   git remote add tiger21 https://github.com/TIGER21-LLC/inbox-zero.git
+   
+3. Push Clean Repository
+-------------------------
+   git push tiger21 tiger21-clean:main
+   
+   This pushes the 'tiger21-clean' branch as 'main' on TIGER21-LLC
+
+4. Set Default Branch (on GitHub)
+----------------------------------
+   GitHub → Settings → Branches → Default branch → main
+
+DEPLOYMENT FILES INCLUDED
+=========================
+
+Core Deployment:
+  ✓ docker-compose.tiger21.yml      - Docker Swarm stack configuration
+  ✓ docker/Dockerfile.tiger21.prod  - Hardened production Docker image
+  ✓ deploy-tiger21.sh               - Automated deployment script
+  ✓ .env.tiger21.example            - Environment template (NO credentials)
+
+Documentation:
+  ✓ TIGER21_DEPLOYMENT.md           - Complete deployment guide
+  ✓ TIGER21_DEPLOYMENT_CHECKLIST.md - Step-by-step checklist
+  ✓ TIGER21_QUICK_REFERENCE.md     - Quick command reference
+
+DEPLOYMENT CONFIGURATION
+========================
+
+Infrastructure:
+  Domain:        iz.tiger21.com
+  Server:        167.99.116.99 (DigitalOcean)
+  SSH:           root@167.99.116.99
+  Path:          ~/IT-Configs/docker_swarm/inbox-zero
+  Stack:         inbox-zero-tiger21
+  Architecture:  Docker Swarm + Traefik + Cloudflare
+
+Services:
+  • app (Next.js)          - 2 replicas, load balanced
+  • postgres (PostgreSQL)  - 1 replica, persistent storage
+  • redis (Redis)          - 1 replica, persistent storage
+  • serverless-redis-http  - Upstash compatibility layer
+  • inngest                - Background job processor
+
+SECURITY FEATURES
+=================
+
+  ✓ No credentials in repository (all managed on server)
+  ✓ Hardened Alpine-based containers
+  ✓ Non-root user execution (nextjs:nodejs)
+  ✓ Multi-stage Docker build (minimal attack surface)
+  ✓ PostgreSQL scram-sha-256 authentication
+  ✓ Private overlay networking
+  ✓ Database/Redis not exposed to internet
+  ✓ Cloudflare DDoS protection
+  ✓ SSL/TLS enforced (Full strict mode)
+
+DEPLOYMENT WORKFLOW
+===================
+
+Initial Setup (ONE-TIME):
+-------------------------
+1. Create TIGER21-LLC/inbox-zero repository ✓
+2. SSH to server and create directories:
+   ssh root@167.99.116.99
+   mkdir -p ~/IT-Configs/docker_swarm/inbox-zero
+   mkdir -p /mnt/inbox-zero-tiger21/{postgres,redis,app-data}
+   
+3. Clone repository on server:
+   cd ~/IT-Configs/docker_swarm/inbox-zero
+   git clone https://github.com/TIGER21-LLC/inbox-zero.git .
+   
+4. Create environment file:
+   cp .env.tiger21.example .env.tiger21
+   nano .env.tiger21  # Fill in actual credentials
+   chmod 600 .env.tiger21
+   
+5. Configure Cloudflare DNS:
+   - Add A record: iz.tiger21.com → 167.99.116.99
+   - Enable proxy (orange cloud)
+   - SSL/TLS: Full (strict)
+   
+6. Configure OAuth:
+   - Google: https://console.cloud.google.com/
+     Redirect: https://iz.tiger21.com/api/auth/callback/google
+   - Microsoft: https://portal.azure.com/
+     Redirect: https://iz.tiger21.com/api/auth/callback/microsoft
+
+Regular Deployments:
+--------------------
+From your local machine:
+  ./deploy-tiger21.sh
+
+This script will:
+  1. Verify repository and branch
+  2. Push code to GitHub
+  3. Pull code on server
+  4. Build Docker image
+  5. Deploy to Docker Swarm
+  6. Run database migrations
+  7. Verify services
+
+IMPORTANT REMINDERS
+===================
+
+  ⚠️  CREDENTIALS NEVER IN GIT
+      - .env.tiger21 exists ONLY on server
+      - .env.tiger21.example is safe template
+      
+  ⚠️  DOCKER SWARM (not Docker Compose)
+      - Use 'docker stack' commands
+      - Use 'docker service' commands
+      - NOT 'docker compose' commands
+      
+  ⚠️  DEPLOYMENT TARGET
+      - Always confirm: TIGER 21 or Personal
+      - TIGER 21: 167.99.116.99
+      - Personal: 192.168.3.2
+
+QUICK COMMANDS
+==============
+
+Check Status:
+  ssh root@167.99.116.99 'docker stack services inbox-zero-tiger21'
+  
+View Logs:
+  ssh root@167.99.116.99 'docker service logs inbox-zero-tiger21_app -f'
+  
+Scale Services:
+  ssh root@167.99.116.99 'docker service scale inbox-zero-tiger21_app=3'
+  
+Update Service:
+  ssh root@167.99.116.99 'docker service update --force inbox-zero-tiger21_app'
+  
+Rollback:
+  ssh root@167.99.116.99 'docker service rollback inbox-zero-tiger21_app'
+
+SUPPORT DOCUMENTATION
+=====================
+
+  📖 TIGER21_DEPLOYMENT.md           - Full deployment guide
+  ✅ TIGER21_DEPLOYMENT_CHECKLIST.md - Interactive checklist
+  📋 TIGER21_QUICK_REFERENCE.md      - Command reference
+  📚 README.md                        - Project overview
+  🏗️ ARCHITECTURE.md                  - Technical architecture
+
+PRODUCTION CHECKLIST
+====================
+
+Before deploying:
+  [ ] .env.tiger21 created on server with strong passwords
+  [ ] Cloudflare DNS configured (A record + proxy enabled)
+  [ ] OAuth redirect URIs configured (Google + Microsoft)
+  [ ] Server directories created (/mnt/inbox-zero-tiger21/*)
+  [ ] Docker Swarm initialized on server
+  [ ] Traefik running with traefik-public network
+  
+After deploying:
+  [ ] Website accessible at https://iz.tiger21.com
+  [ ] SSL certificate valid (Cloudflare)
+  [ ] All services healthy (2 app replicas running)
+  [ ] Can sign in with Google and Microsoft
+  [ ] Email loading works
+  [ ] Background jobs processing (Inngest)
+
+CONTACT & SUPPORT
+=================
+
+  Repository: https://github.com/TIGER21-LLC/inbox-zero
+  Domain:     https://iz.tiger21.com
+  Server:     167.99.116.99 (DigitalOcean)
+
+═══════════════════════════════════════════════════════════════════════════
+
+Ready to deploy! Follow TIGER21_DEPLOYMENT_CHECKLIST.md for detailed steps.
+

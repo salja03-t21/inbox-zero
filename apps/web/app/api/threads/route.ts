@@ -3,6 +3,7 @@ import { withEmailProvider } from "@/utils/middleware";
 import { type ThreadsQuery, threadsQuery } from "@/app/api/threads/validation";
 import { isDefined } from "@/utils/types";
 import prisma from "@/utils/prisma";
+import { ExecutedRuleStatus } from "@prisma/client";
 import { createScopedLogger } from "@/utils/logger";
 import { isIgnoredSender } from "@/utils/filter-ignored-senders";
 import type { EmailProvider } from "@/utils/email/types";
@@ -41,11 +42,26 @@ export const GET = withEmailProvider(async (request) => {
   });
 
   try {
+    logger.info("Fetching threads", {
+      limit: query.limit,
+      hasNextPageToken: !!query.nextPageToken,
+      after: query.after,
+      before: query.before,
+      isUnread: query.isUnread,
+    });
+
     const threads = await getThreads({
       query,
       emailAccountId,
       emailProvider,
     });
+
+    logger.info("Threads fetched", {
+      threadCount: threads.threads.length,
+      hasNextPageToken: !!threads.nextPageToken,
+      threadsWithPlan: threads.threads.filter((t) => t.plan).length,
+    });
+
     return NextResponse.json(threads);
   } catch (error) {
     logger.error("Error fetching threads", { error, emailAccountId });
@@ -75,10 +91,17 @@ async function getThreads({
   });
 
   const threadIds = threads.map((t) => t.id);
+  // IMPORTANT: Only APPLIED/APPLYING statuses mean the thread already has a valid plan.
+  // Emails with SKIPPED or ERROR should be reprocessed in bulk runs.
+  const PLAN_STATUSES: ExecutedRuleStatus[] = [
+    ExecutedRuleStatus.APPLIED,
+    ExecutedRuleStatus.APPLYING,
+  ];
   const plans = await prisma.executedRule.findMany({
     where: {
       emailAccountId,
       threadId: { in: threadIds },
+      status: { in: PLAN_STATUSES },
     },
     select: {
       id: true,

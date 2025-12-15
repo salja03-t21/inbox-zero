@@ -29,6 +29,12 @@ yarn-error.log*
 .env*.local
 .env
 .env.test
+.env.production
+.env.development
+deploy.log
+.env*
+# But allow .example files (templates with no credentials)
+!.env*.example
 
 # vercel
 .vercel
@@ -83,8 +89,6 @@ coverage
 memory-bank/
 .env.production
 deploy.log
-.opencode/
 .serena/
+.opencode/
 .specify/
-apps/web/.env.*.bak
-apps/web/.env.*.migration

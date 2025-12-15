@@ -14,6 +14,7 @@ import {
   hashEmailBody,
   convertGmailUrlBody,
   getLabelsBody,
+  setAdminStatusBody,
 } from "@/utils/actions/admin.validation";
 
 export const adminProcessHistoryAction = adminActionClient
@@ -285,4 +286,42 @@ export const adminGetLabelsAction = adminActionClient
     const labels = await emailProvider.getLabels();
 
     return { labels };
+  });
+
+export const adminSetAdminStatusAction = adminActionClient
+  .metadata({ name: "adminSetAdminStatus" })
+  .inputSchema(setAdminStatusBody)
+  .action(async ({ parsedInput: { userId, isAdmin }, ctx: { logger } }) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, isAdmin: true },
+      });
+
+      if (!user) {
+        throw new SafeError("User not found");
+      }
+
+      // Update admin status
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isAdmin },
+      });
+
+      logger.info("Admin status updated", {
+        userId,
+        userEmail: user.email,
+        isAdmin,
+      });
+
+      return {
+        success: true,
+        message: `${user.email} is now ${isAdmin ? "an admin" : "no longer an admin"}`,
+      };
+    } catch (error) {
+      logger.error("Failed to update admin status", { userId, isAdmin, error });
+      throw new SafeError(
+        `Failed to update admin status: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   });

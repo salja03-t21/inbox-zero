@@ -41,16 +41,17 @@ export async function handleOutboundReply({
     return;
   }
 
-  const { isLatest, sortedMessages } = isMessageLatestInThread(
+  const { isLatestOutbound, sortedMessages } = isMessageLatestOutboundInThread(
     message,
     threadMessages,
+    provider,
     logger,
   );
-  if (!isLatest) {
+  if (!isLatestOutbound) {
     logger.info(
-      "Skipping outbound check: message is not the latest in the thread",
+      "Skipping outbound check: message is not the user's latest sent message",
     );
-    return; // Stop processing if not the latest
+    return; // Stop processing if not the user's latest outbound message
   }
 
   // Prepare thread messages for AI analysis (chronological order, oldest to newest)
@@ -108,25 +109,55 @@ async function isOutboundTrackingEnabled({
   return !!enabledRule;
 }
 
-function isMessageLatestInThread(
+/**
+ * Check if the message is the user's latest SENT message in the thread.
+ * This handles webhook race conditions where inbound replies may arrive
+ * before we finish processing the outbound message.
+ *
+ * We still want to process outbound messages even if there's a newer inbound
+ * message, because we need to track that the user is awaiting a reply.
+ */
+function isMessageLatestOutboundInThread(
   message: ParsedMessage,
   threadMessages: ParsedMessage[],
+  provider: EmailProvider,
   logger: Logger,
-): { isLatest: boolean; sortedMessages: ParsedMessage[] } {
-  if (!threadMessages.length) return { isLatest: false, sortedMessages: [] }; // Should not happen if called correctly
+): { isLatestOutbound: boolean; sortedMessages: ParsedMessage[] } {
+  if (!threadMessages.length)
+    return { isLatestOutbound: false, sortedMessages: [] };
 
   const sortedMessages = [...threadMessages].sort(sortByInternalDate());
-  const actualLatestMessage = sortedMessages[sortedMessages.length - 1];
 
-  if (actualLatestMessage?.id !== message.id) {
+  // Filter to only outbound (sent) messages
+  const outboundMessages = sortedMessages.filter((m) =>
+    provider.isSentMessage(m),
+  );
+
+  if (!outboundMessages.length) {
+    logger.warn("No outbound messages found in thread");
+    return { isLatestOutbound: false, sortedMessages };
+  }
+
+  const latestOutboundMessage = outboundMessages[outboundMessages.length - 1];
+
+  if (latestOutboundMessage?.id !== message.id) {
     logger.warn(
-      "Skipping outbound reply check: message is not the latest in the thread",
+      "Skipping outbound reply check: message is not the user's latest sent message",
       {
         processingMessageId: message.id,
-        actualLatestMessageId: actualLatestMessage?.id,
+        latestOutboundMessageId: latestOutboundMessage?.id,
+        outboundCount: outboundMessages.length,
+        totalCount: sortedMessages.length,
       },
     );
-    return { isLatest: false, sortedMessages };
+    return { isLatestOutbound: false, sortedMessages };
   }
-  return { isLatest: true, sortedMessages };
+
+  logger.info("Message is user's latest sent message, proceeding", {
+    messageId: message.id,
+    totalMessagesInThread: sortedMessages.length,
+    outboundMessagesInThread: outboundMessages.length,
+  });
+
+  return { isLatestOutbound: true, sortedMessages };
 }

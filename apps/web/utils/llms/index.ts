@@ -30,6 +30,7 @@ import {
 import { sleep } from "@/utils/sleep";
 import { getModel, type ModelType } from "@/utils/llms/model";
 import { createScopedLogger } from "@/utils/logger";
+import { withLLMRetry } from "@/utils/llms/retry";
 
 const logger = createScopedLogger("llms");
 
@@ -60,13 +61,17 @@ export function createGenerateText({
         prompt: options.prompt?.slice(0, MAX_LOG_LENGTH),
       });
 
-      const result = await generateText(
-        {
-          ...options,
-          ...commonOptions,
-          model,
-        },
-        ...restArgs,
+      const result = await withLLMRetry(
+        () =>
+          generateText(
+            {
+              ...options,
+              ...commonOptions,
+              model,
+            },
+            ...restArgs,
+          ),
+        { operationLabel: `generateText:${label}` },
       );
 
       if (result.usage) {
@@ -143,17 +148,21 @@ export function createGenerateObject({
         logger.warn("Missing JSON in prompt", { label });
       }
 
-      const result = await generateObject(
-        {
-          experimental_repairText: async ({ text }) => {
-            logger.info("Repairing text", { label });
-            const fixed = jsonrepair(text);
-            return fixed;
-          },
-          ...options,
-          ...commonOptions,
-        },
-        ...restArgs,
+      const result = await withLLMRetry(
+        () =>
+          generateObject(
+            {
+              experimental_repairText: async ({ text }) => {
+                logger.info("Repairing text", { label });
+                const fixed = jsonrepair(text);
+                return fixed;
+              },
+              ...options,
+              ...commonOptions,
+            },
+            ...restArgs,
+          ),
+        { operationLabel: `generateObject:${label}` },
       );
 
       if (result.usage) {
@@ -268,7 +277,21 @@ async function handleError(
   label: string,
   modelName: string,
 ) {
-  logger.error("Error in LLM call", { error, userEmail, label, modelName });
+  logger.error("Error in LLM call", {
+    error,
+    userEmail,
+    label,
+    modelName,
+    errorMessage: error instanceof Error ? error.message : String(error),
+    errorName: error instanceof Error ? error.name : typeof error,
+    errorStack: error instanceof Error ? error.stack : undefined,
+    // @ts-ignore - Log additional properties if they exist
+    statusCode: error?.statusCode,
+    // @ts-ignore
+    responseBody: error?.responseBody,
+    // @ts-ignore
+    url: error?.url,
+  });
 
   if (APICallError.isInstance(error)) {
     if (isIncorrectOpenAIAPIKeyError(error)) {

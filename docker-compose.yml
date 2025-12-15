@@ -37,6 +37,31 @@ services:
     networks:
       - inbox-zero-network
 
+  inngest:
+    image: inngest/inngest:latest
+    container_name: inbox-zero-inngest-dev
+    restart: unless-stopped
+    command: inngest start
+    ports:
+      - "8288:8288"
+      - "8289:8289"
+    environment:
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      INNGEST_POSTGRES_URI: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-inboxzero}
+      INNGEST_REDIS_URI: redis://redis:6379
+      INNGEST_POLL_INTERVAL: 60
+    depends_on:
+      - db
+      - redis
+    networks:
+      - inbox-zero-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8288/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     image: ghcr.io/elie222/inbox-zero:latest
     pull_policy: if_not_present

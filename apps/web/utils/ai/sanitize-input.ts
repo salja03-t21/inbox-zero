@@ -1,5 +1,8 @@
 import { createScopedLogger } from "@/utils/logger";
+<<<<<<< HEAD
 import { stringifyEmail } from "@/utils/stringify-email";
+=======
+>>>>>>> production
 import type { EmailForLLM } from "@/utils/types";
 
 const logger = createScopedLogger("ai/sanitize");
@@ -57,7 +60,11 @@ export function detectPromptInjection(text: string): {
  */
 export function sanitizeEmailForLLM(
   email: EmailForLLM,
+<<<<<<< HEAD
   maxLength: number,
+=======
+  _maxLength: number,
+>>>>>>> production
 ): {
   sanitizedEmail: EmailForLLM;
   wasSanitized: boolean;

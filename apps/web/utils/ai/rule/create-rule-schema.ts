@@ -48,6 +48,7 @@ export function getAvailableActions(provider: string) {
 export const getExtraActions = () => [
   ActionType.DIGEST,
   ActionType.CALL_WEBHOOK,
+  ActionType.CREATE_MEETING,
 ];
 
 const actionSchema = (provider: string) =>

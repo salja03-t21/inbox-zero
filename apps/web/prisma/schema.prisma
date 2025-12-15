@@ -26,7 +26,7 @@ model Account {
   id_token              String?       @db.Text
   session_state         String?
   user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  emailAccount          EmailAccount?
+  emailAccounts         EmailAccount[]
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -82,7 +82,9 @@ model User {
   aiProvider    String?
   aiModel       String?
   aiApiKey      String?
+  aiBaseUrl     String?
   webhookSecret String?
+  isAdmin       Boolean @default(false) // Global admin status for the application
 
   // referral system
   referralCode String? @unique // User's own referral code
@@ -101,6 +103,8 @@ model User {
   // Referral relationships
   referralsMade    Referral[] @relation("ReferrerUser")
   referralReceived Referral?  @relation("ReferredUser")
+
+  bulkProcessJobs BulkProcessJob[]
 }
 
 // Migrating over to the new settings model. Currently most settings are in the User model, but will be moved to this model in the future.
@@ -112,6 +116,13 @@ model EmailAccount {
 
   name  String? // Name associated with the Google account
   image String? // Profile image URL from the Google account
+
+  // Shared mailbox support (Microsoft only)
+  isSharedMailbox     Boolean @default(false) // True if this is a shared mailbox
+  sharedMailboxOwner  String? // The email address of the shared mailbox being accessed
+
+  // Admin control: disable rule execution for this account
+  enabled Boolean @default(true) // If false, rules won't be applied to this mailbox
 
   about                     String?
   writingStyle              String?
@@ -142,11 +153,16 @@ model EmailAccount {
   meetingSchedulerWorkingHoursEnd    Int     @default(17) // Working hours end (0-23)
   meetingSchedulerAutoCreate         Boolean @default(true) // Auto-create events or prompt for confirmation
 
+  // Knowledge extraction settings
+  knowledgeExtractionEnabled    Boolean   @default(false)  // Scheduled sync toggle
+  knowledgeAutoApprove          Boolean   @default(false)  // Auto-approve vs review pending entries
+  lastKnowledgeExtractionAt     DateTime?
+
   digestSchedule Schedule?
 
   userId    String
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId String  @unique
+  accountId String
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   labels           Label[]
@@ -161,10 +177,12 @@ model EmailAccount {
   cleanupThreads   CleanupThread[]
   emailMessages    EmailMessage[]
   emailTokens      EmailToken[]
-  knowledge        Knowledge[]
-  chats            Chat[]
-  digests          Digest[]
-  scheduledActions ScheduledAction[]
+  knowledge               Knowledge[]
+  knowledgeExtractionJobs KnowledgeExtractionJob[]
+  chats                   Chat[]
+  digests                 Digest[]
+  scheduledActions        ScheduledAction[]
+  bulkProcessJobs         BulkProcessJob[]
 
   members             Member[]
   invitations         Invitation[]
@@ -583,6 +601,40 @@ model ScheduledAction {
   @@index([emailAccountId, messageId])
 }
 
+// Bulk email processing jobs
+// Tracks server-side bulk processing of emails through QStash queues
+model BulkProcessJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  emailAccountId String
+  emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status BulkProcessJobStatus @default(PENDING)
+
+  // Filter parameters
+  startDate  DateTime
+  endDate    DateTime?
+  onlyUnread Boolean   @default(true)
+
+  // Progress tracking
+  totalEmails     Int @default(0) // Total emails found in date range
+  emailsQueued    Int @default(0) // Emails actually queued for processing (excludes already-processed)
+  processedEmails Int @default(0)
+  failedEmails    Int @default(0)
+
+  completedAt DateTime?
+  error       String?   @db.Text
+
+  @@index([emailAccountId, status])
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
 // Notes:
 // In the past groups stood on their own. Now they are attached to a rule.
 // A group without a rule does not do anything anymore. I may delete all detached groups in the future, and then make rule required
@@ -766,12 +818,48 @@ model Knowledge {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   title     String
-  content   String
+  content   String   @db.Text
+
+  // Auto-generated knowledge fields
+  source           KnowledgeSource    @default(MANUAL)
+  status           KnowledgeStatus    @default(ACTIVE)
+  topic            String?            // AI-extracted topic (e.g., "Meeting Scheduling")
+  groupType        KnowledgeGroupType? // TOPIC or SENDER
+  senderPattern    String?            // Sender email/domain pattern if SENDER type
+  sourceEmailCount Int?               // Number of emails this was derived from
+  autoMetadata     Json?              // { confidence, keywords, extractedFromEmailIds }
+  contentHash      String?            // For deduplication
 
   emailAccountId String
   emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
 
   @@unique([emailAccountId, title])
+  @@index([emailAccountId, source])
+  @@index([emailAccountId, status])
+  @@index([contentHash])
+}
+
+model KnowledgeExtractionJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status      KnowledgeExtractionJobStatus    @default(PENDING)
+  triggerType KnowledgeExtractionTriggerType  @default(MANUAL)
+
+  startDate       DateTime    // Start of date range for email analysis
+  endDate         DateTime?   // End of date range (null = now)
+  totalEmails     Int         @default(0)
+  processedEmails Int         @default(0)
+  entriesCreated  Int         @default(0)
+  completedAt     DateTime?
+  error           String?     @db.Text
+
+  emailAccountId String
+  emailAccount   EmailAccount @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+
+  @@index([emailAccountId, status])
+  @@index([emailAccountId, createdAt])
 }
 
 model ApiKey {
@@ -1012,6 +1100,7 @@ enum ActionType {
   // TRACK_THREAD // @deprecated - No longer used. We rely on rule SystemType instead to run this.
   DIGEST
   MOVE_FOLDER
+  CREATE_MEETING
   // SUMMARIZE
   // SNOOZE
   // ADD_TO_DO
@@ -1140,4 +1229,41 @@ enum SchedulingStatus {
   PENDING
   SCHEDULED
   FAILED
+}
+
+enum BulkProcessJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// Knowledge extraction enums
+enum KnowledgeSource {
+  MANUAL
+  AUTO
+}
+
+enum KnowledgeStatus {
+  PENDING
+  ACTIVE
+  ARCHIVED
+}
+
+enum KnowledgeGroupType {
+  TOPIC
+  SENDER
+}
+
+enum KnowledgeExtractionJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum KnowledgeExtractionTriggerType {
+  MANUAL
+  SCHEDULED
 }

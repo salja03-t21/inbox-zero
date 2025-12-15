@@ -7,7 +7,7 @@ import {
   saveDigestScheduleBody,
   updateDigestItemsBody,
 } from "@/utils/actions/settings.validation";
-import { DEFAULT_PROVIDER } from "@/utils/llms/config";
+import { DEFAULT_PROVIDER, Provider } from "@/utils/llms/config";
 import prisma from "@/utils/prisma";
 import { calculateNextScheduleDate } from "@/utils/schedule";
 import { actionClientUser } from "@/utils/actions/safe-action";
@@ -37,14 +37,29 @@ export const updateAiSettingsAction = actionClientUser
   .action(
     async ({
       ctx: { userId },
-      parsedInput: { aiProvider, aiModel, aiApiKey },
+      parsedInput: { aiProvider, aiModel, aiApiKey, aiBaseUrl },
     }) => {
+      // Normalize base URL: trim whitespace only
+      const cleanBaseUrl = aiBaseUrl?.trim() || null;
+
       await prisma.user.update({
         where: { id: userId },
         data:
           aiProvider === DEFAULT_PROVIDER
-            ? { aiProvider: null, aiModel: null, aiApiKey: null }
-            : { aiProvider, aiModel, aiApiKey },
+            ? {
+                aiProvider: null,
+                aiModel: null,
+                aiApiKey: null,
+                aiBaseUrl: null,
+              }
+            : {
+                aiProvider,
+                aiModel,
+                aiApiKey,
+                // Only store base URL for OpenAI provider
+                aiBaseUrl:
+                  aiProvider === Provider.OPEN_AI ? cleanBaseUrl : null,
+              },
       });
     },
   );

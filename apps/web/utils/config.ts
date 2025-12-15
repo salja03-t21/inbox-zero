@@ -6,9 +6,6 @@ export const NO_REFRESH_TOKEN_ERROR_CODE = "NO_REFRESH_TOKEN";
 
 export const userCount = "15,000+";
 
-export const KNOWLEDGE_BASIC_MAX_ITEMS = 1;
-export const KNOWLEDGE_BASIC_MAX_CHARS = 2000;
-
 export const ConditionType = {
   AI: "AI",
   STATIC: "STATIC",

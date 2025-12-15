@@ -47,6 +47,7 @@ export function ModelSection() {
             aiProvider={data.aiProvider}
             aiModel={data.aiModel}
             aiApiKey={data.aiApiKey}
+            aiBaseUrl={data.aiBaseUrl}
             models={dataModels}
             refetchUser={mutate}
           />
@@ -60,6 +61,7 @@ function ModelSectionForm(props: {
   aiProvider: SaveAiSettingsBody["aiProvider"] | null;
   aiModel: SaveAiSettingsBody["aiModel"] | null;
   aiApiKey: SaveAiSettingsBody["aiApiKey"] | null;
+  aiBaseUrl: SaveAiSettingsBody["aiBaseUrl"] | null;
   models?: OpenAiModelsResponse;
   refetchUser: () => void;
 }) {
@@ -76,6 +78,7 @@ function ModelSectionForm(props: {
       aiProvider: props.aiProvider ?? DEFAULT_PROVIDER,
       aiModel: props.aiModel ?? "",
       aiApiKey: props.aiApiKey ?? undefined,
+      aiBaseUrl: props.aiBaseUrl ?? "",
     },
   });
 
@@ -146,6 +149,18 @@ function ModelSectionForm(props: {
             registerProps={register("aiApiKey")}
             error={errors.aiApiKey}
           />
+
+          {watch("aiProvider") === Provider.OPEN_AI && (
+            <Input
+              type="text"
+              name="aiBaseUrl"
+              label="Base URL (optional)"
+              placeholder="https://api.openai.com/v1"
+              registerProps={register("aiBaseUrl")}
+              error={errors.aiBaseUrl}
+              explainText="For OpenAI-compatible providers like Nebius Token Factory. Example: https://api.tokenfactory.nebius.com/v1/"
+            />
+          )}
         </>
       )}
 

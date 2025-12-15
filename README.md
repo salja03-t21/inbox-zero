@@ -1,438 +1,297 @@
-[![](apps/web/app/opengraph-image.png)](https://www.getinboxzero.com)
+# Inbox Zero - TIGER 21 Deployment
 
-<p align="center">
-  <a href="https://www.getinboxzero.com">
-    <h1 align="center">Inbox Zero - your 24/7 AI email assistant</h1>
-  </a>
-  <p align="center">
-    Organizes your inbox, pre-drafts replies, and tracks follow‑ups - so you reach inbox zero faster. Open source alternative to Fyxer, but more customisable and secure.
-    <br />
-    <a href="https://www.getinboxzero.com">Website</a>
-    ·
-    <a href="https://www.getinboxzero.com/discord">Discord</a>
-    ·
-    <a href="https://github.com/elie222/inbox-zero/issues">Issues</a>
-  </p>
-</p>
+AI-powered email assistant for TIGER 21 members, deployed at **[iz.tiger21.com](https://iz.tiger21.com)**.
 
-<div align="center">
+## Overview
 
-![Stars](https://img.shields.io/github/stars/elie222/inbox-zero?labelColor=black&style=for-the-badge&color=2563EB)
-![Forks](https://img.shields.io/github/forks/elie222/inbox-zero?labelColor=black&style=for-the-badge&color=2563EB)
+Inbox Zero is an AI email assistant that helps you:
+- **AI Personal Assistant:** Organizes your inbox and pre-drafts replies in your tone and style
+- **Smart Categories:** Automatically categorize every sender
+- **Bulk Unsubscriber:** One-click unsubscribe and archive emails you never read
+- **Cold Email Blocker:** Auto-block cold emails
+- **Reply Zero:** Track emails to reply to and those awaiting responses
+- **Email Analytics:** Track your activity and trends over time
 
-<a href="https://trendshift.io/repositories/6400" target="_blank"><img src="https://trendshift.io/api/badge/repositories/6400" alt="elie222%2Finbox-zero | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+## TIGER 21 Deployment Details
 
-[![Vercel OSS Program](https://vercel.com/oss/program-badge.svg)](https://vercel.com/oss)
+### Production Environment
 
-</div>
+- **Domain**: https://iz.tiger21.com
+- **Server**: 167.99.116.99 (DigitalOcean)
+- **Infrastructure**: Docker Swarm
+- **Deployment Path**: `~/IT-Configs/docker_swarm/inbox-zero`
+- **Data Volumes**: `/mnt/inbox-zero-tiger21/`
 
-## Mission
+### Architecture
 
-To help you spend less time in your inbox, so you can focus on what matters.
+- **Application**: Next.js 15 (App Router) - 2 replicas for high availability
+- **Database**: DigitalOcean Managed PostgreSQL
+- **Cache**: Redis 7 (containerized)
+- **Background Jobs**: Inngest
+- **Reverse Proxy**: Traefik with automatic SSL via Cloudflare
+- **Authentication**: Better Auth with Microsoft OAuth and SSO
 
-<br />
+### Access Control
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Felie222%2Finbox-zero&env=AUTH_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,MICROSOFT_CLIENT_ID,MICROSOFT_CLIENT_SECRET,EMAIL_ENCRYPT_SECRET,EMAIL_ENCRYPT_SALT,UPSTASH_REDIS_URL,UPSTASH_REDIS_TOKEN,GOOGLE_PUBSUB_TOPIC_NAME,DATABASE_URL,NEXT_PUBLIC_BASE_URL)
+- **Allowed Domains**: Only `tiger21.com` and `tiger21chair.com` email addresses can register
+- **Authentication Methods**: Microsoft OAuth and SSO enabled, Gmail disabled
 
-## Features
+### Email Provider Support
 
-- **AI Personal Assistant:** Organizes your inbox and pre-drafts replies in your tone and style.
-- **Cursor Rules for email:** Explain in plain English how your AI should handle your inbox.
-- **Reply Zero:** Track emails to reply to and those awaiting responses.
-- **Smart Categories:** Automatically categorize every sender.
-- **Bulk Unsubscriber:** One-click unsubscribe and archive emails you never read.
-- **Cold Email Blocker:** Auto‑block cold emails.
-- **Email Analytics:** Track your activity and trends over time.
+- **Microsoft Outlook/Exchange**: Fully supported (primary provider for TIGER 21)
+- **Gmail**: Disabled (`NEXT_PUBLIC_DISABLE_GMAIL=true`)
 
-Learn more in our [docs](https://docs.getinboxzero.com).
+### AI/LLM Configuration
 
-## Feature Screenshots
+- **Provider**: Nebius AI (via OpenAI-compatible API)
+- **Default Model**: Qwen/Qwen3-235B-A22B-Instruct-2507
+- **Economy Model**: openai/gpt-oss-120b
+- **Endpoint**: https://api.tokenfactory.nebius.com/v1/
 
-| ![AI Assistant](.github/screenshots/email-assistant.png) |        ![Reply Zero](.github/screenshots/reply-zero.png)        |
-| :------------------------------------------------------: | :-------------------------------------------------------------: |
-|                      _AI Assistant_                      |                          _Reply Zero_                           |
-|  ![Gmail Client](.github/screenshots/email-client.png)   | ![Bulk Unsubscriber](.github/screenshots/bulk-unsubscriber.png) |
-|                      _Gmail client_                      |                       _Bulk Unsubscriber_                       |
+## Deployment
 
-## Demo Video
+### Prerequisites
 
-[![Inbox Zero demo](/video-thumbnail.png)](http://www.youtube.com/watch?v=hfvKvTHBjG0)
+- Docker Swarm initialized on server
+- Access to `ghcr.io/tiger21-llc` container registry
+- DigitalOcean Managed PostgreSQL database
+- Microsoft Azure OAuth app configured
+- Cloudflare DNS pointing to server IP
 
-## Built with
-
-- [Next.js](https://nextjs.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [shadcn/ui](https://ui.shadcn.com/)
-- [Prisma](https://www.prisma.io/)
-- [Upstash](https://upstash.com/)
-- [Turborepo](https://turbo.build/)
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=elie222/inbox-zero&type=Date)](https://www.star-history.com/#elie222/inbox-zero&Date)
-
-## Feature Requests
-
-To request a feature open a [GitHub issue](https://github.com/elie222/inbox-zero/issues), or join our [Discord](https://www.getinboxzero.com/discord).
-
-## Getting Started for Developers
-
-We offer a hosted version of Inbox Zero at [https://getinboxzero.com](https://getinboxzero.com). To self-host follow the steps below.
-
-### Self-Hosting with Docker on VPS
-
-For a complete guide on deploying Inbox Zero to a VPS using Docker, see our [Docker Self-Hosting Guide](docs/hosting/docker.md).
-
-### Setup
-
-[Here's a video](https://youtu.be/hVQENQ4WT2Y) on how to set up the project. It covers the same steps mentioned in this document. But goes into greater detail on setting up the external services.
-
-### Requirements
-
-- [Node.js](https://nodejs.org/en/) >= 18.0.0
-- [pnpm](https://pnpm.io/) >= 8.6.12
-- [Docker desktop](https://www.docker.com/products/docker-desktop/) (recommended but optional)
-
-Make sure you have the above installed before starting.
-
-The external services that are required are (detailed setup instructions below):
-
-- [Google OAuth](https://console.cloud.google.com/apis/credentials)
-- [Google PubSub](https://console.cloud.google.com/cloudpubsub/topic/list)
-
-### Updating .env file: secrets
-
-Create your own `.env` file from the example supplied:
+### Quick Deploy
 
 ```bash
-cp apps/web/.env.example apps/web/.env
-cd apps/web
-pnpm install
+# On the deployment server (167.99.116.99)
+cd ~/IT-Configs/docker_swarm/inbox-zero
+./deploy-tiger21.sh
 ```
 
-Set the environment variables in the newly created `.env`. You can see a list of required variables in: `apps/web/env.ts`.
+### Manual Deployment Steps
 
-The required environment variables:
-
-- `AUTH_SECRET` -- can be any random string (try using `openssl rand -hex 32` for a quick secure random string)
-- `EMAIL_ENCRYPT_SECRET` -- Secret key for encrypting OAuth tokens (try using `openssl rand -hex 32` for a secure key)
-- `EMAIL_ENCRYPT_SALT` -- Salt for encrypting OAuth tokens (try using `openssl rand -hex 16` for a secure salt)
-
-
-- `NEXT_PUBLIC_BASE_URL` -- The URL where your app is hosted (e.g., `http://localhost:3000` for local development or `https://yourdomain.com` for production).
-- `INTERNAL_API_KEY` -- A secret key for internal API calls (try using `openssl rand -hex 32` for a secure key)
-
-- `UPSTASH_REDIS_URL` -- Redis URL from Upstash. (can be empty if you are using Docker Compose)
-- `UPSTASH_REDIS_TOKEN` -- Redis token from Upstash. (or specify your own random string if you are using Docker Compose)
-
-When using Vercel with Fluid Compute turned off, you should set `MAX_DURATION=300` or lower. See Vercel limits for different plans [here](https://vercel.com/docs/functions/configuring-functions/duration#duration-limits).
-
-### Updating .env file with Google OAuth credentials:
-
-- `GOOGLE_CLIENT_ID` -- Google OAuth client ID. More info [here](https://next-auth.js.org/providers/google)
-- `GOOGLE_CLIENT_SECRET` -- Google OAuth client secret. More info [here](https://next-auth.js.org/providers/google)
-
-Go to [Google Cloud](https://console.cloud.google.com/). Create a new project if necessary.
-
-Create [new credentials](https://console.cloud.google.com/apis/credentials):
-
-1.  If the banner shows up, configure **consent screen** (if not, you can do this later)
-    1. Click the banner, then Click `Get Started`.
-    2. Choose a name for your app, and enter your email.
-    3. In Audience, choose `External`
-    4. Enter your contact information
-    5. Agree to the User Data policy and then click `Create`.
-    6. Return to APIs and Services using the left sidebar.
-2.  Create new [credentials](https://console.cloud.google.com/apis/credentials):
-    1. Click the `+Create Credentials` button. Choose OAuth Client ID.
-    2. In `Application Type`, Choose `Web application`
-    3. Choose a name for your web client
-    4. In Authorized JavaScript origins, add a URI and enter `http://localhost:3000`
-    5. In `Authorized redirect URIs` enter:
-      - `http://localhost:3000/api/auth/callback/google`
-      - `http://localhost:3000/api/google/linking/callback`
-    6. Click `Create`.
-    7. A popup will show up with the new credentials, including the Client ID and secret.
-3.  Update .env file:
-    1. Copy the Client ID to `GOOGLE_CLIENT_ID`
-    2. Copy the Client secret to `GOOGLE_CLIENT_SECRET`
-4.  Update [scopes](https://console.cloud.google.com/auth/scopes)
-
-    1. Go to `Data Access` in the left sidebar (or click link above)
-    2. Click `Add or remove scopes`
-    3. Copy paste the below into the `Manually add scopes` box:
-
-    ```plaintext
-    https://www.googleapis.com/auth/userinfo.profile
-    https://www.googleapis.com/auth/userinfo.email
-    https://www.googleapis.com/auth/gmail.modify
-    https://www.googleapis.com/auth/gmail.settings.basic
-    https://www.googleapis.com/auth/contacts
-    ```
-
-    4. Click `Update`
-    5. Click `Save` in the Data Access page.
-
-5.  Add yourself as a test user
-    1. Go to [Audience](https://console.cloud.google.com/auth/audience)
-    2. In the `Test users` section, click `+Add users`
-    3. Enter your email and press `Save`
-
-6.  Enable Google People API in [Google Cloud Console](https://console.cloud.google.com/marketplace/product/google/people.googleapis.com)
-
-### Updating .env file with Microsoft OAuth credentials:
-
-- `MICROSOFT_CLIENT_ID` -- Microsoft OAuth client ID
-- `MICROSOFT_CLIENT_SECRET` -- Microsoft OAuth client secret
-
-Go to [Microsoft Azure Portal](https://portal.azure.com/). Create a new Azure Active Directory app registration:
-
-1. Navigate to Azure Active Directory
-2. Go to "App registrations" in the left sidebar or search it in the searchbar
-3. Click "New registration"
-
-   1. Choose a name for your application
-   2. Under "Supported account types" select "Accounts in any organizational directory (Any Azure AD directory - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)"
-   3. Set the Redirect URI:
-      - Platform: Web
-      - URL: `http://localhost:3000/api/auth/callback/microsoft`
-   4. Click "Register"
-   5. In the "Manage" menu click "Authentication (Preview)"
-   6. Add the Redirect URI: `http://localhost:3000/api/outlook/linking/callback`
-
-4. Get your credentials:
-
-   1. The "Application (client) ID" shown is your `MICROSOFT_CLIENT_ID`
-   2. To get your client secret:
-      - Click "Certificates & secrets" in the left sidebar
-      - Click "New client secret"
-      - Add a description and choose an expiry
-      - Click "Add"
-      - Copy the secret Value (not the ID) - this is your `MICROSOFT_CLIENT_SECRET`
-
-5. Configure API permissions:
-
-   1. In the "Manage" menu click "API permissions" in the left sidebar
-   2. Click "Add a permission"
-   3. Select "Microsoft Graph"
-   4. Select "Delegated permissions"
-   5. Add the following permissions:
-
-      - openid
-      - profile
-      - email
-      - User.Read
-      - offline_access
-      - Mail.ReadWrite
-      - Mail.Send
-      - Mail.ReadBasic
-      - Mail.Read
-      - Mail.Read.Shared
-      - MailboxSettings.ReadWrite
-      - Contacts.ReadWrite
-
-   6. Click "Add permissions"
-   7. Click "Grant admin consent" if you're an admin
-
-6. Update your .env file with the credentials:
-   ```plaintext
-   MICROSOFT_CLIENT_ID=your_client_id_here
-   MICROSOFT_CLIENT_SECRET=your_client_secret_here
+1. **Build and push Docker image**:
+   ```bash
+   docker build -f docker/Dockerfile.tiger21.prod \
+     --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
+     -t ghcr.io/tiger21-llc/inbox-zero:latest .
+   
+   docker push ghcr.io/tiger21-llc/inbox-zero:latest
    ```
 
-### Updating .env file with LLM parameters
+2. **Deploy to Docker Swarm**:
+   ```bash
+   docker stack deploy --compose-file docker-compose.tiger21.yml inbox-zero-tiger21
+   ```
 
-You need to set an LLM, but you can use a local one too:
+3. **Run database migrations** (first time only):
+   ```bash
+   docker exec -it $(docker ps -q -f name=inbox-zero-tiger21_app) sh -c \
+     'cd /app/apps/web && npx prisma migrate deploy'
+   ```
 
-- [Anthropic](https://console.anthropic.com/settings/keys)
-- [OpenAI](https://platform.openai.com/api-keys)
-- AWS Bedrock Anthropic
-- Google Gemini
-- Groq Llama 3.3 70B
-- Ollama (local)
+4. **Verify deployment**:
+   ```bash
+   docker stack ps inbox-zero-tiger21
+   docker service logs inbox-zero-tiger21_app
+   curl https://iz.tiger21.com/api/health/simple
+   ```
 
-For the LLM, you can use Anthropic, OpenAI, or Anthropic on AWS Bedrock. You
-can also use Ollama by setting the following enviroment variables:
+### Environment Configuration
 
-```sh
-OLLAMA_BASE_URL=http://localhost:11434/api
-NEXT_PUBLIC_OLLAMA_MODEL=phi3
-```
-
-Note: If you need to access Ollama hosted locally and the application is running on Docker setup, you can use `http://host.docker.internal:11434/api` as the base URL. You might also need to set `OLLAMA_HOST` to `0.0.0.0` in the Ollama configuration file.
-
-You can select the model you wish to use in the app on the `/settings` page of the app.
-
-If you are using local ollama, you can set it to be default:
-
-```sh
-DEFAULT_LLM_PROVIDER=ollama
-```
-
-If this is the case you must also set the `ECONOMY_LLM_PROVIDER` environment variable.
-
-### Redis and Postgres
-
-We use Postgres for the database.
-For Redis, you can use [Upstash Redis](https://upstash.com/) or set up your own Redis instance.
-
-You can run Postgres & Redis locally using `docker-compose`
+Environment variables are managed in `.env.tiger21` on the server. Key configurations:
 
 ```bash
-docker-compose up -d # -d will run the services in the background
+# Application
+NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com
+NEXT_PUBLIC_DISABLE_GMAIL=true
+
+# Access Control
+ALLOWED_EMAIL_DOMAINS=tiger21.com,tiger21chair.com
+ENABLE_GOOGLE_AUTH=false
+ENABLE_MICROSOFT_AUTH=true
+ENABLE_SSO_AUTH=true
+
+# Database (DigitalOcean Managed PostgreSQL)
+DATABASE_URL=postgresql://inbox_zero_user:PASSWORD@db-postgres-do-user-13034382-0.b.db.ondigitalocean.com:25060/inbox-zero?sslmode=require
+
+# Microsoft OAuth
+MICROSOFT_CLIENT_ID=d5886e83-a14e-4213-8615-74d2146e318f
+MICROSOFT_CLIENT_SECRET=<secret>
+MICROSOFT_TENANT_ID=89f2f6c3-aa52-4af9-953e-02a633d0da4d
+
+# Nebius AI
+DEFAULT_LLM_MODEL=Qwen/Qwen3-235B-A22B-Instruct-2507
+ECONOMY_LLM_MODEL=openai/gpt-oss-120b
+OPENAI_BASE_URL=https://api.tokenfactory.nebius.com/v1/
+OPENAI_API_KEY=<nebius-jwt-token>
 ```
 
-### Running the app
+**IMPORTANT**: Never commit `.env.tiger21` to version control. Use `.env.tiger21.example` as a template.
 
-To run the migrations:
+## Monitoring & Maintenance
+
+### Health Checks
+
+- **Simple Health**: https://iz.tiger21.com/api/health/simple
+- **Service Status**: `docker stack ps inbox-zero-tiger21`
+- **Logs**: `docker service logs -f inbox-zero-tiger21_app`
+
+### Scaling
+
+The application is configured with 2 replicas for high availability. To scale:
 
 ```bash
-pnpm prisma migrate dev
+docker service scale inbox-zero-tiger21_app=3
 ```
 
-To run the app locally for development (slower):
+### Database Backups
+
+DigitalOcean Managed PostgreSQL includes automatic daily backups with 7-day retention.
+
+### Updates
+
+To update the application:
+
+1. Build new image with updated code
+2. Push to registry
+3. Update the service: `docker service update --image ghcr.io/tiger21-llc/inbox-zero:latest inbox-zero-tiger21_app`
+
+## Development
+
+### Local Development Setup
+
+**Requirements:**
+- Node.js >= 18.0.0
+- pnpm >= 8.6.12
+- Docker Desktop (for local PostgreSQL/Redis)
+
+**Quick Start:**
 
 ```bash
-pnpm run dev
+# Clone repository
+git clone https://github.com/TIGER21-LLC/inbox-zero.git
+cd inbox-zero
+
+# Install dependencies
+pnpm install
+
+# Copy environment template
+cp apps/web/.env.example apps/web/.env
+
+# Start local services (PostgreSQL + Redis)
+docker-compose up -d
+
+# Run database migrations
+pnpm --filter=web prisma migrate dev
+
+# Start development server
+pnpm dev
 ```
 
-Or from the project root:
+Open [http://localhost:3000](http://localhost:3000) to view the app.
+
+### Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **UI**: Tailwind CSS + shadcn/ui
+- **Database**: Prisma + PostgreSQL
+- **Cache**: Redis (Upstash-compatible)
+- **Authentication**: Better Auth
+- **Background Jobs**: Inngest
+- **Monorepo**: Turborepo with pnpm workspaces
+
+### Project Structure
+
+```
+inbox-zero/
+├── apps/
+│   └── web/               # Main Next.js application
+│       ├── app/           # Next.js App Router pages
+│       ├── components/    # React components
+│       ├── utils/         # Utilities and helpers
+│       ├── prisma/        # Database schema & migrations
+│       └── providers/     # React context providers
+├── packages/
+│   ├── resend/           # Email sending (Resend API)
+│   ├── tinybird/         # Analytics
+│   └── tsconfig/         # Shared TypeScript configs
+└── docker/
+    └── Dockerfile.tiger21.prod  # Production Docker image
+```
+
+### Key Commands
 
 ```bash
-turbo dev
+# Development
+pnpm dev                              # Start dev server
+pnpm build                            # Build for production
+pnpm test                             # Run tests
+pnpm tsc --noEmit                     # Type check
+
+# Database
+pnpm --filter=web prisma migrate dev  # Create & run migrations
+pnpm --filter=web prisma studio       # Open database GUI
+pnpm --filter=web prisma generate     # Regenerate Prisma client
+
+# Code Quality
+pnpm format-and-lint:fix              # Auto-fix formatting/linting
 ```
 
-To build and run the app locally in production mode (faster):
+### Testing Premium Features
 
-```bash
-pnpm run build
-pnpm start
-```
+To test premium features locally:
 
-Open [http://localhost:3000](http://localhost:3000) to view the app in your browser.
+1. Set yourself as admin in `.env`:
+   ```bash
+   ADMINS=your-email@tiger21.com
+   ```
 
-### Premium
+2. Visit [http://localhost:3000/admin](http://localhost:3000/admin) and upgrade yourself to premium
 
-Many features are available only to premium users. To upgrade yourself, make yourself an admin in the `.env`: `ADMINS=hello@gmail.com`
-Then upgrade yourself at: [http://localhost:3000/admin](http://localhost:3000/admin).
+## Microsoft OAuth Setup
 
-### Set up push notifications via Google PubSub to handle emails in real time
+The application uses Microsoft OAuth for authentication. Configuration:
 
-Follow instructions [here](https://developers.google.com/gmail/api/guides/push).
+### Azure AD App Registration
 
-1. [Create a topic](https://developers.google.com/gmail/api/guides/push#create_a_topic)
-2. [Create a subscription](https://developers.google.com/gmail/api/guides/push#create_a_subscription)
-3. [Grant publish rights on your topic](https://developers.google.com/gmail/api/guides/push#grant_publish_rights_on_your_topic)
+1. **App ID**: d5886e83-a14e-4213-8615-74d2146e318f
+2. **Tenant ID**: 89f2f6c3-aa52-4af9-953e-02a633d0da4d
+3. **Redirect URIs**:
+   - `https://iz.tiger21.com/api/auth/callback/microsoft`
+   - `https://iz.tiger21.com/api/outlook/linking/callback`
 
-Set env var `GOOGLE_PUBSUB_TOPIC_NAME`.
-When creating the subscription select Push and the url should look something like: `https://www.getinboxzero.com/api/google/webhook?token=TOKEN` or `https://abc.ngrok-free.app/api/google/webhook?token=TOKEN` where the domain is your domain. Set `GOOGLE_PUBSUB_VERIFICATION_TOKEN` in your `.env` file to be the value of `TOKEN`.
+### Required API Permissions
 
-To run in development ngrok can be helpful:
+- **Microsoft Graph Delegated Permissions**:
+  - openid, profile, email
+  - User.Read
+  - offline_access
+  - Mail.ReadWrite
+  - Mail.Send
+  - Mail.ReadBasic
+  - Mail.Read
+  - Mail.Read.Shared
+  - MailboxSettings.ReadWrite
+  - Contacts.ReadWrite
 
-```sh
-ngrok http 3000
-# or with an ngrok domain to keep your endpoint stable (set `XYZ`):
-ngrok http --domain=XYZ.ngrok-free.app 3000
-```
+## Security
 
-And then update the webhook endpoint in the [Google PubSub subscriptions dashboard](https://console.cloud.google.com/cloudpubsub/subscription/list).
+- **OAuth Tokens**: Encrypted at rest using `EMAIL_ENCRYPT_SECRET` and `EMAIL_ENCRYPT_SALT`
+- **Session Storage**: Database-backed (PostgreSQL)
+- **SSL/TLS**: Automatic via Traefik + Cloudflare
+- **Secrets**: Managed via environment variables, never committed to git
+- **Database**: Managed PostgreSQL with SSL required
 
-To start watching emails visit: `/api/watch/all`
+## Support & Documentation
 
-### Watching for email updates
+- **Architecture Overview**: See [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Deployment Guide**: See [TIGER21_DEPLOYMENT.md](./TIGER21_DEPLOYMENT.md)
+- **Deployment Checklist**: See [TIGER21_DEPLOYMENT_CHECKLIST.md](./TIGER21_DEPLOYMENT_CHECKLIST.md)
+- **Quick Reference**: See [TIGER21_QUICK_REFERENCE.md](./TIGER21_QUICK_REFERENCE.md)
 
-Set a cron job to run these:
-The Google watch is necessary. Others are optional.
+## License
 
-```json
-  "crons": [
-    {
-      "path": "/api/watch/all",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/resend/summary/all",
-      "schedule": "0 16 * * 1"
-    },
-    {
-      "path": "/api/reply-tracker/disable-unused-auto-draft",
-      "schedule": "0 3 * * *"
-    }
-  ]
-```
+See [LICENSE](./LICENSE) file for details.
 
-[Here](https://vercel.com/guides/how-to-setup-cron-jobs-on-vercel#alternative-cron-providers) are some easy ways to run cron jobs. Upstash is a free, easy option. I could never get the Vercel `vercel.json`. Open to PRs if you find a fix for that.
+---
 
-### Docker Build Instructions
-
-When building the Docker image, you **must** specify your `NEXT_PUBLIC_BASE_URL` as a build argument. This is because Next.js embeds `NEXT_PUBLIC_*` variables at build time, not runtime.
-
-### Building the Docker image
-
-```bash
-# For production with your custom domain
-docker build \
-  --build-arg NEXT_PUBLIC_BASE_URL="https://your-domain.com" \
-  -t inbox-zero \
-  -f docker/Dockerfile.prod .
-
-# For local development (default)
-docker build -t inbox-zero -f docker/Dockerfile.prod .
-```
-
-### Running the container
-
-After building, run the container with your runtime secrets:
-
-```bash
-docker run -p 3000:3000 \
-  -e DATABASE_URL="your-database-url" \
-  -e AUTH_SECRET="your-auth-secret" \
-  -e GOOGLE_CLIENT_ID="your-google-client-id" \
-  -e GOOGLE_CLIENT_SECRET="your-google-client-secret" \
-  # ... other runtime environment variables
-  inbox-zero
-```
-
-**Important:** If you need to change `NEXT_PUBLIC_BASE_URL`, you must rebuild the Docker image. It cannot be changed at runtime.
-
-For more detailed Docker build instructions and security considerations, see [docker/DOCKER_BUILD_GUIDE.md](docker/DOCKER_BUILD_GUIDE.md).
-
-
-### Calendar integrations
-
-#### Google Calendar
-
-1. Visit: https://console.cloud.google.com/apis/library
-2. Search for "Google Calendar API"
-3. Click on it and then click "Enable"
-4. Visit: [credentials](https://console.cloud.google.com/apis/credentials):
-    1. Click on your project
-    2. In `Authorized redirect URIs` add:
-      - `http://localhost:3000/api/google/calendar/callback`
-
-#### Microsoft Calendar
-
-1. Go to your existing Microsoft Azure app registration (created earlier in the Microsoft OAuth setup)
-2. Add the calendar redirect URI:
-    1. In the "Manage" menu click "Authentication (Preview)"
-    2. Add the Redirect URI: `http://localhost:3000/api/outlook/calendar/callback`
-3. Add calendar permissions:
-    1. In the "Manage" menu click "API permissions"
-    2. Click "Add a permission"
-    3. Select "Microsoft Graph"
-    4. Select "Delegated permissions"
-    5. Add the following calendar permissions:
-       - Calendars.Read
-       - Calendars.ReadWrite
-    6. Click "Add permissions"
-    7. Click "Grant admin consent" if you're an admin
-
-Note: The calendar integration uses a separate OAuth flow from the main email OAuth, so users can connect their calendar independently.
-
-## Contributing to the project
-
-You can view open tasks in our [GitHub Issues](https://github.com/elie222/inbox-zero/issues).
-Join our [Discord](https://www.getinboxzero.com/discord) to discuss tasks and check what's being worked on.
-
-[ARCHITECTURE.md](./ARCHITECTURE.md) explains the architecture of the project (LLM generated).
+**Built with Next.js, Tailwind CSS, shadcn/ui, Prisma, and deployed on Docker Swarm**

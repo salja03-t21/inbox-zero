@@ -1,9 +1,14 @@
 import { z } from "zod";
 import { tool } from "ai";
+import { TZDate } from "@date-fns/tz";
 import { createScopedLogger } from "@/utils/logger";
 import { createGenerateText } from "@/utils/llms";
 import { getModel } from "@/utils/llms/model";
 import { getUnifiedCalendarAvailability } from "@/utils/calendar/unified-availability";
+import {
+  findSuggestedTimes,
+  getWorkingHours,
+} from "@/utils/meetings/find-availability";
 import type { EmailAccountWithAI } from "@/utils/llms/types";
 import type { EmailForLLM } from "@/utils/types";
 import prisma from "@/utils/prisma";
@@ -59,23 +64,37 @@ export async function aiGetCalendarAvailability({
   // Determine user's primary timezone from calendars
   const userTimezone = getUserTimezone(calendarConnections);
 
-  logger.trace("Determined user timezone", { userTimezone });
+  // Get user's working hours from settings
+  const { start: workStartHour, end: workEndHour } = await getWorkingHours(
+    emailAccount.id,
+  );
+
+  logger.trace("Determined user context", {
+    userTimezone,
+    workStartHour,
+    workEndHour,
+  });
 
   const system = `You are an AI assistant that analyzes email threads to determine if they contain meeting or scheduling requests, and if yes, returns the suggested times for the meeting.
 
 Your task is to:
 1. Analyze the email thread to determine if it's related to scheduling a meeting, call, or appointment
-2. If it is scheduling-related, extract the date and time information mentioned anywhere in the thread
-3. Use the checkCalendarAvailability tool to get actual availability from the user's calendars
-4. Return possible times for the meeting by calling "returnSuggestedTimes" with the suggested dates and times
+2. If it is scheduling-related, use the suggestTimeSlots tool to get available times that respect the user's working hours
+3. Return possible times for the meeting by calling "returnSuggestedTimes" with the suggested dates and times
 
 If the email thread is not about scheduling, return isRelevant: false.
 
-You can only call "returnSuggestedTimes" once.
-Your suggested times should be in the format of "YYYY-MM-DD HH:MM".
-IMPORTANT: Another agent is responsible for drafting the final email reply. You just need to reply with the suggested times.
+IMPORTANT CONSTRAINTS:
+- User's timezone: ${userTimezone}
+- User's working hours: ${workStartHour}:00–${workEndHour}:00
+- ONLY suggest times within working hours
+- Default meeting duration: 30 minutes (unless clearly specified)
+- Prefer using suggestTimeSlots tool over manual calculation
+- You can only call "returnSuggestedTimes" once
+- Your suggested times should be in format "YYYY-MM-DD HH:MM"
+- Another agent will draft the final email reply
 
-TIMEZONE CONTEXT: The user's primary timezone is ${userTimezone}. When interpreting times mentioned in emails (like "6pm"), assume they refer to this timezone unless explicitly stated otherwise.`;
+TIMEZONE CONTEXT: When interpreting times mentioned in emails (like "6pm"), assume they refer to ${userTimezone} unless explicitly stated otherwise.`;
 
   const prompt = `${getUserInfoPrompt({ emailAccount })}
   
@@ -95,6 +114,13 @@ ${threadContent}
     modelOptions,
   });
 
+  // Helper to format Date to "YYYY-MM-DD HH:MM" in user's timezone
+  const formatDateTime = (date: Date, timezone: string): string => {
+    const tzDate = new TZDate(date, timezone);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${tzDate.getFullYear()}-${pad(tzDate.getMonth() + 1)}-${pad(tzDate.getDate())} ${pad(tzDate.getHours())}:${pad(tzDate.getMinutes())}`;
+  };
+
   let result: CalendarAvailabilityContext["suggestedTimes"] | null = null;
 
   await generateText({
@@ -104,7 +130,9 @@ ${threadContent}
     stopWhen: (result) =>
       result.steps.some((step) =>
         step.toolCalls?.some(
-          (call) => call.toolName === "returnSuggestedTimes",
+          (call) =>
+            call.toolName === "returnSuggestedTimes" ||
+            call.toolName === "suggestTimeSlots",
         ),
       ) || result.steps.length > 5,
     tools: {
@@ -139,6 +167,77 @@ ${threadContent}
           } catch (error) {
             logger.error("Error checking calendar availability", { error });
             return { busyPeriods: [] };
+          }
+        },
+      }),
+      suggestTimeSlots: tool({
+        description:
+          "Compute available time slots within working hours using the user's calendars - PREFERRED over manual calculation",
+        inputSchema: z.object({
+          daysAhead: z
+            .number()
+            .min(1)
+            .max(30)
+            .default(7)
+            .optional()
+            .describe("Number of days ahead to search for slots"),
+          durationMinutes: z
+            .number()
+            .min(15)
+            .max(180)
+            .default(30)
+            .optional()
+            .describe("Meeting duration in minutes"),
+          maxSuggestions: z
+            .number()
+            .min(1)
+            .max(10)
+            .default(5)
+            .optional()
+            .describe("Maximum number of time slots to suggest"),
+          preferredStartHour: z
+            .number()
+            .min(0)
+            .max(23)
+            .optional()
+            .describe("Preferred starting hour (0-23) if mentioned in email"),
+        }),
+        execute: async ({
+          daysAhead = 7,
+          durationMinutes = 30,
+          maxSuggestions = 5,
+          preferredStartHour,
+        }) => {
+          try {
+            const slots = await findSuggestedTimes({
+              emailAccountId: emailAccount.id,
+              durationMinutes,
+              daysAhead,
+              timezone: userTimezone,
+              preferredStartHour: preferredStartHour ?? workStartHour,
+              maxSuggestions,
+              workStartHour,
+              workEndHour,
+            });
+
+            const suggestedTimes = slots.map((slot) =>
+              formatDateTime(slot.start, userTimezone),
+            );
+
+            logger.info("Generated time slot suggestions", {
+              count: suggestedTimes.length,
+              workingHours: `${workStartHour}:00-${workEndHour}:00`,
+              timezone: userTimezone,
+              suggestions: suggestedTimes,
+            });
+
+            // Set result directly - this tool should be preferred
+            result = suggestedTimes;
+
+            return { suggestedTimes };
+          } catch (error) {
+            logger.error("Error generating time slot suggestions", { error });
+            return { suggestedTimes: [] };
           }
         },
       }),

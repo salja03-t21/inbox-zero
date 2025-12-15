@@ -10,11 +10,13 @@ type Calendar = GetCalendarsResponse["connections"][0]["calendars"][0];
 
 interface CalendarListProps {
   calendars: Calendar[];
+  connectionEmail?: string; // Actually displays mailbox name (can be name or email)
   onToggleCalendar: (calendarId: string, isEnabled: boolean) => void;
 }
 
 export function CalendarList({
   calendars,
+  connectionEmail,
   onToggleCalendar,
 }: CalendarListProps) {
   return (
@@ -36,6 +38,11 @@ export function CalendarList({
                     </Badge>
                   )}
                 </div>
+                {connectionEmail && (
+                  <p className="text-xs text-muted-foreground truncate block overflow-hidden text-ellipsis whitespace-nowrap">
+                    {connectionEmail}
+                  </p>
+                )}
                 {calendar.description && (
                   <p className="text-xs text-muted-foreground truncate block overflow-hidden text-ellipsis whitespace-nowrap">
                     {calendar.description}

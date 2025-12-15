@@ -1,6 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { aiExtractRelevantKnowledge } from "@/utils/ai/knowledge/extract";
 import type { Knowledge } from "@prisma/client";
+import { KnowledgeSource, KnowledgeStatus } from "@prisma/client";
 import { getEmailAccount } from "@/__tests__/helpers";
 
 const TIMEOUT = 30_000;
@@ -12,39 +13,57 @@ vi.mock("server-only", () => ({}));
 // Skip tests unless explicitly running AI tests
 const isAiTest = process.env.RUN_AI_TESTS === "true";
 
+// Helper to create knowledge entries with default values for new fields
+function createKnowledgeEntry(
+  overrides: Partial<Knowledge> & {
+    id: string;
+    emailAccountId: string;
+    title: string;
+    content: string;
+  },
+): Knowledge {
+  return {
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    source: KnowledgeSource.MANUAL,
+    status: KnowledgeStatus.ACTIVE,
+    topic: null,
+    groupType: null,
+    senderPattern: null,
+    sourceEmailCount: null,
+    autoMetadata: null,
+    contentHash: null,
+    ...overrides,
+  };
+}
+
 function getKnowledgeBase(): Knowledge[] {
   return [
-    {
+    createKnowledgeEntry({
       id: "1",
       emailAccountId: "test-user-id",
       title: "Instagram Sponsorship Rates",
       content: `For brand sponsorships on Instagram, my standard rate is $5,000 per post. 
       This includes one main feed post with up to 3 stories. For longer term partnerships 
       (3+ posts), I offer a 20% discount.`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
+    }),
+    createKnowledgeEntry({
       id: "2",
       emailAccountId: "test-user-id",
       title: "YouTube Sponsorship Packages",
       content: `My YouTube sponsorship packages start at $10,000 for a 60-90 second 
       integration. This includes one round of revisions and a draft review before posting. 
       The video will remain on my channel indefinitely.`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
+    }),
+    createKnowledgeEntry({
       id: "3",
       emailAccountId: "test-user-id",
       title: "TikTok Collaboration Rates",
       content: `For TikTok collaborations, I charge $3,000 per video. This includes 
       concept development, filming, and editing. I typically post between 6-8pm EST 
       for maximum engagement. All sponsored content is marked with #ad as required.`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
+    }),
+    createKnowledgeEntry({
       id: "4",
       emailAccountId: "test-user-id",
       title: "Speaking Engagements",
@@ -52,10 +71,8 @@ function getKnowledgeBase(): Knowledge[] {
       My speaking fee is $15,000 for in-person events and $5,000 for virtual events. 
       Topics include digital marketing, content creation, and building engaged communities. 
       Travel expenses must be covered separately for events outside of California.`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
+    }),
+    createKnowledgeEntry({
       id: "5",
       emailAccountId: "test-user-id",
       title: "Brand Ambassador Programs",
@@ -63,10 +80,8 @@ function getKnowledgeBase(): Knowledge[] {
       at $50,000. This includes monthly content across all platforms (Instagram, YouTube, 
       and TikTok), two virtual meet-and-greets with your team, and exclusive rights in 
       your product category. Minimum commitment is 6 months.`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
+    }),
+    createKnowledgeEntry({
       id: "6",
       emailAccountId: "test-user-id",
       title: "Consulting Services",
@@ -76,9 +91,7 @@ function getKnowledgeBase(): Knowledge[] {
       - Monthly strategy calls & support: $1,500/month
       - Team training workshop: $5,000/day
       All consulting includes a detailed PDF report and action items.`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
+    }),
   ];
 }
 

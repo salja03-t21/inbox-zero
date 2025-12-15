@@ -6,6 +6,7 @@ import type { EmailProvider } from "@/utils/email/types";
 import { enqueueDigestItem } from "@/utils/digest/index";
 import { filterNullProperties } from "@/utils";
 import { labelMessageAndSync } from "@/utils/label.server";
+import { createMeetingAction } from "@/utils/ai/actions/create-meeting";
 
 const logger = createScopedLogger("ai-actions");
 
@@ -64,6 +65,8 @@ export const runActionFunction = async (options: {
       return digest(opts);
     case ActionType.MOVE_FOLDER:
       return move_folder(opts);
+    case ActionType.CREATE_MEETING:
+      return createMeetingAction(opts);
     default:
       throw new Error(`Unknown action: ${action}`);
   }
@@ -279,12 +282,37 @@ const digest: ActionFunction<{ id?: string }> = async ({
   await enqueueDigestItem({ email, emailAccountId, actionId });
 };
 
-const move_folder: ActionFunction<{ folderId?: string | null }> = async ({
-  client,
-  email,
-  userEmail,
-  args,
-}) => {
-  if (!args.folderId) return;
-  await client.moveThreadToFolder(email.threadId, userEmail, args.folderId);
+const move_folder: ActionFunction<{
+  folderId?: string | null;
+  folderName?: string | null;
+}> = async ({ client, email, userEmail, args }) => {
+  if (!args.folderId && !args.folderName) return;
+
+  // For Outlook/Microsoft, resolve folder ID from folder name at execution time
+  // because folder IDs are mailbox-specific and cannot be shared between mailboxes
+  let resolvedFolderId = args.folderId;
+  if (args.folderName && "getOrCreateOutlookFolderIdByName" in client) {
+    logger.info("Resolving folder ID from folder name for execution", {
+      folderName: args.folderName,
+      cachedFolderId: args.folderId,
+    });
+    resolvedFolderId = await client.getOrCreateOutlookFolderIdByName(
+      args.folderName,
+    );
+    logger.info("Resolved folder ID", {
+      folderName: args.folderName,
+      resolvedFolderId,
+      cachedFolderId: args.folderId,
+    });
+  }
+
+  if (!resolvedFolderId) {
+    logger.warn("No folder ID available after resolution", {
+      folderName: args.folderName,
+      cachedFolderId: args.folderId,
+    });
+    return;
+  }
+
+  await client.moveThreadToFolder(email.threadId, userEmail, resolvedFolderId);
 };

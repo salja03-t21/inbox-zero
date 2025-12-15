@@ -15,3 +15,9 @@ export const getLabelsBody = z.object({
   emailAccountId: z.string().min(1, "Email account ID is required"),
 });
 export type GetLabelsBody = z.infer<typeof getLabelsBody>;
+
+export const setAdminStatusBody = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  isAdmin: z.boolean(),
+});
+export type SetAdminStatusBody = z.infer<typeof setAdminStatusBody>;

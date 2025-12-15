@@ -1,7 +1,7 @@
 "use server";
 
 import { after } from "next/server";
-import { actionClient } from "@/utils/actions/safe-action";
+import { actionClient, actionClientUser } from "@/utils/actions/safe-action";
 import prisma from "@/utils/prisma";
 import { aiAnalyzePersona } from "@/utils/ai/knowledge/persona";
 import { createEmailProvider } from "@/utils/email/provider";
@@ -116,3 +116,108 @@ export const fetchSignaturesFromProviderAction = actionClient
 
     return { signatures };
   });
+
+const connectSharedMailboxSchema = z.object({
+  sharedMailboxEmail: z.string().email(),
+  sharedMailboxName: z.string().optional(),
+});
+
+export const connectSharedMailboxAction = actionClient
+  .metadata({ name: "connectSharedMailbox" })
+  .schema(connectSharedMailboxSchema)
+  .action(
+    async ({
+      ctx: { emailAccountId, userId, logger },
+      parsedInput: { sharedMailboxEmail, sharedMailboxName },
+    }) => {
+      logger.info("Connecting shared mailbox", {
+        sharedMailboxEmail,
+        emailAccountId,
+      });
+
+      // Check if this shared mailbox is already connected for this user
+      const existingSharedMailbox = await prisma.emailAccount.findFirst({
+        where: {
+          userId,
+          isSharedMailbox: true,
+          sharedMailboxOwner: sharedMailboxEmail,
+        },
+      });
+
+      if (existingSharedMailbox) {
+        throw new SafeError(
+          "This shared mailbox is already connected to your account",
+        );
+      }
+
+      // Get the primary email account to copy the account credentials
+      const primaryEmailAccount = await prisma.emailAccount.findUnique({
+        where: { id: emailAccountId },
+        include: { account: true },
+      });
+
+      if (!primaryEmailAccount) {
+        throw new SafeError("Primary email account not found");
+      }
+
+      // Create a new EmailAccount entry for the shared mailbox
+      // This shares the same Account (OAuth tokens) but represents a different mailbox
+      const sharedMailbox = await prisma.emailAccount.create({
+        data: {
+          email: sharedMailboxEmail,
+          name: sharedMailboxName || sharedMailboxEmail,
+          userId,
+          accountId: primaryEmailAccount.accountId,
+          isSharedMailbox: true,
+          sharedMailboxOwner: sharedMailboxEmail,
+        },
+      });
+
+      logger.info("Shared mailbox connected successfully", {
+        sharedMailboxId: sharedMailbox.id,
+      });
+
+      return { sharedMailboxId: sharedMailbox.id };
+    },
+  );
+
+const disconnectSharedMailboxSchema = z.object({
+  sharedMailboxId: z.string(),
+});
+
+export const disconnectSharedMailboxAction = actionClientUser
+  .metadata({ name: "disconnectSharedMailbox" })
+  .schema(disconnectSharedMailboxSchema)
+  .action(
+    async ({ ctx: { userId, logger }, parsedInput: { sharedMailboxId } }) => {
+      logger.info("Disconnecting shared mailbox", {
+        sharedMailboxId,
+      });
+
+      // Verify the shared mailbox belongs to the user and is actually a shared mailbox
+      const sharedMailbox = await prisma.emailAccount.findFirst({
+        where: {
+          id: sharedMailboxId,
+          userId,
+          isSharedMailbox: true,
+        },
+      });
+
+      if (!sharedMailbox) {
+        throw new SafeError(
+          "Shared mailbox not found or you don't have permission to disconnect it",
+        );
+      }
+
+      // Delete the shared mailbox EmailAccount (this won't delete the Account/OAuth tokens)
+      await prisma.emailAccount.delete({
+        where: { id: sharedMailboxId },
+      });
+
+      logger.info("Shared mailbox disconnected successfully", {
+        sharedMailboxId,
+      });
+
+      return { success: true };
+    },
+  );

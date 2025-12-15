@@ -18,7 +18,7 @@ import { SCOPES as GMAIL_SCOPES } from "@/utils/gmail/scopes";
 import { TypographyP } from "@/components/Typography";
 
 export function AddAccount() {
-  const handleConnectGoogle = async () => {
+  const _handleConnectGoogle = async () => {
     await signIn.social({
       provider: "google",
       callbackURL: "/accounts",
@@ -26,7 +26,7 @@ export function AddAccount() {
     });
   };
 
-  const handleMergeGoogle = async () => {
+  const _handleMergeGoogle = async () => {
     const response = await fetch("/api/google/linking/auth-url", {
       method: "GET",
       headers: { "Content-Type": "application/json" },
@@ -65,12 +65,13 @@ export function AddAccount() {
   return (
     <Card className="flex items-center justify-center">
       <CardContent className="flex flex-col items-center gap-4 p-6">
-        <AddEmailAccount
+        {/* Google account adding disabled */}
+        {/* <AddEmailAccount
           name="Google"
           image="/images/google.svg"
           handleConnect={handleConnectGoogle}
           handleMerge={handleMergeGoogle}
-        />
+        /> */}
         <AddEmailAccount
           name="Microsoft"
           image="/images/microsoft.svg"

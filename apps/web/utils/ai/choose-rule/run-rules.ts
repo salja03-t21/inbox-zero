@@ -99,7 +99,111 @@ export async function runRules({
     matches: results.matches,
   });
 
-  const finalMatches = limitDraftEmailActions(conversationAwareMatches);
+  const conversationAwareLimited = limitDraftEmailActions(
+    conversationAwareMatches,
+  );
+
+  // Check if CREATE_MEETING action exists and if TO_REPLY reason suggests meeting is being handled
+  const hasMeetingCreation = conversationAwareLimited.some((match) =>
+    match.rule.actions.some(
+      (action) => action.type === ActionType.CREATE_MEETING,
+    ),
+  );
+
+  const finalMatches = hasMeetingCreation
+    ? conversationAwareLimited.map((match) => {
+        // If this is TO_REPLY rule and meeting is being created,
+        // check if the AI's reason mentions meeting/scheduling as the ONLY reason
+        if (match.rule.systemType === SystemType.TO_REPLY) {
+          const reasonLower = (results.reasoning || "").toLowerCase();
+          // Only skip draft if reason is ONLY about meeting/scheduling
+          // Keywords that suggest meeting is the only concern
+          const meetingOnlyKeywords = [
+            "meeting",
+            "schedule",
+            "time",
+            "confirmed",
+            "let's meet",
+            "see you",
+          ];
+
+          // Check if reason suggests tasks are COMPLETED/FULFILLED (not pending)
+          const completionPhrases = [
+            "fulfilled",
+            "completed",
+            "resolved",
+            "acknowledged",
+            "received",
+            "got",
+            "thanked",
+            "thanks",
+            "already",
+            "done",
+          ];
+
+          // Keywords that suggest PENDING tasks beyond meeting
+          const pendingTaskKeywords = [
+            "need to",
+            "should",
+            "must",
+            "has to",
+            "pending",
+            "unanswered",
+            "still needs",
+            "requested",
+            "asked for",
+            "waiting for",
+            "committed to",
+            "promised to",
+          ];
+
+          const hasMeetingKeywords = meetingOnlyKeywords.some((kw) =>
+            reasonLower.includes(kw),
+          );
+          const hasCompletedTasks = completionPhrases.some((phrase) =>
+            reasonLower.includes(phrase),
+          );
+          const hasPendingTasks = pendingTaskKeywords.some((kw) =>
+            reasonLower.includes(kw),
+          );
+
+          // Only remove draft if:
+          // 1. It's about a meeting, AND
+          // 2. There are no pending tasks OR tasks are completed/fulfilled
+          const shouldSkipDraft =
+            hasMeetingKeywords && (!hasPendingTasks || hasCompletedTasks);
+
+          if (shouldSkipDraft) {
+            logger.info(
+              "Skipping TO_REPLY draft because CREATE_MEETING is handling the meeting-only response",
+              { reason: results.reasoning },
+            );
+            return {
+              ...match,
+              rule: {
+                ...match.rule,
+                actions: match.rule.actions.filter(
+                  (action) => action.type !== ActionType.DRAFT_EMAIL,
+                ),
+              },
+            };
+          }
+        }
+        return match;
+      })
+    : conversationAwareLimited;
+
+  logger.info("Rule matching results", {
+    totalMatches: finalMatches.length,
+    hasMeetingCreation,
+    rules: finalMatches.map((m) => ({
+      ruleId: m.rule.id,
+      ruleName: m.rule.name,
+      systemType: m.rule.systemType,
+      hasActions: m.rule.actions.length,
+      actionTypes: m.rule.actions.map((a) => a.type),
+    })),
+  });
 
   logger.trace("Matching rule", () => ({
     results: finalMatches.map(filterNullProperties),
@@ -138,6 +242,14 @@ export async function runRules({
     let reasonToUse = results.reasoning;
 
     if (result.rule && isConversationRule(result.rule.id)) {
+      logger.info(
+        "Conversation meta rule matched, determining specific status",
+        {
+          messageId: message.id,
+          threadId: message.threadId,
+        },
+      );
+
       const { rule: statusRule, reason: statusReason } =
         await determineConversationStatus({
           conversationRules,
@@ -148,6 +260,14 @@ export async function runRules({
         });
 
       if (!statusRule) {
+        logger.warn(
+          "No conversation status rule enabled for determined status",
+          {
+            reason: statusReason,
+            messageId: message.id,
+          },
+        );
+
         const executedRule: RunRulesResult = {
           rule: null,
           reason: statusReason || "No enabled conversation status rule found",
@@ -158,6 +278,17 @@ export async function runRules({
         executedRules.push(executedRule);
         continue;
       }
+
+      logger.info("Conversation status determined, executing rule", {
+        statusType: statusRule.systemType,
+        ruleName: statusRule.name,
+        ruleId: statusRule.id,
+        hasActions: statusRule.actions.length,
+        actionTypes: statusRule.actions.map((a) => a.type),
+        hasDraftAction: statusRule.actions.some(
+          (a) => a.type === ActionType.DRAFT_EMAIL,
+        ),
+      });
 
       ruleToExecute = statusRule;
       reasonToUse = statusReason;
@@ -246,12 +377,29 @@ async function executeMatchedRule(
   modelType: ModelType,
   batchTimestamp: Date,
 ) {
+  logger.info("Executing rule and generating action items", {
+    ruleId: rule.id,
+    ruleName: rule.name,
+    ruleSystemType: rule.systemType,
+    ruleActions: rule.actions.map((a) => ({
+      type: a.type,
+      id: a.id,
+      label: a.label,
+    })),
+  });
+
   const actionItems = await getActionItemsWithAiArgs({
     message,
     emailAccount,
     selectedRule: rule,
     client,
     modelType,
+  });
+
+  logger.info("Action items generated", {
+    ruleId: rule.id,
+    actionCount: actionItems.length,
+    actionTypes: actionItems.map((a) => a.type),
   });
 
   const { immediateActions, delayedActions } = groupBy(actionItems, (item) =>

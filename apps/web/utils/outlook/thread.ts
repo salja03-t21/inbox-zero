@@ -17,7 +17,7 @@ export async function getThread(
   try {
     const response = await client
       .getClient()
-      .api("/me/messages")
+      .api(`${client.getBaseUrl()}/messages`)
       .filter(filter)
       .select(
         "id,conversationId,conversationIndex,subject,bodyPreview,from,sender,toRecipients,receivedDateTime,isDraft,isRead,body,categories,parentFolderId",
@@ -66,7 +66,7 @@ export async function getThreads(
   nextPageToken?: string | null;
   threads: { id: string; snippet: string }[];
 }> {
-  let request = client.getClient().api("/me/messages");
+  let request = client.getClient().api(`${client.getBaseUrl()}/messages`);
 
   if (query) {
     request = request.filter(
@@ -110,7 +110,7 @@ export async function getThreadsWithNextPageToken({
 }) {
   let request = client
     .getClient()
-    .api(pageToken || "/me/messages")
+    .api(pageToken || `${client.getBaseUrl()}/messages`)
     .top(maxResults)
     .select("id,conversationId,subject,bodyPreview");
 
@@ -147,7 +147,7 @@ export async function getThreadsFromSender(
 ): Promise<Array<{ id: string; snippet: string }>> {
   const response: { value: Message[] } = await client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .filter(`from/emailAddress/address eq '${escapeODataString(sender)}'`)
     .top(limit)
     .select("id,conversationId,bodyPreview")
@@ -174,7 +174,7 @@ export async function getThreadsFromSenderWithSubject(
 ): Promise<Array<{ id: string; snippet: string; subject: string }>> {
   const response: { value: Message[] } = await client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .filter(`from/emailAddress/address eq '${escapeODataString(sender)}'`)
     .top(limit)
     .select("id,conversationId,subject,bodyPreview")

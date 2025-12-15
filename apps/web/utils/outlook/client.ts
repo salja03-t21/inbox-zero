@@ -19,10 +19,12 @@ type AuthOptions = {
 export class OutlookClient {
   private readonly client: Client;
   private readonly accessToken: string;
+  private readonly sharedMailboxEmail: string | null;
   private folderIdCache: Record<string, string> | null = null;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, sharedMailboxEmail?: string | null) {
     this.accessToken = accessToken;
+    this.sharedMailboxEmail = sharedMailboxEmail || null;
     this.client = Client.init({
       authProvider: (done) => {
         done(null, this.accessToken);
@@ -54,17 +56,29 @@ export class OutlookClient {
     this.folderIdCache = cache;
   }
 
+  /**
+   * Get the base URL for Microsoft Graph API calls.
+   * For shared mailboxes, use /users/{email} instead of /me
+   */
+  getBaseUrl(): string {
+    return this.sharedMailboxEmail
+      ? `/users/${encodeURIComponent(this.sharedMailboxEmail)}`
+      : "/me";
+  }
+
   // Helper methods for common operations
   async getUserProfile(): Promise<User> {
     return await this.client
-      .api("/me")
+      .api(this.getBaseUrl())
       .select("id,displayName,mail,userPrincipalName")
       .get();
   }
 
   async getUserPhoto(): Promise<string | null> {
     try {
-      const photoResponse = await this.client.api("/me/photo/$value").get();
+      const photoResponse = await this.client
+        .api(`${this.getBaseUrl()}/photo/$value`)
+        .get();
 
       if (photoResponse) {
         const arrayBuffer = await photoResponse.arrayBuffer();
@@ -80,8 +94,11 @@ export class OutlookClient {
 }
 
 // Helper to create OutlookClient instance
-const createOutlookClient = (accessToken: string) => {
-  return new OutlookClient(accessToken);
+const createOutlookClient = (
+  accessToken: string,
+  sharedMailboxEmail?: string | null,
+) => {
+  return new OutlookClient(accessToken, sharedMailboxEmail);
 };
 
 export const getContactsClient = ({ accessToken }: AuthOptions) => {
@@ -95,18 +112,20 @@ export const getOutlookClientWithRefresh = async ({
   refreshToken,
   expiresAt,
   emailAccountId,
+  sharedMailboxEmail,
 }: {
   accessToken?: string | null;
   refreshToken: string | null;
   expiresAt: number | null;
   emailAccountId: string;
+  sharedMailboxEmail?: string | null;
 }): Promise<OutlookClient> => {
   if (!refreshToken) throw new SafeError("No refresh token");
 
   // Check if token needs refresh
   const expiryDate = expiresAt ? expiresAt : null;
   if (accessToken && expiryDate && expiryDate > Date.now()) {
-    return createOutlookClient(accessToken);
+    return createOutlookClient(accessToken, sharedMailboxEmail);
   }
 
   // Refresh token
@@ -149,7 +168,7 @@ export const getOutlookClientWithRefresh = async ({
       provider: "microsoft",
     });
 
-    return createOutlookClient(tokens.access_token);
+    return createOutlookClient(tokens.access_token, sharedMailboxEmail);
   } catch (error) {
     const isInvalidGrantError =
       error instanceof Error &&
@@ -176,14 +195,19 @@ export function getLinkingOAuth2Url() {
 
   const baseUrl =
     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
+  const redirectUri = `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`;
+
   const params = new URLSearchParams({
     client_id: env.MICROSOFT_CLIENT_ID,
     response_type: "code",
-    redirect_uri: `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`,
+    redirect_uri: redirectUri,
     scope: SCOPES.join(" "),
+    prompt: "select_account",
   });
 
-  return `${baseUrl}?${params.toString()}`;
+  const finalUrl = `${baseUrl}?${params.toString()}`;
+
+  return finalUrl;
 }
 
 // Helper types for common Microsoft Graph operations

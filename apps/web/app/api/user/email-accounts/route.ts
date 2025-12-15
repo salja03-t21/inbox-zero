@@ -25,6 +25,7 @@ async function getEmailAccounts({ userId }: { userId: string }) {
           name: true,
           image: true,
           email: true,
+          isAdmin: true,
         },
       },
     },

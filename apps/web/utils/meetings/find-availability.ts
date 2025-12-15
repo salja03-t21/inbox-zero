@@ -3,10 +3,15 @@ import {
   addMinutes,
   startOfDay,
   endOfDay,
+<<<<<<< HEAD
   isWithinInterval,
   isBefore,
   isAfter,
   parse,
+=======
+  isBefore,
+  isAfter,
+>>>>>>> production
   parseISO,
 } from "date-fns";
 import { TZDate } from "@date-fns/tz";
@@ -18,6 +23,39 @@ import prisma from "@/utils/prisma";
 
 const logger = createScopedLogger("meetings/find-availability");
 
+<<<<<<< HEAD
+=======
+/**
+ * Get working hours from user settings with fallback defaults
+ */
+export async function getWorkingHours(emailAccountId: string): Promise<{
+  start: number;
+  end: number;
+}> {
+  const acct = await prisma.emailAccount.findUnique({
+    where: { id: emailAccountId },
+    select: {
+      meetingSchedulerWorkingHoursStart: true,
+      meetingSchedulerWorkingHoursEnd: true,
+    },
+  });
+
+  const start = acct?.meetingSchedulerWorkingHoursStart ?? 9;
+  const end = acct?.meetingSchedulerWorkingHoursEnd ?? 17;
+
+  // Validate and clamp working hours
+  if (end <= start || start < 0 || start > 23 || end < 1 || end > 24) {
+    logger.warn("Invalid working hours in settings, using defaults", {
+      start,
+      end,
+    });
+    return { start: 9, end: 17 };
+  }
+
+  return { start, end };
+}
+
+>>>>>>> production
 export interface AvailableTimeSlot {
   start: Date;
   end: Date;
@@ -72,11 +110,20 @@ export async function findMeetingAvailability({
 
   // If no specific times requested, suggest times for the next 7 days
   if (requestedTimes.length === 0) {
+<<<<<<< HEAD
+=======
+    const workingHours = await getWorkingHours(emailAccountId);
+>>>>>>> production
     const suggestedTimes = await findSuggestedTimes({
       emailAccountId,
       durationMinutes: meetingRequest.durationMinutes,
       daysAhead: 7,
       timezone,
+<<<<<<< HEAD
+=======
+      workStartHour: workingHours.start,
+      workEndHour: workingHours.end,
+>>>>>>> production
     });
 
     return {
@@ -110,12 +157,21 @@ export async function findMeetingAvailability({
   // If all requested times are busy, suggest alternative times
   let suggestedTimes: AvailableTimeSlot[] = [];
   if (hasConflicts) {
+<<<<<<< HEAD
+=======
+    const workingHours = await getWorkingHours(emailAccountId);
+>>>>>>> production
     suggestedTimes = await findSuggestedTimes({
       emailAccountId,
       durationMinutes: meetingRequest.durationMinutes,
       daysAhead: 7,
       timezone,
       preferredStartHour: getPreferredStartHour(requestedTimes),
+<<<<<<< HEAD
+=======
+      workStartHour: workingHours.start,
+      workEndHour: workingHours.end,
+>>>>>>> production
     });
   }
 
@@ -136,14 +192,25 @@ export async function findMeetingAvailability({
 
 /**
  * Find suggested available time slots
+<<<<<<< HEAD
  */
 async function findSuggestedTimes({
+=======
+ * Now exported for use in AI calendar availability tool
+ */
+export async function findSuggestedTimes({
+>>>>>>> production
   emailAccountId,
   durationMinutes,
   daysAhead,
   timezone,
   preferredStartHour = 9, // Default to 9 AM
   maxSuggestions = 5,
+<<<<<<< HEAD
+=======
+  workStartHour = 9,
+  workEndHour = 17,
+>>>>>>> production
 }: {
   emailAccountId: string;
   durationMinutes: number;
@@ -151,6 +218,11 @@ async function findSuggestedTimes({
   timezone: string;
   preferredStartHour?: number;
   maxSuggestions?: number;
+<<<<<<< HEAD
+=======
+  workStartHour?: number;
+  workEndHour?: number;
+>>>>>>> production
 }): Promise<AvailableTimeSlot[]> {
   const now = new Date();
   const startDate = startOfDay(now);
@@ -166,9 +238,13 @@ async function findSuggestedTimes({
 
   const suggestions: AvailableTimeSlot[] = [];
 
+<<<<<<< HEAD
   // Working hours: 9 AM to 5 PM by default
   const workStartHour = 9;
   const workEndHour = 17;
+=======
+  // Working hours are now passed in as parameters from user settings
+>>>>>>> production
 
   // Start checking from tomorrow
   let currentDay = addDays(startOfDay(now), 1);
@@ -247,7 +323,11 @@ function parseTimePreferences(
   timezone: string,
 ): AvailableTimeSlot[] {
   const slots: AvailableTimeSlot[] = [];
+<<<<<<< HEAD
   const now = new Date();
+=======
+  const _now = new Date();
+>>>>>>> production
 
   for (const pref of preferences) {
     try {

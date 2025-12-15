@@ -9,12 +9,10 @@ import {
   ArchiveIcon,
   ArrowLeftIcon,
   BarChartBigIcon,
-  BookIcon,
   BrushIcon,
   CalendarIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  CrownIcon,
   FileIcon,
   InboxIcon,
   type LucideIcon,
@@ -25,6 +23,7 @@ import {
   RatioIcon,
   SendIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   SparklesIcon,
   TagIcon,
   Users2Icon,
@@ -51,14 +50,13 @@ import { CommandShortcut } from "@/components/ui/command";
 import { useSplitLabels } from "@/hooks/useLabels";
 import { LoadingContent } from "@/components/LoadingContent";
 import { useCleanerEnabled } from "@/hooks/useFeatureFlags";
-import { ClientOnly } from "@/components/ClientOnly";
 import { AccountSwitcher } from "@/components/AccountSwitcher";
 import { useAccount } from "@/providers/EmailAccountProvider";
 import { prefixPath } from "@/utils/path";
-import { ReferralDialog } from "@/components/ReferralDialog";
-import { isGoogleProvider } from "@/utils/email/provider-types";
 import { NavUser } from "@/components/NavUser";
 import { PremiumExpiredCard } from "@/components/PremiumExpiredCard";
+import { useUser } from "@/hooks/useUser";
+import { isOrganizationAdmin } from "@/utils/organizations/roles";
 
 type NavItem = {
   name: string;
@@ -104,7 +102,7 @@ export const useNavigation = () => {
         icon: CalendarIcon,
       },
     ],
-    [currentEmailAccountId, provider],
+    [currentEmailAccountId],
   );
 
   const navItemsFiltered = useMemo(
@@ -179,6 +177,15 @@ export function SideNav({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentEmailAccountId = emailAccount?.id || emailAccountId;
   const path = usePathname();
   const showMailNav = path.includes("/mail") || path.includes("/compose");
+  const { data: user } = useUser();
+
+  const currentEmailAccountMembers =
+    user?.members?.filter(
+      (member) => member.emailAccountId === currentEmailAccountId,
+    ) || [];
+  const hasOrganization = currentEmailAccountMembers.length > 0;
+  const isAdmin = isOrganizationAdmin(currentEmailAccountMembers);
+  const canAccessSettings = !hasOrganization || isAdmin;
 
   const visibleBottomLinks = useMemo(
     () =>
@@ -237,19 +244,23 @@ export function SideNav({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <ReferralDialog />
         </ClientOnly> */}
 
-        <SidebarMenuButton asChild>
-          <Link href="https://docs.getinboxzero.com" target="_blank">
-            <BookIcon className="size-4" />
-            <span className="font-semibold">Help Center</span>
-          </Link>
-        </SidebarMenuButton>
+        {user?.isAdmin && (
+          <SidebarMenuButton asChild>
+            <Link href="/admin/users">
+              <ShieldCheckIcon className="size-4" />
+              <span className="font-semibold">Admin</span>
+            </Link>
+          </SidebarMenuButton>
+        )}
 
-        <SidebarMenuButton asChild>
-          <Link href={prefixPath(currentEmailAccountId, "/settings")}>
-            <SettingsIcon className="size-4" />
-            <span className="font-semibold">Settings</span>
-          </Link>
-        </SidebarMenuButton>
+        {canAccessSettings && (
+          <SidebarMenuButton asChild>
+            <Link href={prefixPath(currentEmailAccountId, "/settings")}>
+              <SettingsIcon className="size-4" />
+              <span className="font-semibold">Settings</span>
+            </Link>
+          </SidebarMenuButton>
+        )}
 
         <SideNavMenu items={visibleBottomLinks} activeHref={path} />
 

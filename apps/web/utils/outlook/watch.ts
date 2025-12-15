@@ -1,9 +1,9 @@
-import type { Client } from "@microsoft/microsoft-graph-client";
+import type { OutlookClient } from "@/utils/outlook/client";
 import type { Subscription } from "@microsoft/microsoft-graph-types";
 import addDays from "date-fns/addDays";
 import { env } from "@/env";
 
-export async function watchOutlook(client: Client) {
+export async function watchOutlook(client: OutlookClient) {
   const base =
     env.NODE_ENV === "development"
       ? env.WEBHOOK_URL || env.NEXT_PUBLIC_BASE_URL
@@ -18,12 +18,13 @@ export async function watchOutlook(client: Client) {
   const subscriptionPayload = {
     changeType: "created,updated",
     notificationUrl: notificationUrl.toString(),
-    resource: "/me/messages",
+    resource: `${client.getBaseUrl()}/messages`,
     expirationDateTime: addDays(new Date(), 3).toISOString(), // 3 days (max allowed)
     clientState: env.MICROSOFT_WEBHOOK_CLIENT_STATE,
   };
 
   const subscription: Subscription = await client
+    .getClient()
     .api("/subscriptions")
     .post(subscriptionPayload);
 
@@ -33,6 +34,9 @@ export async function watchOutlook(client: Client) {
   };
 }
 
-export async function unwatchOutlook(client: Client, subscriptionId: string) {
-  await client.api(`/subscriptions/${subscriptionId}`).delete();
+export async function unwatchOutlook(
+  client: OutlookClient,
+  subscriptionId: string,
+) {
+  await client.getClient().api(`/subscriptions/${subscriptionId}`).delete();
 }

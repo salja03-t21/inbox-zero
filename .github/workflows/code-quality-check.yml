@@ -1,0 +1,265 @@
+name: Code Quality Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - production
+      - staging
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  statuses: write
+  checks: write
+
+jobs:
+  quality-check:
+    name: Automated Code Review
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run TypeScript check
+        id: typecheck
+        continue-on-error: true
+        run: |
+          echo "## TypeScript Check" >> $GITHUB_STEP_SUMMARY
+          if pnpm tsc --noEmit 2>&1 | tee ts-errors.txt; then
+            echo "✅ No type errors found" >> $GITHUB_STEP_SUMMARY
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Type errors detected" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -n 50 ts-errors.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run linter
+        id: lint
+        continue-on-error: true
+        run: |
+          echo "## Linting Check" >> $GITHUB_STEP_SUMMARY
+          if pnpm run check 2>&1 | tee lint-errors.txt; then
+            echo "✅ Code quality checks passed" >> $GITHUB_STEP_SUMMARY
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Linting issues detected" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -n 50 lint-errors.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run tests
+        id: test
+        continue-on-error: true
+        run: |
+          echo "## Tests" >> $GITHUB_STEP_SUMMARY
+          if pnpm test 2>&1 | tee test-results.txt; then
+            echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Some tests failed" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -n 50 test-results.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Analyze changed files
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            const analysis = {
+              hasPrismaChanges: files.some(f => f.filename.includes('schema.prisma')),
+              hasEnvChanges: files.some(f => f.filename.includes('.env.example') || f.filename.includes('env.ts')),
+              hasAuthChanges: files.some(f => f.filename.includes('auth') || f.filename.includes('session') || f.filename.includes('middleware')),
+              hasAIChanges: files.some(f => f.filename.includes('/ai/') || f.filename.includes('llm') || f.filename.includes('prompt')),
+              hasDockerChanges: files.some(f => f.filename.includes('Dockerfile') || f.filename.includes('docker-compose')),
+              hasWorkflowChanges: files.some(f => f.filename.includes('.github/workflows/')),
+              totalFiles: files.length,
+              additions: files.reduce((sum, f) => sum + f.additions, 0),
+              deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+            };
+            
+            return analysis;
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const analysis = ${{ steps.analyze.outputs.result }};
+            const typecheckStatus = '${{ steps.typecheck.outputs.status }}';
+            const lintStatus = '${{ steps.lint.outputs.status }}';
+            const testStatus = '${{ steps.test.outputs.status }}';
+            
+            let body = '## 🤖 Automated Code Quality Report\n\n';
+            
+            // Status summary
+            body += '### Automated Checks\n\n';
+            body += `| Check | Status |\n`;
+            body += `|-------|--------|\n`;
+            body += `| TypeScript | ${typecheckStatus === 'success' ? '✅ Passed' : '❌ Failed'} |\n`;
+            body += `| Linting | ${lintStatus === 'success' ? '✅ Passed' : '❌ Failed'} |\n`;
+            body += `| Tests | ${testStatus === 'success' ? '✅ Passed' : '❌ Failed'} |\n\n`;
+            
+            // Changes summary
+            body += '### Changes Summary\n\n';
+            body += `- **Files changed:** ${analysis.totalFiles}\n`;
+            body += `- **Lines added:** +${analysis.additions}\n`;
+            body += `- **Lines deleted:** -${analysis.deletions}\n\n`;
+            
+            // Project-specific warnings
+            body += '### Project-Specific Checks\n\n';
+            
+            if (analysis.hasPrismaChanges) {
+              body += '⚠️ **Database Schema Changes Detected**\n';
+              body += '- Ensure migration files are included\n';
+              body += '- Verify backward compatibility\n';
+              body += '- Test migration in development environment\n';
+              body += '- Update seed data if necessary\n\n';
+            }
+            
+            if (analysis.hasEnvChanges) {
+              body += '⚠️ **Environment Configuration Changes**\n';
+              body += '- Update `.env.example` with new variables\n';
+              body += '- Update `env.ts` validation schema\n';
+              body += '- Document changes in deployment guide\n';
+              body += '- Notify operations team\n\n';
+            }
+            
+            if (analysis.hasAuthChanges) {
+              body += '🔒 **Security-Critical Changes Detected**\n';
+              body += '- Authentication/authorization logic modified\n';
+              body += '- Manual security review **required**\n';
+              body += '- Test OAuth flows thoroughly\n';
+              body += '- Verify session handling\n';
+              body += '- Check for authorization bypasses\n\n';
+            }
+            
+            if (analysis.hasAIChanges) {
+              body += '🤖 **AI/LLM Changes Detected**\n';
+              body += '- Review prompts for safety and clarity\n';
+              body += '- Check for prompt injection vulnerabilities\n';
+              body += '- Verify error handling for AI failures\n';
+              body += '- Test with edge cases and malicious inputs\n';
+              body += '- Ensure proper rate limiting\n\n';
+            }
+            
+            if (analysis.hasDockerChanges) {
+              body += '🐳 **Docker Configuration Changes**\n';
+              body += '- Test Docker build locally\n';
+              body += '- Verify all build args are documented\n';
+              body += '- Check for security vulnerabilities in base images\n';
+              body += '- Update deployment documentation\n\n';
+            }
+            
+            if (analysis.hasWorkflowChanges) {
+              body += '⚙️ **CI/CD Workflow Changes**\n';
+              body += '- Test workflow changes in a fork first\n';
+              body += '- Verify secrets are properly configured\n';
+              body += '- Check for security implications\n\n';
+            }
+            
+            // Recommendations
+            body += '### Recommendations\n\n';
+            
+            if (typecheckStatus === 'success' && lintStatus === 'success' && testStatus === 'success') {
+              body += '✅ **All automated checks passed!**\n\n';
+              body += 'This PR meets the basic quality standards. Please ensure:\n';
+              body += '- [ ] Business logic is correct\n';
+              body += '- [ ] Error handling is comprehensive\n';
+              body += '- [ ] Security implications are reviewed\n';
+              body += '- [ ] Documentation is updated\n';
+              body += '- [ ] Manual testing is complete\n';
+            } else {
+              body += '⚠️ **Action Required**\n\n';
+              body += 'Please address the following issues before merging:\n\n';
+              
+              if (typecheckStatus !== 'success') {
+                body += '1. 🔴 **Fix TypeScript errors** (Critical)\n';
+                body += '   - Run `pnpm tsc --noEmit` to see all errors\n';
+                body += '   - See full output in workflow logs\n\n';
+              }
+              
+              if (testStatus !== 'success') {
+                body += '2. 🔴 **Fix failing tests** (Critical)\n';
+                body += '   - Run `pnpm test` locally\n';
+                body += '   - Ensure all tests pass before merging\n\n';
+              }
+              
+              if (lintStatus !== 'success') {
+                body += '3. 🟡 **Fix linting issues** (Important)\n';
+                body += '   - Run `pnpm run check` locally\n';
+                body += '   - Run `pnpm run format-and-lint:fix` to auto-fix\n\n';
+              }
+            }
+            
+            // Security warning for critical changes
+            const isCritical = analysis.hasAuthChanges || analysis.hasPrismaChanges || analysis.hasWorkflowChanges;
+            if (isCritical) {
+              body += '\n---\n\n';
+              body += '🚨 **CRITICAL CHANGES DETECTED**\n\n';
+              body += 'This PR modifies security-critical or infrastructure files.\n';
+              body += '**Manual review by a senior team member is REQUIRED before merging.**\n';
+            }
+            
+            body += '\n---\n';
+            body += '*Automated review by GitHub Actions • [View detailed logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})*';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+      - name: Set PR status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const typecheckStatus = '${{ steps.typecheck.outputs.status }}';
+            const lintStatus = '${{ steps.lint.outputs.status }}';
+            const testStatus = '${{ steps.test.outputs.status }}';
+            
+            const allPassed = typecheckStatus === 'success' && lintStatus === 'success' && testStatus === 'success';
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: allPassed ? 'success' : 'failure',
+              context: 'Code Quality Check',
+              description: allPassed ? 'All checks passed' : 'Some checks failed - see details',
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });

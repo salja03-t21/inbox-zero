@@ -27,17 +27,34 @@ export async function getOutlookRootFolders(
   client: OutlookClient,
 ): Promise<OutlookFolder[]> {
   const fields = "id,displayName";
+
+  // First, get all root folders without expansion (to avoid limits)
   const response: { value: MailFolder[] } = await client
     .getClient()
-    .api("/me/mailFolders")
+    .api(`${client.getBaseUrl()}/mailFolders`)
     .select(fields)
     .top(999)
-    .expand(
-      `childFolders($select=${fields};$expand=childFolders($select=${fields}))`,
-    )
     .get();
 
-  return response.value.map(convertMailFolderToOutlookFolder);
+  const rootFolders = response.value.map(convertMailFolderToOutlookFolder);
+
+  // Then fetch child folders for each root folder separately (with pagination support)
+  await Promise.all(
+    rootFolders.map(async (folder) => {
+      try {
+        folder.childFolders = await getOutlookChildFolders(client, folder.id);
+      } catch (error) {
+        logger.warn("Failed to fetch child folders for root folder", {
+          folderId: folder.id,
+          folderName: folder.displayName,
+          error,
+        });
+        folder.childFolders = [];
+      }
+    }),
+  );
+
+  return rootFolders;
 }
 
 export async function getOutlookChildFolders(
@@ -45,91 +62,213 @@ export async function getOutlookChildFolders(
   folderId: string,
 ): Promise<OutlookFolder[]> {
   const fields = "id,displayName";
-  const response: { value: MailFolder[] } = await client
-    .getClient()
-    .api(`/me/mailFolders/${folderId}/childFolders`)
-    .select(fields)
-    .expand(
-      `childFolders($select=${fields};$expand=childFolders($select=${fields}))`,
-    )
-    .get();
+  let allFolders: MailFolder[] = [];
+  let nextLink: string | undefined;
 
-  return response.value.map(convertMailFolderToOutlookFolder);
+  // Fetch all folders with pagination support
+  do {
+    const response: { value: MailFolder[]; "@odata.nextLink"?: string } =
+      nextLink
+        ? await client.getClient().api(nextLink).get()
+        : await client
+            .getClient()
+            .api(`${client.getBaseUrl()}/mailFolders/${folderId}/childFolders`)
+            .select(fields)
+            .top(999)
+            .expand(
+              `childFolders($select=${fields};$expand=childFolders($select=${fields}))`,
+            )
+            .get();
+
+    allFolders = allFolders.concat(response.value);
+    nextLink = response["@odata.nextLink"];
+  } while (nextLink);
+
+  return allFolders.map(convertMailFolderToOutlookFolder);
 }
 
+/**
+ * Find a folder by name, searching Inbox child folders first, then root folders.
+ * This ensures we prefer folders created under Inbox (standard location for mail folders).
+ */
 async function findOutlookFolderByName(
   client: OutlookClient,
   folderName: string,
 ): Promise<OutlookFolder | undefined> {
+  const escapedFolderName = folderName.replace(/'/g, "''");
+
+  // First, search within Inbox child folders (preferred location)
   try {
-    const response: { value: MailFolder[] } = await client
+    const inboxId = await getWellKnownFolderId(client, "inbox");
+    logger.info("Searching for folder in Inbox", {
+      folderName,
+      scope: "inbox",
+    });
+
+    const inboxChildrenResponse: {
+      value: MailFolder[];
+      "@odata.nextLink"?: string;
+    } = await client
       .getClient()
-      .api("/me/mailFolders")
-      .filter(`displayName eq '${folderName.replace(/'/g, "''")}'`)
+      .api(`${client.getBaseUrl()}/mailFolders/${inboxId}/childFolders`)
+      .filter(`displayName eq '${escapedFolderName}'`)
       .select("id,displayName")
-      .top(1)
+      .top(100)
       .get();
 
-    if (response.value && response.value.length > 0) {
-      return convertMailFolderToOutlookFolder(response.value[0]);
+    if (inboxChildrenResponse.value && inboxChildrenResponse.value.length > 0) {
+      logger.info("Found folder in Inbox", {
+        folderName,
+        folderId: inboxChildrenResponse.value[0].id,
+        scope: "inbox",
+      });
+      return convertMailFolderToOutlookFolder(inboxChildrenResponse.value[0]);
     }
-    return undefined;
   } catch (error) {
-    logger.warn("Error finding folder by name", { folderName, error });
-    return undefined;
+    logger.warn("Error searching Inbox child folders", {
+      folderName,
+      error,
+      scope: "inbox",
+    });
+    // Continue to root search as fallback
   }
+
+  // Fallback: search at root level for backward compatibility
+  // (existing folders may be at root level from before this fix)
+  try {
+    logger.info("Searching for folder at root level", {
+      folderName,
+      scope: "root",
+    });
+
+    const rootResponse: { value: MailFolder[]; "@odata.nextLink"?: string } =
+      await client
+        .getClient()
+        .api(`${client.getBaseUrl()}/mailFolders`)
+        .filter(`displayName eq '${escapedFolderName}'`)
+        .select("id,displayName")
+        .top(200)
+        .get();
+
+    if (rootResponse.value && rootResponse.value.length > 0) {
+      logger.info("Found folder at root level", {
+        folderName,
+        folderId: rootResponse.value[0].id,
+        scope: "root",
+      });
+      return convertMailFolderToOutlookFolder(rootResponse.value[0]);
+    }
+  } catch (error) {
+    logger.warn("Error searching root folders", {
+      folderName,
+      error,
+      scope: "root",
+    });
+  }
+
+  logger.info("Folder not found in Inbox or root", { folderName });
+  return undefined;
 }
 
 export async function getOutlookFolderTree(
   client: OutlookClient,
-  expandLevels = 6,
+  maxDepth = 10,
 ): Promise<OutlookFolder[]> {
   const folders = await getOutlookRootFolders(client);
 
-  if (expandLevels <= 2) {
-    return folders;
-  }
+  // Recursively fetch all child folders to the specified depth
+  async function expandFolder(
+    folder: OutlookFolder,
+    currentDepth: number,
+  ): Promise<void> {
+    // Stop if we've reached max depth or if this folder has no ID
+    if (currentDepth >= maxDepth || !folder.id) {
+      return;
+    }
 
-  const remainingLevels = expandLevels - 2;
-  for (let currentLevel = 0; currentLevel < remainingLevels; currentLevel++) {
-    const folderQueue = [...folders];
-
-    while (folderQueue.length > 0) {
-      const folder = folderQueue.shift()!;
-      if (!folder.childFolders || folder.childFolders.length === 0) {
-        try {
-          folder.childFolders = await getOutlookChildFolders(client, folder.id);
-        } catch (error) {
-          logger.warn("Failed to fetch deeper folders", {
-            folderId: folder.id,
-            error,
-          });
-        }
-      }
-      if (folder.childFolders) {
-        folderQueue.push(
-          ...folder.childFolders.map(convertMailFolderToOutlookFolder),
-        );
+    // The initial call to getOutlookRootFolders now fetches child folders separately
+    // for each root folder (depth 0 -> depth 1), with full pagination support.
+    // We only need to expand deeper (depth >= 2)
+    if (
+      currentDepth >= 2 &&
+      (!folder.childFolders || folder.childFolders.length === 0)
+    ) {
+      try {
+        folder.childFolders = await getOutlookChildFolders(client, folder.id);
+      } catch (error) {
+        logger.warn("Failed to fetch child folders", {
+          folderId: folder.id,
+          folderName: folder.displayName,
+          depth: currentDepth,
+          error,
+        });
+        folder.childFolders = [];
+        return;
       }
     }
+
+    // Recursively expand all children
+    if (folder.childFolders && folder.childFolders.length > 0) {
+      await Promise.all(
+        folder.childFolders.map((child) =>
+          expandFolder(child, currentDepth + 1),
+        ),
+      );
+    }
   }
+
+  // Expand all root folders
+  await Promise.all(folders.map((folder) => expandFolder(folder, 0)));
 
   return folders;
 }
 
+/**
+ * Get or create a folder by name.
+ * Creates folders under Inbox (standard location for mail organization).
+ * Searches Inbox first, then root level for backward compatibility.
+ */
 export async function getOrCreateOutlookFolderIdByName(
   client: OutlookClient,
   folderName: string,
 ): Promise<string> {
-  const existingFolder = await findOutlookFolderByName(client, folderName);
+  // Validate and normalize folder name
+  const trimmedName = folderName.trim();
+  if (!trimmedName) {
+    throw new Error("Folder name cannot be empty");
+  }
+
+  // Check if folder already exists (searches Inbox first, then root)
+  const existingFolder = await findOutlookFolderByName(client, trimmedName);
 
   if (existingFolder) {
+    logger.info("Using existing folder", {
+      folderName: trimmedName,
+      folderId: existingFolder.id,
+    });
     return existingFolder.id;
   }
 
+  // Create new folder under Inbox
   try {
-    const response = await client.getClient().api("/me/mailFolders").post({
-      displayName: folderName,
+    const inboxId = await getWellKnownFolderId(client, "inbox");
+    logger.info("Creating folder under Inbox", {
+      folderName: trimmedName,
+      parent: "inbox",
+      parentId: inboxId,
+    });
+
+    const response = await client
+      .getClient()
+      .api(`${client.getBaseUrl()}/mailFolders/${inboxId}/childFolders`)
+      .post({
+        displayName: trimmedName,
+      });
+
+    logger.info("Folder created successfully", {
+      folderName: trimmedName,
+      folderId: response.id,
+      parent: "inbox",
     });
 
     return response.id;
@@ -139,14 +278,25 @@ export async function getOrCreateOutlookFolderIdByName(
     // biome-ignore lint/suspicious/noExplicitAny: simplest
     const err = error as any;
     if (err?.code === "ErrorFolderExists" || err?.statusCode === 409) {
-      logger.info("Folder already exists, fetching existing folder", {
-        folderName,
-      });
-      const folder = await findOutlookFolderByName(client, folderName);
+      logger.info(
+        "Folder already exists (race condition), fetching existing folder",
+        {
+          folderName: trimmedName,
+        },
+      );
+      const folder = await findOutlookFolderByName(client, trimmedName);
       if (folder) {
         return folder.id;
       }
     }
+
+    logger.error("Failed to create folder", {
+      folderName: trimmedName,
+      error: err?.message || error,
+      errorCode: err?.code,
+      statusCode: err?.statusCode,
+    });
+
     throw error;
   }
 }
@@ -177,9 +327,12 @@ export async function moveMessageToFolder(
   messageId: string,
   destinationFolderId: string,
 ): Promise<void> {
-  await client.getClient().api(`/me/messages/${messageId}/move`).post({
-    destinationId: destinationFolderId,
-  });
+  await client
+    .getClient()
+    .api(`${client.getBaseUrl()}/messages/${messageId}/move`)
+    .post({
+      destinationId: destinationFolderId,
+    });
 }
 
 /**
@@ -190,9 +343,12 @@ export async function markMessageAsRead(
   messageId: string,
   isRead: boolean,
 ): Promise<void> {
-  await client.getClient().api(`/me/messages/${messageId}`).patch({
-    isRead,
-  });
+  await client
+    .getClient()
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
+    .patch({
+      isRead,
+    });
 }
 
 /**
@@ -206,7 +362,7 @@ export async function flagMessage(
 ): Promise<void> {
   await client
     .getClient()
-    .api(`/me/messages/${messageId}`)
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
     .patch({
       flag: isFlagged
         ? { flagStatus: "flagged" }
@@ -230,7 +386,7 @@ export async function getWellKnownFolderId(
 ): Promise<string> {
   const response = await client
     .getClient()
-    .api(`/me/mailFolders/${folderName}`)
+    .api(`${client.getBaseUrl()}/mailFolders/${folderName}`)
     .select("id")
     .get();
 

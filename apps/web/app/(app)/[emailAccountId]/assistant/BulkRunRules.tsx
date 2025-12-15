@@ -1,19 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState, useCallback } from "react";
 import { HistoryIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionDescription } from "@/components/Typography";
-import type { ThreadsResponse } from "@/app/api/threads/route";
-import type { ThreadsQuery } from "@/app/api/threads/validation";
 import { LoadingContent } from "@/components/LoadingContent";
-import { runAiRules } from "@/utils/queue/email-actions";
-import { sleep } from "@/utils/sleep";
-import { toastError } from "@/components/Toast";
+import { toastError, toastSuccess } from "@/components/Toast";
 import { PremiumAlertWithData, usePremium } from "@/components/PremiumAlert";
 import { SetDateDropdown } from "@/app/(app)/[emailAccountId]/assistant/SetDateDropdown";
 import { useThreads } from "@/hooks/useThreads";
-import { useAiQueueState } from "@/store/ai-queue";
+import { fetchWithAccount } from "@/utils/fetch";
 import {
   Dialog,
   DialogContent,
@@ -21,31 +17,79 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useAccount } from "@/providers/EmailAccountProvider";
-import { fetchWithAccount } from "@/utils/fetch";
 
-export function BulkRunRules() {
-  const { emailAccountId } = useAccount();
+interface BulkRunRulesProps {
+  emailAccountId: string;
+  onJobCreated?: (jobId: string) => void;
+}
 
+export function BulkRunRules({
+  emailAccountId,
+  onJobCreated,
+}: BulkRunRulesProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [totalThreads, setTotalThreads] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
 
   const { data, isLoading, error } = useThreads({ type: "inbox" });
-
-  const queue = useAiQueueState();
-
-  // Temporarily disable premium check for testing
-  const hasAiAccess = true;
-  const isLoadingPremium = false;
-  // const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
-
-  const [running, setRunning] = useState(false);
+  const { hasAiAccess, isLoading: isLoadingPremium } = usePremium();
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [onlyUnread, setOnlyUnread] = useState(true);
 
-  const abortRef = useRef<() => void>(undefined);
+  const startBulkProcess = useCallback(async () => {
+    if (!startDate) {
+      toastError({ description: "Please select a start date" });
+      return;
+    }
+
+    setIsStarting(true);
+
+    try {
+      const response = await fetchWithAccount({
+        url: "/api/bulk-process/start",
+        emailAccountId,
+        init: {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            emailAccountId,
+            startDate: startDate.toISOString(),
+            endDate: endDate?.toISOString(),
+            onlyUnread,
+          }),
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to start bulk processing");
+      }
+
+      const result = await response.json();
+
+      toastSuccess({
+        description:
+          "Bulk processing started! Processing will continue in the background.",
+      });
+
+      setIsOpen(false);
+
+      if (onJobCreated) {
+        onJobCreated(result.jobId);
+      }
+    } catch (error) {
+      console.error("Error starting bulk process:", error);
+      toastError({
+        title: "Failed to start bulk processing",
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsStarting(false);
+    }
+  }, [startDate, endDate, onlyUnread, emailAccountId, onJobCreated]);
 
   return (
     <div>
@@ -63,18 +107,11 @@ export function BulkRunRules() {
             {data && (
               <>
                 <SectionDescription>
-                  This runs your rules on emails currently in your inbox (that
-                  have not been previously processed).
+                  This runs your rules on emails in your inbox that have not
+                  been successfully processed (excludes emails with SKIPPED or
+                  ERROR status).
                 </SectionDescription>
 
-                {!!queue.size && (
-                  <div className="rounded-md border border-green-200 bg-green-50 px-2 py-1.5 dark:border-green-800 dark:bg-green-950">
-                    <SectionDescription className="mt-0">
-                      Progress: {totalThreads - queue.size}/{totalThreads}{" "}
-                      emails completed
-                    </SectionDescription>
-                  </div>
-                )}
                 <LoadingContent loading={isLoadingPremium}>
                   {hasAiAccess ? (
                     <div className="flex flex-col space-y-2">
@@ -83,13 +120,11 @@ export function BulkRunRules() {
                           onChange={setStartDate}
                           value={startDate}
                           placeholder="Set start date"
-                          disabled={running}
                         />
                         <SetDateDropdown
                           onChange={setEndDate}
                           value={endDate}
                           placeholder="Set end date (optional)"
-                          disabled={running}
                         />
                       </div>
                       <label className="flex items-center space-x-2">
@@ -97,7 +132,6 @@ export function BulkRunRules() {
                           type="checkbox"
                           checked={onlyUnread}
                           onChange={(e) => setOnlyUnread(e.target.checked)}
-                          disabled={running}
                           className="h-4 w-4 rounded border-gray-300"
                         />
                         <span className="text-sm">
@@ -107,42 +141,12 @@ export function BulkRunRules() {
 
                       <Button
                         type="button"
-                        disabled={running || !startDate || !emailAccountId}
-                        loading={running}
-                        onClick={async () => {
-                          if (!startDate) {
-                            toastError({
-                              description: "Please select a start date",
-                            });
-                            return;
-                          }
-                          if (!emailAccountId) {
-                            toastError({
-                              description:
-                                "Email account ID is missing. Please refresh the page.",
-                            });
-                            return;
-                          }
-                          setRunning(true);
-                          abortRef.current = await onRun(
-                            emailAccountId,
-                            { startDate, endDate, onlyUnread },
-                            (count) =>
-                              setTotalThreads((total) => total + count),
-                            () => setRunning(false),
-                          );
-                        }}
+                        disabled={!startDate || isStarting}
+                        loading={isStarting}
+                        onClick={startBulkProcess}
                       >
-                        Process Emails
+                        {isStarting ? "Starting..." : "Process Emails"}
                       </Button>
-                      {running && (
-                        <Button
-                          variant="outline"
-                          onClick={() => abortRef.current?.()}
-                        >
-                          Cancel
-                        </Button>
-                      )}
                     </div>
                   ) : (
                     <PremiumAlertWithData />
@@ -155,90 +159,4 @@ export function BulkRunRules() {
       </Dialog>
     </div>
   );
-}
-
-// fetch batches of messages and add them to the ai queue
-async function onRun(
-  emailAccountId: string,
-  {
-    startDate,
-    endDate,
-    onlyUnread,
-  }: { startDate: Date; endDate?: Date; onlyUnread: boolean },
-  incrementThreadsQueued: (count: number) => void,
-  onComplete: () => void,
-) {
-  let nextPageToken = "";
-  const LIMIT = 25;
-
-  let aborted = false;
-
-  function abort() {
-    aborted = true;
-  }
-
-  async function run() {
-    for (let i = 0; i < 100; i++) {
-      const query: ThreadsQuery = {
-        type: "inbox",
-        limit: LIMIT,
-        after: startDate,
-        before: endDate || undefined,
-        ...(onlyUnread ? { isUnread: true } : {}),
-        ...(nextPageToken ? { nextPageToken } : {}),
-      };
-
-      const res = await fetchWithAccount({
-        url: `/api/threads?${
-          // biome-ignore lint/suspicious/noExplicitAny: simplest
-          new URLSearchParams(query as any).toString()
-        }`,
-        emailAccountId,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Failed to fetch threads:", res.status, errorData);
-        toastError({
-          title: "Failed to fetch emails",
-          description:
-            typeof errorData.error === "string"
-              ? errorData.error
-              : `Error: ${res.status}`,
-        });
-        break;
-      }
-
-      const data: ThreadsResponse = await res.json();
-
-      if (!data.threads) {
-        console.error("Invalid response: missing threads", data);
-        toastError({
-          title: "Invalid response",
-          description: "Failed to process emails. Please try again.",
-        });
-        break;
-      }
-
-      nextPageToken = data.nextPageToken || "";
-
-      const threadsWithoutPlan = data.threads.filter((t) => !t.plan);
-
-      incrementThreadsQueued(threadsWithoutPlan.length);
-
-      runAiRules(emailAccountId, threadsWithoutPlan, false);
-
-      if (!nextPageToken || aborted) break;
-
-      // avoid gmail api rate limits
-      // ai takes longer anyway
-      await sleep(threadsWithoutPlan.length ? 5000 : 2000);
-    }
-
-    onComplete();
-  }
-
-  run();
-
-  return abort;
 }

@@ -1,7 +1,7 @@
 /* eslint-disable no-process-env */
 import * as Sentry from "@sentry/nextjs";
 
-export function register() {
+export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     // this is your Sentry.init call from `sentry.server.config.js|ts`
     Sentry.init({

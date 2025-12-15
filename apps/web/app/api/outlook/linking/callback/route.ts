@@ -21,7 +21,8 @@ export const GET = withError(async (request) => {
     OUTLOOK_LINKING_STATE_COOKIE_NAME,
   )?.value;
 
-  const redirectUrl = new URL("/accounts", request.nextUrl.origin);
+  // Use the configured base URL instead of request origin to avoid proxy/tunnel issues
+  const redirectUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
   const response = NextResponse.redirect(redirectUrl);
 
   if (!storedState || !receivedState || storedState !== receivedState) {
@@ -112,6 +113,18 @@ export const GET = withError(async (request) => {
         user: { select: { name: true, email: true } },
       },
     });
+
+    // Also get the corresponding EmailAccount for later updates
+    const existingEmailAccount = existingAccount
+      ? await prisma.emailAccount.findFirst({
+          where: {
+            accountId: existingAccount.id,
+          },
+          select: {
+            id: true,
+          },
+        })
+      : null;
 
     if (!existingAccount) {
       if (action === "merge") {
@@ -225,23 +238,25 @@ export const GET = withError(async (request) => {
       targetUserId,
     });
 
-    await prisma.$transaction([
-      prisma.account.update({
-        where: { id: existingAccount.id },
-        data: { userId: targetUserId },
-      }),
-      prisma.emailAccount.update({
-        where: { accountId: existingAccount.id },
-        data: {
-          userId: targetUserId,
-          name: existingAccount.user.name,
-          email: existingAccount.user.email,
-        },
-      }),
-      prisma.user.delete({
-        where: { id: existingAccount.userId },
-      }),
-    ]);
+    if (existingEmailAccount) {
+      await prisma.$transaction([
+        prisma.account.update({
+          where: { id: existingAccount.id },
+          data: { userId: targetUserId },
+        }),
+        prisma.emailAccount.update({
+          where: { id: existingEmailAccount.id },
+          data: {
+            userId: targetUserId,
+            name: existingAccount.user.name,
+            email: existingAccount.user.email,
+          },
+        }),
+        prisma.user.delete({
+          where: { id: existingAccount.userId },
+        }),
+      ]);
+    }
 
     logger.info("Account re-assigned to user.", {
       email: providerEmail,

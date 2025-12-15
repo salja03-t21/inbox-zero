@@ -7,6 +7,7 @@ import type { EmailForAction } from "@/utils/ai/types";
 import { createReplyContent } from "@/utils/gmail/reply";
 import { forwardEmailHtml, forwardEmailSubject } from "@/utils/gmail/forward";
 import { buildReplyAllRecipients } from "@/utils/email/reply-all";
+import { ensureEmailSendingEnabled } from "@/utils/mail";
 
 interface OutlookMessageRequest {
   subject: string;
@@ -26,6 +27,8 @@ export async function sendEmailWithHtml(
   client: OutlookClient,
   body: SendEmailBody,
 ) {
+  ensureEmailSendingEnabled();
+
   const message: OutlookMessageRequest = {
     subject: body.subject,
     body: {
@@ -48,11 +51,14 @@ export async function sendEmailWithHtml(
     message.conversationId = body.replyToEmail.threadId;
   }
 
-  const result: Message = await client
+  // Use sendMail endpoint to actually send the email (not just create a draft)
+  await client
     .getClient()
-    .api("/me/messages")
-    .post(message);
-  return result;
+    .api(`${client.getBaseUrl()}/sendMail`)
+    .post({ message, saveToSentItems: true });
+
+  // sendMail doesn't return the message, so we return a minimal response
+  return { id: "", internetMessageId: "" } as Message;
 }
 
 export async function sendEmailWithPlainText(
@@ -73,7 +79,45 @@ export async function replyToEmail(
     message,
   });
 
-  // Only replying to the original sender
+  // Default to reply-all behavior: include original TO field recipients in CC
+  const replyToAddress = message.headers["reply-to"] || message.headers.from;
+
+  // Build CC list for reply-all behavior
+  const ccRecipients: { emailAddress: { address: string } }[] = [];
+
+  // Add original CC recipients if they exist
+  if (message.headers.cc) {
+    const originalCcAddresses = message.headers.cc
+      .split(",")
+      .map((addr) => addr.trim());
+    for (const addr of originalCcAddresses) {
+      ccRecipients.push({ emailAddress: { address: addr } });
+    }
+  }
+
+  // Add original TO recipients to CC (excluding the reply-to address to avoid duplicates)
+  if (message.headers.to && message.headers.to !== replyToAddress) {
+    // Split multiple TO addresses and filter out the reply-to address
+    const originalToAddresses = message.headers.to
+      .split(",")
+      .map((addr) => addr.trim());
+    const filteredToAddresses = originalToAddresses.filter(
+      (addr) => addr !== replyToAddress,
+    );
+    for (const addr of filteredToAddresses) {
+      ccRecipients.push({ emailAddress: { address: addr } });
+    }
+  }
+
+  // Remove duplicate CC recipients
+  const uniqueCcRecipients = ccRecipients.filter(
+    (recipient, index, self) =>
+      index ===
+      self.findIndex(
+        (r) => r.emailAddress.address === recipient.emailAddress.address,
+      ),
+  );
+
   const replyMessage = {
     subject: `Re: ${message.headers.subject}`,
     body: {
@@ -83,18 +127,24 @@ export async function replyToEmail(
     toRecipients: [
       {
         emailAddress: {
-          address: message.headers["reply-to"] || message.headers.from,
+          address: replyToAddress,
         },
       },
     ],
+    ...(uniqueCcRecipients.length > 0
+      ? { ccRecipients: uniqueCcRecipients }
+      : {}),
     conversationId: message.threadId,
   };
 
   // Send the email immediately using the sendMail endpoint
-  const result = await client.getClient().api("/me/sendMail").post({
-    message: replyMessage,
-    saveToSentItems: true,
-  });
+  const result = await client
+    .getClient()
+    .api(`${client.getBaseUrl()}/sendMail`)
+    .post({
+      message: replyMessage,
+      saveToSentItems: true,
+    });
   return result;
 }
 
@@ -113,7 +163,7 @@ export async function forwardEmail(
   // Get the original message
   const originalMessage: Message = await client
     .getClient()
-    .api(`/me/messages/${options.messageId}`)
+    .api(`${client.getBaseUrl()}/messages/${options.messageId}`)
     .get();
 
   const message: ParsedMessage = {
@@ -153,7 +203,7 @@ export async function forwardEmail(
 
   const result = await client
     .getClient()
-    .api(`/me/messages/${options.messageId}/forward`)
+    .api(`${client.getBaseUrl()}/messages/${options.messageId}/forward`)
     .post({ message: forwardMessage });
 
   return result;
@@ -190,11 +240,13 @@ export async function draftEmail(
   // This ensures the draft is linked to the original message as a reply
   const replyDraft: Message = await client
     .getClient()
-    .api(`/me/messages/${originalEmail.id}/createReply`)
+    .api(`${client.getBaseUrl()}/messages/${originalEmail.id}/createReply`)
     .post({});
 
   // Update the draft with our content
-  const updateRequest = client.getClient().api(`/me/messages/${replyDraft.id}`);
+  const updateRequest = client
+    .getClient()
+    .api(`${client.getBaseUrl()}/messages/${replyDraft.id}`);
 
   // To handle change key error
   const etag = (replyDraft as { "@odata.etag"?: string })?.["@odata.etag"];

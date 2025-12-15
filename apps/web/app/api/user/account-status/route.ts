@@ -34,10 +34,20 @@ export const GET = withAuth(async (req) => {
     // For OAuth, we want to check the refresh token expiration, not access token
     // Access tokens typically expire in 1 hour, but refresh tokens last much longer
     // If refreshTokenExpiresAt is null, the refresh token doesn't expire (as long as it's used regularly)
+<<<<<<< HEAD
     const expiresAt = emailAccount.account.refreshTokenExpiresAt ?? emailAccount.account.expires_at;
     const hasRefreshToken = !!emailAccount.account.refresh_token;
     const isConnected = hasRefreshToken;
     const hasExpiringRefreshToken = !!emailAccount.account.refreshTokenExpiresAt;
+=======
+    const expiresAt =
+      emailAccount.account.refreshTokenExpiresAt ??
+      emailAccount.account.expires_at;
+    const hasRefreshToken = !!emailAccount.account.refresh_token;
+    const isConnected = hasRefreshToken;
+    const hasExpiringRefreshToken =
+      !!emailAccount.account.refreshTokenExpiresAt;
+>>>>>>> production
 
     return NextResponse.json({
       isConnected,
@@ -45,7 +55,11 @@ export const GET = withAuth(async (req) => {
       provider: emailAccount.account.provider,
       hasExpiringRefreshToken,
     });
+<<<<<<< HEAD
   } catch (error) {
+=======
+  } catch (_error) {
+>>>>>>> production
     return NextResponse.json(
       { error: "Failed to fetch account status" },
       { status: 500 },

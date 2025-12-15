@@ -37,6 +37,7 @@ export async function getWebhookEmailAccount(
           aiProvider: true,
           aiModel: true,
           aiApiKey: true,
+          aiBaseUrl: true,
           premium: {
             select: {
               lemonSqueezyRenewsAt: true,
@@ -91,19 +92,17 @@ export async function validateWebhookAccount(
     return { success: false, response: NextResponse.json({ ok: true }) };
   }
 
-  const premium = isPremium(
+  const hasPremiumAccess = isPremium(
     emailAccount.user.premium?.lemonSqueezyRenewsAt || null,
     emailAccount.user.premium?.stripeSubscriptionStatus || null,
-  )
-    ? emailAccount.user.premium
-    : undefined;
+  );
 
   const provider = await createEmailProvider({
     emailAccountId: emailAccount.id,
     provider: emailAccount.account?.provider,
   });
 
-  if (!premium) {
+  if (!hasPremiumAccess) {
     logger.info("Account not premium", {
       lemonSqueezyRenewsAt: emailAccount.user.premium?.lemonSqueezyRenewsAt,
       stripeSubscriptionStatus:
@@ -117,11 +116,14 @@ export async function validateWebhookAccount(
     return { success: false, response: NextResponse.json({ ok: true }) };
   }
 
-  const userHasAiAccess = hasAiAccess(premium.tier, emailAccount.user.aiApiKey);
+  const userHasAiAccess = hasAiAccess(
+    emailAccount.user.premium?.tier || null,
+    emailAccount.user.aiApiKey,
+  );
 
   if (!userHasAiAccess) {
     logger.info("Does not have ai access - unwatching", {
-      tier: premium.tier,
+      tier: emailAccount.user.premium?.tier || null,
       hasApiKey: !!emailAccount.user.aiApiKey,
     });
     await unwatchEmails({

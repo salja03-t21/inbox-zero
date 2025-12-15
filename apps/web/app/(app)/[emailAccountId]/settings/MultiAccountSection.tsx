@@ -20,7 +20,7 @@ import {
   updateMultiAccountPremiumAction,
 } from "@/utils/actions/premium";
 import type { MultiAccountEmailsResponse } from "@/app/api/user/settings/multi-account/route";
-import { AlertBasic, AlertWithButton } from "@/components/Alert";
+import { AlertBasic } from "@/components/Alert";
 import { usePremium } from "@/components/PremiumAlert";
 import { PremiumTier } from "@prisma/client";
 import { getUserTier } from "@/utils/premium";

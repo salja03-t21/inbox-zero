@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useRef, useMemo } from "react";
+import { useCallback, useState, useRef, useMemo, useEffect } from "react";
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { parseAsBoolean, useQueryState } from "nuqs";
@@ -14,7 +14,7 @@ import {
   RefreshCcwIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toastError } from "@/components/Toast";
+import { toastError, toastSuccess } from "@/components/Toast";
 import { LoadingContent } from "@/components/LoadingContent";
 import type { MessagesResponse } from "@/app/api/messages/route";
 import { EmailMessageCell } from "@/components/EmailMessageCell";
@@ -27,12 +27,16 @@ import { SearchForm } from "@/components/SearchForm";
 import type { BatchExecutedRulesResponse } from "@/app/api/user/executed-rules/batch/route";
 import { isAIRule, isGroupRule, isStaticRule } from "@/utils/condition";
 import { BulkRunRules } from "@/app/(app)/[emailAccountId]/assistant/BulkRunRules";
+import type { BulkProcessStatusResponse } from "@/app/api/bulk-process/status/[jobId]/route";
+import type { ActiveBulkProcessJobResponse } from "@/app/api/bulk-process/active/route";
+import { fetchWithAccount } from "@/utils/fetch";
 import { cn } from "@/utils";
 import { TestCustomEmailForm } from "@/app/(app)/[emailAccountId]/assistant/TestCustomEmailForm";
 import { ResultsDisplay } from "@/app/(app)/[emailAccountId]/assistant/ResultDisplay";
 import { useAccount } from "@/providers/EmailAccountProvider";
 import { FixWithChat } from "@/app/(app)/[emailAccountId]/assistant/FixWithChat";
 import { useChat } from "@/providers/ChatProvider";
+import { SectionDescription } from "@/components/Typography";
 
 type Message = MessagesResponse["messages"][number];
 
@@ -120,6 +124,79 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
     Record<string, RunRulesResult[]>
   >({});
   const handledThreadsRef = useRef(new Set<string>());
+
+  // Bulk processing state
+  const [bulkJobId, setBulkJobId] = useState<string | null>(null);
+  const [bulkJobStatus, setBulkJobStatus] =
+    useState<BulkProcessStatusResponse | null>(null);
+
+  // Check for existing active job on mount
+  useEffect(() => {
+    async function checkActiveJob() {
+      try {
+        const response = await fetchWithAccount({
+          url: "/api/bulk-process/active",
+          emailAccountId,
+        });
+
+        if (response.ok) {
+          const data: ActiveBulkProcessJobResponse = await response.json();
+          if (data.job) {
+            setBulkJobId(data.job.jobId);
+            setBulkJobStatus(data.job);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking for active job:", error);
+      }
+    }
+
+    checkActiveJob();
+  }, [emailAccountId]);
+
+  // Poll for job status
+  useEffect(() => {
+    if (!bulkJobId) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetchWithAccount({
+          url: `/api/bulk-process/status/${bulkJobId}`,
+          emailAccountId,
+        });
+
+        if (response.ok) {
+          const status: BulkProcessStatusResponse = await response.json();
+          setBulkJobStatus(status);
+
+          // Stop polling if job is complete
+          if (
+            status.status === "COMPLETED" ||
+            status.status === "FAILED" ||
+            status.status === "CANCELLED"
+          ) {
+            clearInterval(pollInterval);
+            setBulkJobId(null);
+
+            if (status.status === "COMPLETED") {
+              toastSuccess({
+                description: `Completed! Processed ${status.processedEmails} emails.`,
+              });
+            } else if (status.status === "FAILED") {
+              toastError({
+                title: "Bulk processing failed",
+                description: status.error || "Unknown error",
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error polling job status:", error);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [bulkJobId, emailAccountId]);
 
   // Merge existing rules with results
   const allResults = useMemo(() => {
@@ -233,6 +310,42 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
 
   const { setInput } = useChat();
 
+  const handleJobCreated = (jobId: string) => {
+    setBulkJobId(jobId);
+    setBulkJobStatus(null);
+  };
+
+  const handleBulkCancel = async () => {
+    if (!bulkJobId) return;
+
+    try {
+      const response = await fetchWithAccount({
+        url: `/api/bulk-process/cancel/${bulkJobId}`,
+        emailAccountId,
+        init: {
+          method: "POST",
+        },
+      });
+
+      if (response.ok) {
+        setBulkJobId(null);
+        setBulkJobStatus(null);
+        toastSuccess({
+          description: "Processing cancelled.",
+        });
+      } else {
+        toastError({
+          description: "Failed to cancel processing.",
+        });
+      }
+    } catch (error) {
+      console.error("Error cancelling bulk process:", error);
+      toastError({
+        description: "Failed to cancel processing.",
+      });
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between gap-2 pb-6">
@@ -249,7 +362,12 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
             </Button>
           )}
 
-          {!testMode && <BulkRunRules />}
+          {!testMode && (
+            <BulkRunRules
+              emailAccountId={emailAccountId}
+              onJobCreated={handleJobCreated}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -269,6 +387,42 @@ export function ProcessRulesContent({ testMode }: { testMode: boolean }) {
           />
         </div>
       </div>
+
+      {/* Bulk processing progress display */}
+      {bulkJobId && bulkJobStatus && (
+        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+          <div className="flex items-center justify-between">
+            <div>
+              <SectionDescription className="mt-0">
+                Status: {bulkJobStatus.status}
+                <br />
+                {bulkJobStatus.emailsQueued > 0 ? (
+                  <>
+                    Scanned: {bulkJobStatus.totalEmails} | Remaining:{" "}
+                    {Math.max(
+                      0,
+                      bulkJobStatus.emailsQueued -
+                        bulkJobStatus.processedEmails -
+                        bulkJobStatus.failedEmails,
+                    )}
+                  </>
+                ) : (
+                  <>Scanned: {bulkJobStatus.totalEmails}</>
+                )}
+                <br />
+                Processed: {bulkJobStatus.processedEmails} | Failed:{" "}
+                {bulkJobStatus.failedEmails}
+              </SectionDescription>
+            </div>
+            {(bulkJobStatus.status === "PENDING" ||
+              bulkJobStatus.status === "RUNNING") && (
+              <Button variant="outline" size="sm" onClick={handleBulkCancel}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {hasAiRules && showCustomForm && testMode && (
         <div className="my-2">

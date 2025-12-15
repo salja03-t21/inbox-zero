@@ -1,6 +1,10 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
+<<<<<<< HEAD
 import { addDays, addMinutes, startOfDay, parseISO } from "date-fns";
 import type { BusyPeriod } from "@/utils/calendar/availability-types";
+=======
+import { addDays, addMinutes, startOfDay } from "date-fns";
+>>>>>>> production
 import type { ParsedMeetingRequest } from "@/utils/meetings/parse-meeting-request";
 
 // Run with: pnpm test find-availability

@@ -19,7 +19,7 @@ export async function trashThread(options: {
     const escapedThreadId = threadId.replace(/'/g, "''");
     const messages = await client
       .getClient()
-      .api("/me/messages")
+      .api(`${client.getBaseUrl()}/messages`)
       .filter(`conversationId eq '${escapedThreadId}'`)
       .get();
 
@@ -28,7 +28,7 @@ export async function trashThread(options: {
         try {
           return await client
             .getClient()
-            .api(`/me/messages/${message.id}/move`)
+            .api(`${client.getBaseUrl()}/messages/${message.id}/move`)
             .post({
               destinationId: "deleteditems",
             });
@@ -96,7 +96,7 @@ export async function trashThread(options: {
       // Try to get messages by conversationId using a different endpoint
       const messages = await client
         .getClient()
-        .api("/me/messages")
+        .api(`${client.getBaseUrl()}/messages`)
         .select("id")
         .get();
 
@@ -113,7 +113,7 @@ export async function trashThread(options: {
             try {
               return await client
                 .getClient()
-                .api(`/me/messages/${message.id}/move`)
+                .api(`${client.getBaseUrl()}/messages/${message.id}/move`)
                 .post({
                   destinationId: "deleteditems",
                 });
@@ -133,9 +133,12 @@ export async function trashThread(options: {
         await Promise.allSettled(movePromises);
       } else {
         // If no messages found, try treating threadId as a messageId
-        await client.getClient().api(`/me/messages/${threadId}/move`).post({
-          destinationId: "deleteditems",
-        });
+        await client
+          .getClient()
+          .api(`${client.getBaseUrl()}/messages/${threadId}/move`)
+          .post({
+            destinationId: "deleteditems",
+          });
       }
 
       // Publish the delete action

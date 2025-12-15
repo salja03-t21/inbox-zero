@@ -20,7 +20,7 @@ export async function deleteUser({ userId }: { userId: string }) {
       access_token: true,
       refresh_token: true,
       expires_at: true,
-      emailAccount: {
+      emailAccounts: {
         select: {
           id: true,
           email: true,
@@ -30,25 +30,28 @@ export async function deleteUser({ userId }: { userId: string }) {
     },
   });
 
-  const resourcesPromise = accounts.map(async (account) => {
-    if (!account.emailAccount) return Promise.resolve();
+  const resourcesPromise: Promise<any>[] = [];
+  for (const account of accounts) {
+    for (const emailAccount of account.emailAccounts) {
+      // Create email provider for unwatching
+      const emailProvider = account.access_token
+        ? await createEmailProvider({
+            emailAccountId: emailAccount.id,
+            provider: account.provider,
+          })
+        : null;
 
-    // Create email provider for unwatching
-    const emailProvider = account.access_token
-      ? await createEmailProvider({
-          emailAccountId: account.emailAccount.id,
-          provider: account.provider,
-        })
-      : null;
-
-    return deleteResources({
-      emailAccountId: account.emailAccount.id,
-      email: account.emailAccount.email,
-      userId,
-      emailProvider,
-      subscriptionId: account.emailAccount.watchEmailsSubscriptionId,
-    });
-  });
+      resourcesPromise.push(
+        deleteResources({
+          emailAccountId: emailAccount.id,
+          email: emailAccount.email,
+          userId,
+          emailProvider,
+          subscriptionId: emailAccount.watchEmailsSubscriptionId,
+        }),
+      );
+    }
+  }
 
   logger.info("Deleting user resources");
 

@@ -41,6 +41,7 @@ async function watchAllEmails() {
       user: {
         select: {
           aiApiKey: true,
+          aiBaseUrl: true,
           premium: { select: { tier: true } },
         },
       },

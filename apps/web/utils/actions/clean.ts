@@ -6,7 +6,7 @@ import {
   undoCleanInboxSchema,
   changeKeepToDoneSchema,
 } from "@/utils/actions/clean.validation";
-import { bulkPublishToQstash } from "@/utils/upstash";
+import { enqueueJobsBatch } from "@/utils/queue";
 import { env } from "@/env";
 import { GmailLabel } from "@/utils/gmail/label";
 import type { CleanThreadBody } from "@/app/api/clean/route";
@@ -20,8 +20,6 @@ import { actionClient } from "@/utils/actions/safe-action";
 import { SafeError } from "@/utils/error";
 import { createEmailProvider } from "@/utils/email/provider";
 import { isGoogleProvider } from "@/utils/email/provider-types";
-import { getUserPremium } from "@/utils/user/get";
-import { isActivePremium } from "@/utils/premium";
 import { ONE_DAY_MS } from "@/utils/date";
 
 export const cleanInboxAction = actionClient
@@ -131,19 +129,18 @@ export const cleanInboxAction = actionClient
 
           if (threads.length === 0) break;
 
-          const url = `${env.WEBHOOK_URL || env.NEXT_PUBLIC_BASE_URL}/api/clean`;
-
-          logger.info("Pushing to Qstash", {
+          logger.info("Enqueueing clean jobs", {
             threadCount: threads.length,
             nextPageToken,
           });
 
-          const items = threads
+          const jobs = threads
             .map((thread) => {
               if (!thread.id) return;
               return {
-                url,
-                body: {
+                // For Inngest: use event name. For QStash: will be converted to /api/clean
+                name: "/api/clean",
+                data: {
                   emailAccountId,
                   threadId: thread.id,
                   markedDoneLabelId,
@@ -153,20 +150,19 @@ export const cleanInboxAction = actionClient
                   instructions,
                   skips,
                 } satisfies CleanThreadBody,
+                // Use queue name for grouping (QStash will use this for flow control)
                 // give every user their own queue for ai processing. if we get too many parallel users we may need more
                 // api keys or a global queue
                 // problem with a global queue is that if there's a backlog users will have to wait for others to finish first
-                flowControl: {
-                  key: `ai-clean-${emailAccountId}`,
-                  parallelism: 3,
-                },
+                queueName: `ai-clean-${emailAccountId}`,
+                concurrency: 3,
               };
             })
             .filter(isDefined);
 
-          await bulkPublishToQstash({ items });
+          await enqueueJobsBatch(jobs);
 
-          totalEmailsProcessed += items.length;
+          totalEmailsProcessed += jobs.length;
         } while (
           nextPageToken &&
           !isMaxEmailsReached(totalEmailsProcessed, maxEmails)

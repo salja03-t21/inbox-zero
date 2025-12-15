@@ -319,6 +319,7 @@ export function RuleForm({
       { label: "Mark read", value: ActionType.MARK_READ },
       { label: "Mark spam", value: ActionType.MARK_SPAM },
       { label: "Call webhook", value: ActionType.CALL_WEBHOOK },
+      { label: "Create meeting", value: ActionType.CREATE_MEETING },
     ];
 
     return options;
@@ -826,6 +827,11 @@ export function RuleForm({
                       toastSuccess({
                         description: "The rule has been deleted.",
                       });
+
+                      if (isDialog && onSuccess) {
+                        onSuccess();
+                      }
+
                       router.push(
                         prefixPath(emailAccountId, "/automation?tab=rules"),
                       );

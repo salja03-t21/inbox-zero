@@ -224,6 +224,8 @@ export function getActionColor(actionType: ActionType): Color {
     case ActionType.CALL_WEBHOOK:
     case ActionType.DIGEST:
       return "purple";
+    case ActionType.CREATE_MEETING:
+      return "indigo";
     default: {
       const exhaustiveCheck: never = actionType;
       return exhaustiveCheck;

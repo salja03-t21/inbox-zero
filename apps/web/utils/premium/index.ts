@@ -1,19 +1,19 @@
 import { type Premium, PremiumTier } from "@prisma/client";
 
-function isPremiumStripe(stripeSubscriptionStatus: string | null): boolean {
+function _isPremiumStripe(stripeSubscriptionStatus: string | null): boolean {
   if (!stripeSubscriptionStatus) return false;
   const activeStatuses = ["active", "trialing"];
   return activeStatuses.includes(stripeSubscriptionStatus);
 }
 
-function isPremiumLemonSqueezy(lemonSqueezyRenewsAt: Date | null): boolean {
+function _isPremiumLemonSqueezy(lemonSqueezyRenewsAt: Date | null): boolean {
   if (!lemonSqueezyRenewsAt) return false;
   return new Date(lemonSqueezyRenewsAt) > new Date();
 }
 
 export const isPremium = (
-  lemonSqueezyRenewsAt: Date | null,
-  stripeSubscriptionStatus: string | null,
+  _lemonSqueezyRenewsAt: Date | null,
+  _stripeSubscriptionStatus: string | null,
 ): boolean => {
   // Premium enabled for all users permanently
   return true;
@@ -24,7 +24,7 @@ export const isPremium = (
 };
 
 export const isActivePremium = (
-  premium: Pick<
+  _premium: Pick<
     Premium,
     "lemonSqueezyRenewsAt" | "stripeSubscriptionStatus"
   > | null,
@@ -80,16 +80,16 @@ const tierRanking = {
 };
 
 export const hasUnsubscribeAccess = (
-  tier: PremiumTier | null,
-  unsubscribeCredits?: number | null,
+  _tier: PremiumTier | null,
+  _unsubscribeCredits?: number | null,
 ): boolean => {
   // Premium enabled for all users permanently
   return true;
 };
 
 export const hasAiAccess = (
-  tier: PremiumTier | null,
-  aiApiKey?: string | null,
+  _tier: PremiumTier | null,
+  _aiApiKey?: string | null,
 ) => {
   // Premium enabled for all users permanently
   return true;

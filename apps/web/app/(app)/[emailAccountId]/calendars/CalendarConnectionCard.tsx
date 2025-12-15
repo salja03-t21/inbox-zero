@@ -45,6 +45,13 @@ const getProviderInfo = (provider: string) => {
   return providers[provider as keyof typeof providers] || providers.google;
 };
 
+const getMailboxDisplayName = (connection: CalendarConnection) => {
+  // Always use the EmailAccount email - this correctly shows:
+  // - Regular mailboxes: the user's email
+  // - Shared mailboxes: the shared mailbox email
+  return connection.emailAccount.email;
+};
+
 export function CalendarConnectionCard({
   connection,
 }: CalendarConnectionCardProps) {
@@ -55,6 +62,7 @@ export function CalendarConnectionCard({
   >({});
 
   const providerInfo = getProviderInfo(connection.provider);
+  const mailboxName = getMailboxDisplayName(connection);
 
   const { execute: executeDisconnect, isExecuting: isDisconnecting } =
     useAction(disconnectCalendarAction.bind(null, emailAccountId));
@@ -171,6 +179,7 @@ export function CalendarConnectionCard({
                     ? optimisticUpdates[cal.id]
                     : cal.isEnabled,
               }))}
+              connectionEmail={mailboxName}
               onToggleCalendar={handleToggleCalendar}
             />
           ) : (

@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { sendDigestEmail } from "@inboxzero/resend";
 import { withEmailAccount, withError } from "@/utils/middleware";
-import { env } from "@/env";
 import { captureException, SafeError } from "@/utils/error";
 import prisma from "@/utils/prisma";
 import { createScopedLogger, type Logger } from "@/utils/logger";
@@ -21,6 +19,12 @@ import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import { camelCase } from "lodash";
 import { createEmailProvider } from "@/utils/email/provider";
 import { sleep } from "@/utils/sleep";
+import { render } from "@react-email/components";
+import DigestEmail, {
+  generateDigestSubject,
+} from "@inboxzero/resend/emails/digest";
+import { env } from "@/env";
+import { INTERNAL_API_KEY_HEADER } from "@/utils/internal-api";
 
 export const maxDuration = 60;
 
@@ -45,39 +49,48 @@ export const GET = withEmailAccount(async (request) => {
   return NextResponse.json(result);
 });
 
-export const POST = withError(
-  verifySignatureAppRouter(async (request: NextRequest) => {
-    const json = await request.json();
-    const { success, data, error } = sendDigestEmailBody.safeParse(json);
+export const POST = withError(async (request: NextRequest) => {
+  // Check if this is an internal call (Inngest fallback mode)
+  const internalKey = request.headers.get(INTERNAL_API_KEY_HEADER);
+  if (internalKey === env.INTERNAL_API_KEY) {
+    return handleRequest(request);
+  }
 
-    let logger = createScopedLogger("resend/digest");
+  // Otherwise, verify QStash signature
+  return verifySignatureAppRouter(handleRequest)(request);
+});
 
-    if (!success) {
-      logger.error("Invalid request body", { error });
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 },
-      );
-    }
-    const { emailAccountId } = data;
+async function handleRequest(request: NextRequest) {
+  const json = await request.json();
+  const { success, data, error } = sendDigestEmailBody.safeParse(json);
 
-    logger = logger.with({ emailAccountId });
+  let logger = createScopedLogger("resend/digest");
 
-    logger.info("Sending digest email to user POST");
+  if (!success) {
+    logger.error("Invalid request body", { error });
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 },
+    );
+  }
+  const { emailAccountId } = data;
 
-    try {
-      const result = await sendEmail({ emailAccountId, logger });
-      return NextResponse.json(result);
-    } catch (error) {
-      logger.error("Error sending digest email", { error });
-      captureException(error);
-      return NextResponse.json(
-        { success: false, error: "Error sending digest email" },
-        { status: 500 },
-      );
-    }
-  }),
-);
+  logger = logger.with({ emailAccountId });
+
+  logger.info("Sending digest email to user POST");
+
+  try {
+    const result = await sendEmail({ emailAccountId, logger });
+    return NextResponse.json(result);
+  } catch (error) {
+    logger.error("Error sending digest email", { error });
+    captureException(error);
+    return NextResponse.json(
+      { success: false, error: "Error sending digest email" },
+      { status: 500 },
+    );
+  }
+}
 
 async function getDigestSchedule({
   emailAccountId,
@@ -284,18 +297,27 @@ async function sendEmail({
 
     logger.info("Sending digest email");
 
-    // First, send the digest email and wait for it to complete
-    await sendDigestEmail({
-      from: env.RESEND_FROM_EMAIL,
+    // Prepare email props
+    const emailProps = {
+      baseUrl: env.NEXT_PUBLIC_BASE_URL,
+      unsubscribeToken: token,
+      date: new Date(),
+      ruleNames: Object.fromEntries(ruleNameMap),
+      ...executedRulesByRule,
+      emailAccountId,
+    };
+
+    // Render the digest email template to HTML
+    const digestHtml = await render(DigestEmail(emailProps));
+
+    // Generate subject line
+    const subject = generateDigestSubject(emailProps);
+
+    // Send digest email from user's own account to themselves
+    await emailProvider.sendEmailWithHtml({
       to: emailAccount.email,
-      emailProps: {
-        baseUrl: env.NEXT_PUBLIC_BASE_URL,
-        unsubscribeToken: token,
-        date: new Date(),
-        ruleNames: Object.fromEntries(ruleNameMap),
-        ...executedRulesByRule,
-        emailAccountId,
-      },
+      subject,
+      messageHtml: digestHtml,
     });
 
     logger.info("Digest email sent");

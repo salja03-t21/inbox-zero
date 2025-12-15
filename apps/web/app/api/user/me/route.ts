@@ -11,9 +11,11 @@ async function getUser({ userId }: { userId: string }) {
     where: { id: userId },
     select: {
       id: true,
+      isAdmin: true,
       aiProvider: true,
       aiModel: true,
       aiApiKey: true,
+      aiBaseUrl: true,
       webhookSecret: true,
       referralCode: true,
       premium: {

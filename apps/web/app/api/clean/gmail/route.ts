@@ -10,6 +10,8 @@ import { isDefined } from "@/utils/types";
 import { createScopedLogger } from "@/utils/logger";
 import { CleanAction } from "@prisma/client";
 import { updateThread } from "@/utils/redis/clean";
+import { INTERNAL_API_KEY_HEADER } from "@/utils/internal-api";
+import { env } from "@/env";
 
 const logger = createScopedLogger("api/clean/gmail");
 
@@ -137,13 +139,22 @@ async function saveToDatabase({
   });
 }
 
-export const POST = withError(
-  verifySignatureAppRouter(async (request: NextRequest) => {
-    const json = await request.json();
-    const body = cleanGmailSchema.parse(json);
+export const POST = withError(async (request: NextRequest) => {
+  // Check if this is an internal call (Inngest fallback mode)
+  const internalKey = request.headers.get(INTERNAL_API_KEY_HEADER);
+  if (internalKey === env.INTERNAL_API_KEY) {
+    return handleRequest(request);
+  }
 
-    await performGmailAction(body);
+  // Otherwise, verify QStash signature
+  return verifySignatureAppRouter(handleRequest)(request);
+});
 
-    return NextResponse.json({ success: true });
-  }),
-);
+async function handleRequest(request: NextRequest) {
+  const json = await request.json();
+  const body = cleanGmailSchema.parse(json);
+
+  await performGmailAction(body);
+
+  return NextResponse.json({ success: true });
+}

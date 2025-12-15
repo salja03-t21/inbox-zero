@@ -97,14 +97,21 @@
     "includes": [
       "apps/**",
       "packages/**",
-      "!node_modules",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/.turbo",
+      "!**/dist",
+      "!**/build",
+      "!**/out",
+      "!**/.cache",
+      "!**/coverage",
+      "!**/*.min.js",
+      "!**/*.min.css",
+      "!**/.vscode",
+      "!**/sw.js",
       "!*.config.*",
       "!*.json",
-      "!**/tsconfig*.json",
-      "!.turbo",
-      "!.next",
-      "!sw.js",
-      "!.vscode"
+      "!**/tsconfig*.json"
     ]
   },
   "assist": {
@@ -135,5 +142,5 @@
       }
     }
   ],
-  "extends": ["ultracite"]
+  "extends": ["ultracite/next"]
 }

@@ -39,9 +39,9 @@ LATEST_COMMIT=$(git rev-parse --short HEAD)
 echo "📌 Deploying commit: $LATEST_COMMIT"
 echo ""
 
-# Step 2: Create directories on server
+# Step 2: Create directories on server (if they don't exist)
 echo "📁 Ensuring directories exist on server..."
-ssh $SERVER_USER@$SERVER "mkdir -p $DEPLOY_PATH && sudo mkdir -p $VOLUMES_PATH/{postgres,redis,app-data} && sudo chown -R $SERVER_USER:$SERVER_USER $VOLUMES_PATH"
+ssh $SERVER_USER@$SERVER "mkdir -p $DEPLOY_PATH && sudo mkdir -p $VOLUMES_PATH/{postgres,redis,app-data}"
 
 # Step 3: Initialize/update git repository on server
 echo "📦 Updating code on server..."
@@ -89,7 +89,7 @@ sleep 10
 
 # Step 8: Run database migrations
 echo "🗄️  Running database migrations..."
-ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose exec -T app pnpm --filter=web prisma migrate deploy"
+ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose exec -T app sh -c 'cd /app/apps/web && npx prisma migrate deploy'"
 
 # Step 9: Check service status
 echo "✅ Checking service status..."

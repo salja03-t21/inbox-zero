@@ -19,6 +19,14 @@ async function getData({ emailAccountId }: { emailAccountId: string }) {
       email: true,
       provider: true,
       isConnected: true,
+      emailAccount: {
+        select: {
+          name: true,
+          email: true,
+          isSharedMailbox: true,
+          sharedMailboxOwner: true,
+        },
+      },
       calendars: {
         select: {
           id: true,

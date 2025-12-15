@@ -610,4 +610,150 @@ In your specific case I'd recommend adding custom rules to get the most out of i
     },
     TIMEOUT,
   );
+
+  test(
+    "excludes simple meeting confirmations from TO_REPLY",
+    async () => {
+      const emailAccount = getEmailAccount();
+      const latestMessage = getEmail({
+        from: "colleague@example.com",
+        to: emailAccount.email,
+        subject: "Re: Sync tomorrow",
+        content: "Confirmed for 3pm. See you then.",
+      });
+
+      const result = await aiDetermineThreadStatus({
+        emailAccount,
+        threadMessages: [latestMessage],
+      });
+
+      console.debug("Result:", result);
+      expect(result.status).not.toBe(SystemType.TO_REPLY);
+      expect([SystemType.FYI, SystemType.ACTIONED]).toContain(result.status);
+      expect(result.rationale).toBeDefined();
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "excludes meeting acceptances with 'works for me' from TO_REPLY",
+    async () => {
+      const emailAccount = getEmailAccount();
+      const latestMessage = getEmail({
+        from: "colleague@example.com",
+        to: emailAccount.email,
+        subject: "Re: Meeting request",
+        content: "Works for me. I'll be there.",
+      });
+
+      const result = await aiDetermineThreadStatus({
+        emailAccount,
+        threadMessages: [latestMessage],
+      });
+
+      console.debug("Result:", result);
+      expect(result.status).not.toBe(SystemType.TO_REPLY);
+      expect([SystemType.FYI, SystemType.ACTIONED]).toContain(result.status);
+      expect(result.rationale).toBeDefined();
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "excludes explicit meeting scheduling from TO_REPLY",
+    async () => {
+      const emailAccount = getEmailAccount();
+      const latestMessage = getEmail({
+        from: "colleague@example.com",
+        to: emailAccount.email,
+        subject: "Re: Coffee chat",
+        content: "Let's meet at 2:30pm. See you at your office.",
+      });
+
+      const result = await aiDetermineThreadStatus({
+        emailAccount,
+        threadMessages: [latestMessage],
+      });
+
+      console.debug("Result:", result);
+      expect(result.status).not.toBe(SystemType.TO_REPLY);
+      expect([SystemType.FYI, SystemType.ACTIONED]).toContain(result.status);
+      expect(result.rationale).toBeDefined();
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "excludes calendar acceptance notifications from TO_REPLY",
+    async () => {
+      const emailAccount = getEmailAccount();
+      const latestMessage = getEmail({
+        from: "colleague@example.com",
+        to: emailAccount.email,
+        subject: "Accepted: Team Sync @ Tue Oct 15, 2024 3pm - 4pm",
+        content:
+          "John Doe has accepted the invitation to Team Sync on Tuesday, October 15, 2024 from 3:00 PM to 4:00 PM.",
+      });
+
+      const result = await aiDetermineThreadStatus({
+        emailAccount,
+        threadMessages: [latestMessage],
+      });
+
+      console.debug("Result:", result);
+      expect(result.status).not.toBe(SystemType.TO_REPLY);
+      expect([SystemType.FYI, SystemType.ACTIONED]).toContain(result.status);
+      expect(result.rationale).toBeDefined();
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "excludes completed scheduling coordination from TO_REPLY",
+    async () => {
+      const emailAccount = getEmailAccount();
+      const latestMessage = getEmail({
+        from: "colleague@example.com",
+        to: emailAccount.email,
+        subject: "Re: Weekly catch-up",
+        content: "Great, locked in for Friday at 11am. See you then!",
+      });
+
+      const result = await aiDetermineThreadStatus({
+        emailAccount,
+        threadMessages: [latestMessage],
+      });
+
+      console.debug("Result:", result);
+      expect(result.status).not.toBe(SystemType.TO_REPLY);
+      expect([SystemType.FYI, SystemType.ACTIONED]).toContain(result.status);
+      expect(result.rationale).toBeDefined();
+    },
+    TIMEOUT,
+  );
+
+  test(
+    "identifies TO_REPLY when meeting confirmation includes a new question",
+    async () => {
+      const emailAccount = getEmailAccount();
+      const latestMessage = getEmail({
+        from: "colleague@example.com",
+        to: emailAccount.email,
+        subject: "Re: Strategy session",
+        content:
+          "Confirmed for 3pm tomorrow. Also, can you share the agenda beforehand?",
+      });
+
+      const result = await aiDetermineThreadStatus({
+        emailAccount,
+        threadMessages: [latestMessage],
+      });
+
+      console.debug("Result:", result);
+      // Even though it includes a meeting confirmation, the new question requires a reply
+      expect(result.status).toBe(SystemType.TO_REPLY);
+      expect(result.rationale).toBeDefined();
+    },
+    TIMEOUT,
+  );
 });

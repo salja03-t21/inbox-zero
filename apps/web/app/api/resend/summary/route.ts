@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import subHours from "date-fns/subHours";
-import { sendSummaryEmail } from "@inboxzero/resend";
 import { withEmailAccount, withError } from "@/utils/middleware";
 import { env } from "@/env";
 import { hasCronSecret } from "@/utils/cron";
@@ -12,6 +11,9 @@ import { createScopedLogger } from "@/utils/logger";
 import { getMessagesBatch } from "@/utils/gmail/message";
 import { decodeSnippet } from "@/utils/gmail/decode";
 import { createUnsubscribeToken } from "@/utils/unsubscribe";
+import { render } from "@react-email/components";
+import SummaryEmail from "@inboxzero/resend/emails/summary";
+import { createEmailProvider } from "@/utils/email/provider";
 
 export const maxDuration = 60;
 
@@ -65,6 +67,7 @@ async function sendEmail({
       account: {
         select: {
           access_token: true,
+          provider: true,
         },
       },
     },
@@ -215,32 +218,51 @@ async function sendEmail({
   async function sendEmail({
     emailAccountId,
     userEmail,
+    provider,
   }: {
     emailAccountId: string;
     userEmail: string;
+    provider: string;
   }) {
     const token = await createUnsubscribeToken({ emailAccountId });
 
-    return sendSummaryEmail({
-      from: env.RESEND_FROM_EMAIL,
+    // Create email provider
+    const emailProvider = await createEmailProvider({
+      emailAccountId,
+      provider,
+    });
+
+    // Prepare email props
+    const emailProps = {
+      baseUrl: env.NEXT_PUBLIC_BASE_URL,
+      coldEmailers,
+      needsReplyCount: typeCounts[ThreadTrackerType.NEEDS_REPLY],
+      awaitingReplyCount: typeCounts[ThreadTrackerType.AWAITING],
+      needsActionCount: typeCounts[ThreadTrackerType.NEEDS_ACTION],
+      needsReply: recentNeedsReply,
+      awaitingReply: recentAwaitingReply,
+      // needsAction: recentNeedsAction,
+      unsubscribeToken: token,
+    };
+
+    // Render the summary email template to HTML
+    const summaryHtml = await render(SummaryEmail(emailProps));
+
+    // Send summary email from user's own account to themselves
+    return emailProvider.sendEmailWithHtml({
       to: userEmail,
-      emailProps: {
-        baseUrl: env.NEXT_PUBLIC_BASE_URL,
-        coldEmailers,
-        needsReplyCount: typeCounts[ThreadTrackerType.NEEDS_REPLY],
-        awaitingReplyCount: typeCounts[ThreadTrackerType.AWAITING],
-        needsActionCount: typeCounts[ThreadTrackerType.NEEDS_ACTION],
-        needsReply: recentNeedsReply,
-        awaitingReply: recentAwaitingReply,
-        // needsAction: recentNeedsAction,
-        unsubscribeToken: token,
-      },
+      subject: "Your weekly email summary",
+      messageHtml: summaryHtml,
     });
   }
 
   await Promise.all([
     shouldSendEmail
-      ? sendEmail({ emailAccountId, userEmail: emailAccount.email })
+      ? sendEmail({
+          emailAccountId,
+          userEmail: emailAccount.email,
+          provider: emailAccount.account.provider,
+        })
       : Promise.resolve(),
     prisma.emailAccount.update({
       where: { id: emailAccountId },

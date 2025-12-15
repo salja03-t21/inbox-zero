@@ -1,81 +1,45 @@
-import { useState } from "react";
+import { useMemo } from "react";
+import { FolderIcon, Loader2 } from "lucide-react";
 import {
-  Check,
-  ChevronsUpDown,
-  FolderIcon,
-  ChevronRight,
-  Loader2,
-  X,
-} from "lucide-react";
-import { cn } from "@/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FOLDER_SEPARATOR, type OutlookFolder } from "@/utils/outlook/folders";
 import type { FieldError } from "react-hook-form";
 
-interface FolderItemProps {
-  folder: OutlookFolder;
-  level: number;
-  value: { name: string; id: string };
-  onSelect: (folderId: string) => void;
-  displayPath?: string;
-}
+/**
+ * Recursively flatten folder hierarchy into a flat list of items for rendering
+ * This avoids deeply nested DOM structures and improves performance
+ */
+function flattenFolders(
+  folders: OutlookFolder[],
+  parentPath = "",
+  depth = 0,
+): Array<{ folder: OutlookFolder; displayPath: string; depth: number }> {
+  const result: Array<{
+    folder: OutlookFolder;
+    displayPath: string;
+    depth: number;
+  }> = [];
 
-function FolderItem({
-  folder,
-  level,
-  value,
-  onSelect,
-  displayPath,
-}: FolderItemProps) {
-  return (
-    <div key={folder.id}>
-      <CommandItem
-        key={`${folder.id}-${level}`}
-        value={folder.id}
-        onSelect={() => onSelect(folder.id)}
-        data-folder-id={folder.id}
-        data-level={level}
-      >
-        <Check
-          className={cn(
-            "mr-2 h-4 w-4",
-            value.id === folder.id ? "opacity-100" : "opacity-0",
-          )}
-        />
-        <div className="flex items-center gap-2">
-          {level > 0 &&
-            Array.from({ length: level }, (_, i) => (
-              <ChevronRight key={i} className="h-3 w-3 text-muted-foreground" />
-            ))}
-          <FolderIcon className="h-4 w-4" />
-          <span>{displayPath || folder.displayName}</span>
-        </div>
-      </CommandItem>
-      {folder.childFolders?.map((child) => (
-        <div key={child.id} className={""}>
-          <FolderItem
-            folder={child}
-            level={level + 1}
-            value={value}
-            onSelect={onSelect}
-          />
-        </div>
-      ))}
-    </div>
-  );
+  for (const folder of folders) {
+    const currentPath = parentPath
+      ? `${parentPath}${FOLDER_SEPARATOR}${folder.displayName}`
+      : folder.displayName;
+
+    result.push({ folder, displayPath: currentPath, depth });
+
+    if (folder.childFolders && folder.childFolders.length > 0) {
+      result.push(
+        ...flattenFolders(folder.childFolders, currentPath, depth + 1),
+      );
+    }
+  }
+
+  return result;
 }
 
 interface FolderSelectorProps {
@@ -95,9 +59,6 @@ export function FolderSelector({
   placeholder = "Select a folder...",
   error,
 }: FolderSelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
   const findFolderById = (
     folderList: OutlookFolder[],
     targetId: string,
@@ -114,42 +75,8 @@ export function FolderSelector({
     return null;
   };
 
-  const currentFolderId = value.id;
-  const selectedFolder = currentFolderId
-    ? findFolderById(folders, currentFolderId)
-    : null;
-
-  const filteredFolders =
-    searchQuery.trim() === ""
-      ? folders.map((folder) => ({ folder, displayPath: folder.displayName }))
-      : filterFoldersRecursively(folders, searchQuery.toLowerCase());
-
-  function filterFoldersRecursively(
-    folderList: OutlookFolder[],
-    query: string,
-    parentPath = "",
-  ): { folder: OutlookFolder; displayPath: string }[] {
-    const results: { folder: OutlookFolder; displayPath: string }[] = [];
-
-    for (const folder of folderList) {
-      const currentPath = parentPath
-        ? `${parentPath}${FOLDER_SEPARATOR}${folder.displayName}`
-        : folder.displayName;
-      if (folder.displayName.toLowerCase().includes(query)) {
-        results.push({ folder, displayPath: currentPath });
-      }
-      if (folder.childFolders && folder.childFolders.length > 0) {
-        const childResults = filterFoldersRecursively(
-          folder.childFolders,
-          query,
-          currentPath,
-        );
-        results.push(...childResults);
-      }
-    }
-
-    return results;
-  }
+  // Flatten folders for better UI rendering and performance
+  const flattenedFolders = useMemo(() => flattenFolders(folders), [folders]);
 
   const buildFolderPath = (folderId: string): string => {
     const folder = findFolderById(folders, folderId);
@@ -187,91 +114,57 @@ export function FolderSelector({
         name: fullPath,
         id: folder.id,
       });
-      setOpen(false);
     }
   };
 
   return (
     <div>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-            disabled={isLoading}
-          >
-            <div className="flex items-center gap-2 flex-1">
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading folders...</span>
-                </>
-              ) : value.id ? (
+      <Select
+        value={value.id}
+        onValueChange={handleFolderSelect}
+        disabled={isLoading}
+      >
+        <SelectTrigger className="w-full">
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading folders...</span>
+            </div>
+          ) : (
+            <SelectValue placeholder={placeholder}>
+              {value.id ? (
                 <div className="flex items-center gap-2">
                   <FolderIcon className="h-4 w-4" />
-                  <span>{value.name || selectedFolder?.displayName || ""}</span>
+                  <span>{value.name}</span>
                 </div>
               ) : (
                 placeholder
               )}
+            </SelectValue>
+          )}
+        </SelectTrigger>
+        <SelectContent className="max-h-[400px]">
+          {flattenedFolders.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              No folders found
             </div>
-            <div className="flex items-center gap-1">
-              {value.id && !isLoading && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-muted"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onChangeValue({ name: "", id: "" });
-                  }}
-                  title="Clear folder selection"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-            </div>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-          <Command>
-            <CommandInput
-              placeholder="Search folders..."
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-            />
-            <CommandList>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Loading folders...</span>
+          ) : (
+            flattenedFolders.map(({ folder, depth }) => (
+              <SelectItem
+                key={folder.id}
+                value={folder.id}
+                className="cursor-pointer pl-0"
+                style={{ paddingLeft: `${depth * 20 + 32}px` }}
+              >
+                <div className="flex items-center gap-2">
+                  <FolderIcon className="h-4 w-4 shrink-0" />
+                  <span>{folder.displayName}</span>
                 </div>
-              ) : (
-                <>
-                  <CommandEmpty>No folder found.</CommandEmpty>
-                  <CommandGroup>
-                    {filteredFolders.map(({ folder, displayPath }) => {
-                      return (
-                        <FolderItem
-                          key={folder.id}
-                          folder={folder}
-                          level={0}
-                          value={value}
-                          onSelect={handleFolderSelect}
-                          displayPath={displayPath}
-                        />
-                      );
-                    })}
-                  </CommandGroup>
-                </>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+              </SelectItem>
+            ))
+          )}
+        </SelectContent>
+      </Select>
       {error && (
         <div className="mt-1 text-sm text-red-600 dark:text-red-400">
           {error.message}

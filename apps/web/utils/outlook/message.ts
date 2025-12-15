@@ -85,7 +85,7 @@ export async function getFolderIds(client: OutlookClient) {
       try {
         const response = await client
           .getClient()
-          .api(`/me/mailFolders/${folderName}`)
+          .api(`${client.getBaseUrl()}/mailFolders/${folderName}`)
           .select("id")
           .get();
         return [key, response.id];
@@ -229,7 +229,7 @@ export async function queryBatchMessages(
   // Build the base request
   let request = client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,from,sender,toRecipients,receivedDateTime,isDraft,isRead,body,categories,parentFolderId",
     )
@@ -318,23 +318,32 @@ export async function queryBatchMessages(
       combinedFilter,
     });
 
-    request = request.filter(combinedFilter);
+    let response: { value: Message[]; "@odata.nextLink"?: string };
 
-    if (pageToken) {
-      request = request.skipToken(pageToken);
+    if (pageToken && pageToken.startsWith("http")) {
+      // If pageToken is a full URL (@odata.nextLink), fetch it directly
+      logger.info("Using full nextLink URL for pagination", {
+        nextLinkLength: pageToken.length,
+      });
+      response = await client.getClient().api(pageToken).get();
     } else {
-      // Only add orderby for non-paginated requests to avoid sorting complexity errors
-      request = request.orderby("receivedDateTime DESC");
+      request = request.filter(combinedFilter);
+
+      if (pageToken) {
+        request = request.skipToken(pageToken);
+      } else {
+        // Only add orderby for non-paginated requests to avoid sorting complexity errors
+        request = request.orderby("receivedDateTime DESC");
+      }
+
+      response = await request.get();
     }
 
-    const response: { value: Message[]; "@odata.nextLink"?: string } =
-      await request.get();
     const messages = await convertMessages(response.value, folderIds);
 
-    nextPageToken = response["@odata.nextLink"]
-      ? new URL(response["@odata.nextLink"]).searchParams.get("$skiptoken") ||
-        undefined
-      : undefined;
+    // Use the full @odata.nextLink URL as the page token
+    // Microsoft Graph pagination uses the complete URL, not just a skiptoken
+    nextPageToken = response["@odata.nextLink"] || undefined;
 
     logger.info("Filter results", {
       messageCount: messages.length,
@@ -376,7 +385,7 @@ export async function queryMessagesWithFilters(
   // Build base request
   let request = client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,from,sender,toRecipients,receivedDateTime,isDraft,isRead,body,categories,parentFolderId",
     )
@@ -448,7 +457,7 @@ export async function getMessage(
 ): Promise<ParsedMessage> {
   const message = await client
     .getClient()
-    .api(`/me/messages/${messageId}`)
+    .api(`${client.getBaseUrl()}/messages/${messageId}`)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,from,sender,toRecipients,receivedDateTime,isDraft,isRead,body,categories,parentFolderId",
     )
@@ -470,7 +479,7 @@ export async function getMessages(
   const top = options.maxResults || 20;
   let request = client
     .getClient()
-    .api("/me/messages")
+    .api(`${client.getBaseUrl()}/messages`)
     .top(top)
     .select(
       "id,conversationId,conversationIndex,subject,bodyPreview,body,from,toRecipients,receivedDateTime,isRead,categories,parentFolderId,isDraft",

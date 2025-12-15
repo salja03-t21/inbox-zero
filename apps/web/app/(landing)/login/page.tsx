@@ -32,7 +32,7 @@ export default async function AuthenticationPage(props: {
     }
   }
 
-  const enableGoogleAuth = env.ENABLE_GOOGLE_AUTH;
+  const enableGoogleAuth = false; // Disabled Google auth
   const enableMicrosoftAuth = env.ENABLE_MICROSOFT_AUTH;
   const enableSSOAuth = env.ENABLE_SSO_AUTH;
 
@@ -57,7 +57,8 @@ export default async function AuthenticationPage(props: {
 
         {searchParams?.error && <ErrorAlert error={searchParams?.error} />}
 
-        <p className="px-8 pt-10 text-center text-sm text-muted-foreground">
+        {/* Terms of Service text hidden */}
+        {/* <p className="px-8 pt-10 text-center text-sm text-muted-foreground">
           By clicking continue, you agree to our{" "}
           <Link
             href="/terms"
@@ -73,7 +74,7 @@ export default async function AuthenticationPage(props: {
             Privacy Policy
           </Link>
           .
-        </p>
+        </p> */}
 
         <p className="px-4 pt-4 text-center text-sm text-muted-foreground">
           Inbox Zero{"'"}s use and transfer of information received from Google

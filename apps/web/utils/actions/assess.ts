@@ -46,7 +46,14 @@ export const analyzeWritingStyleAction = actionClient
         email: true,
         about: true,
         multiRuleSelectionEnabled: true,
-        user: { select: { aiProvider: true, aiModel: true, aiApiKey: true } },
+        user: {
+          select: {
+            aiProvider: true,
+            aiModel: true,
+            aiApiKey: true,
+            aiBaseUrl: true,
+          },
+        },
       },
     });
 
