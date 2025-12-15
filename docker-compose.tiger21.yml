@@ -1,0 +1,215 @@
+# TIGER 21 Docker Swarm Stack Configuration
+# Domain: iz.tiger21.com
+# Server: 167.99.116.99 (DigitalOcean)
+# Infrastructure: Docker Swarm with Traefik
+# Cloudflare: DNS + SSL Certificates
+# Database: DigitalOcean Managed PostgreSQL
+
+services:
+  app:
+    # Pinned to working AMD64 image until multi-arch build is fixed
+    image: ghcr.io/tiger21-llc/inbox-zero:latest@sha256:98199558783dec4864667d3c1cd1b6b3cf66fdd8b329ddae99d6a1ae77dc5207
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.tiger21.prod
+      args:
+        NEXT_PUBLIC_BASE_URL: https://iz.tiger21.com
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.inbox-zero-tiger21.rule=Host(`iz.tiger21.com`)"
+        - "traefik.http.routers.inbox-zero-tiger21.entrypoints=websecure"
+        - "traefik.http.routers.inbox-zero-tiger21.tls=true"
+        - "traefik.http.routers.inbox-zero-tiger21.tls.certresolver=cloudflare"
+        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.server.port=3000"
+        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.path=/api/health/simple"
+        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.interval=30s"
+        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.timeout=5s"
+        - "traefik.docker.network=traefik-network"
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    environment:
+      # Node environment
+      NODE_ENV: production
+
+      # Next.js internal API calls (server-side fetches)
+      NEXTAUTH_URL: http://localhost:3000
+
+      # Inngest configuration - app connects to inngest service internally
+      INNGEST_BASE_URL: http://inngest:8288
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      INNGEST_DEV: "1"
+
+      # Database - Using DigitalOcean Managed PostgreSQL
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL}
+
+      # Redis
+      UPSTASH_REDIS_URL: http://serverless-redis-http:80
+      UPSTASH_REDIS_TOKEN: ${UPSTASH_REDIS_TOKEN:-tiger21-redis-token}
+      REDIS_URL: redis://redis:6379
+    env_file:
+      - .env.tiger21
+    networks:
+      - inbox-zero-network
+      - traefik-network
+    volumes:
+      - app-data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health/simple",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  redis:
+    image: redis:7-alpine
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    command:
+      - redis-server
+      - --appendonly yes
+      - --appendfsync everysec
+      - --maxmemory 384mb
+      - --maxmemory-policy allkeys-lru
+      - --tcp-backlog 511
+      - --timeout 300
+      - --tcp-keepalive 60
+      - --loglevel notice
+    volumes:
+      - redis-data:/data
+    networks:
+      - inbox-zero-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  serverless-redis-http:
+    image: hiett/serverless-redis-http:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${UPSTASH_REDIS_TOKEN:-tiger21-redis-token}
+      SRH_CONNECTION_STRING: redis://redis:6379
+    networks:
+      - inbox-zero-network
+
+  inngest:
+    image: inngest/inngest:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "2"
+          memory: 8G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    command:
+      - sh
+      - -c
+      - |
+        inngest start --queue-workers 50 --signing-key "$${INNGEST_SIGNING_KEY}"
+    environment:
+      INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
+      INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      INNGEST_POSTGRES_URI: ${DATABASE_URL}
+      INNGEST_REDIS_URI: redis://redis:6379
+      INNGEST_POLL_INTERVAL: 60
+      INNGEST_DEV: "1"
+    networks:
+      - inbox-zero-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8288/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  inbox-zero-network:
+    driver: overlay
+    attachable: true
+  traefik-network:
+    external: true
+
+volumes:
+  redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/inbox-zero-tiger21/redis
+  app-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/inbox-zero-tiger21/app-data

@@ -1,0 +1,129 @@
+# Multi-stage hardened production Dockerfile for TIGER 21
+# Based on Node.js 22 Alpine with security best practices
+# Built for Docker Swarm deployment
+
+# Stage 1: Base image with security updates
+FROM node:22-alpine AS base
+
+# Install security updates and required packages
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+        openssl \
+        ca-certificates \
+        dumb-init \
+        curl \
+        wget && \
+    rm -rf /var/cache/apk/*
+
+# Enable corepack for pnpm (more reliable than npm install -g)
+RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+
+# Create non-root user for running the application
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs
+
+# Stage 2: Builder - install deps and build
+FROM base AS builder
+
+WORKDIR /app
+
+# Copy package manager files first (for layer caching)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY .npmrc* ./
+
+# Create directory structure and copy package.json files
+COPY apps/web/package.json apps/web/package.json
+COPY apps/unsubscriber/package.json apps/unsubscriber/package.json
+COPY packages/loops/package.json packages/loops/package.json
+COPY packages/resend/package.json packages/resend/package.json
+COPY packages/tinybird/package.json packages/tinybird/package.json
+COPY packages/tinybird-ai-analytics/package.json packages/tinybird-ai-analytics/package.json
+COPY packages/tsconfig/package.json packages/tsconfig/package.json
+
+# Copy patches directory
+COPY patches/ patches/
+
+# Copy Prisma schema (needed for postinstall)
+COPY apps/web/prisma/schema.prisma apps/web/prisma/schema.prisma
+
+# Install all dependencies with cache mount for faster rebuilds
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# Copy all source code
+COPY . .
+
+# Build-time environment variables
+ARG NEXT_PUBLIC_BASE_URL="https://iz.tiger21.com"
+ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+ENV NODE_ENV=production
+
+# Dummy build-time variables (required for build, overridden at runtime)
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy?schema=public"
+ENV DIRECT_URL="postgresql://dummy:dummy@dummy:5432/dummy?schema=public"
+ENV AUTH_SECRET="dummy_secret_for_build_only_minimum_32_characters_required"
+ENV GOOGLE_CLIENT_ID="dummy_id_for_build_only"
+ENV GOOGLE_CLIENT_SECRET="dummy_secret_for_build_only"
+ENV EMAIL_ENCRYPT_SECRET="dummy_encrypt_secret_for_build_only_32chars"
+ENV EMAIL_ENCRYPT_SALT="dummy_encrypt_salt_for_build_only_16chars"
+ENV GOOGLE_PUBSUB_TOPIC_NAME="dummy_topic_for_build_only"
+ENV GOOGLE_PUBSUB_VERIFICATION_TOKEN="dummy_pubsub_token_for_build"
+ENV INTERNAL_API_KEY="dummy_apikey_for_build_only"
+ENV API_KEY_SALT="dummy_salt_for_build_only"
+ENV UPSTASH_REDIS_URL="http://dummy-redis-for-build:6379"
+ENV UPSTASH_REDIS_TOKEN="dummy_redis_token_for_build"
+ENV REDIS_URL="redis://dummy:dummy@dummy:6379"
+ENV QSTASH_TOKEN="dummy_qstash_token_for_build"
+ENV QSTASH_CURRENT_SIGNING_KEY="dummy_qstash_curr_key_for_build"
+ENV QSTASH_NEXT_SIGNING_KEY="dummy_qstash_next_key_for_build"
+
+# Generate Prisma client
+RUN pnpm --filter=inbox-zero-ai exec -- prisma generate
+
+# Build the Next.js application
+# Skip type checking and linting during build - these are done separately in CI
+ENV SKIP_ENV_VALIDATION=1
+RUN pnpm --filter=inbox-zero-ai exec -- next build
+
+# Note: Skipping pnpm prune to speed up build
+# This results in a larger image (~4GB) but faster builds
+# We can optimize this later if needed
+
+# Stage 3: Production runtime
+FROM base AS runner
+
+# Security: Run as non-root user
+USER nextjs
+
+WORKDIR /app
+
+# Copy standalone server output from Next.js build
+# The standalone output includes everything needed to run the app
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+
+# Copy static files
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+
+# Copy Prisma schema for migrations
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/prisma ./apps/web/prisma
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health/simple || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Start the standalone server
+# The standalone output creates a server.js at apps/web/server.js
+CMD ["node", "apps/web/server.js"]
