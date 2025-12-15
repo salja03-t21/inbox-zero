@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { env } from "@/env";
 import prisma from "@/utils/prisma";
 
 export async function GET() {
@@ -10,8 +11,10 @@ export async function GET() {
     return NextResponse.json({ error: "Provider not found" }, { status: 404 });
   }
 
+  // Include client secret in the OIDC config for Better Auth
   const correctConfig = {
     clientId: "0oa251hvxm7RlukZO0h8",
+    clientSecret: env.SSO_OKTA_TIGER21_1765774132282_CLIENT_SECRET,
     discoveryUrl: "https://apps.tiger21.com/.well-known/openid-configuration",
   };
 
@@ -29,6 +32,6 @@ export async function GET() {
   return NextResponse.json({
     old: provider.oidcConfig,
     new: updated?.oidcConfig,
-    message: "Updated successfully",
+    message: "Updated successfully (now includes clientSecret)",
   });
 }
