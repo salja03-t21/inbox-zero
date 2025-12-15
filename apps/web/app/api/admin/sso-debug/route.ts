@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/utils/prisma";
 
+// Force dynamic route - do not pre-render at build time
+export const dynamic = "force-dynamic";
+
 /**
  * Debug endpoint to analyze SSO provider configuration.
  * This helps diagnose JSON parsing issues in the oidcConfig field.

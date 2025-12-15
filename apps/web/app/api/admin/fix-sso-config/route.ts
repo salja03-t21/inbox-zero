@@ -5,6 +5,9 @@ import prisma from "@/utils/prisma";
 
 const logger = createScopedLogger("api/admin/fix-sso-config");
 
+// Force dynamic route - do not pre-render at build time
+export const dynamic = "force-dynamic";
+
 /**
  * Admin endpoint to fix SSO OIDC configuration.
  *
