@@ -76,7 +76,8 @@ echo ""
 # Step 4: Build Docker image locally
 echo "🐳 Building Docker image locally..."
 echo "   This may take 5-10 minutes..."
-docker build \
+docker buildx build \
+    --platform linux/amd64 \
     -f docker/Dockerfile.tiger21.prod \
     --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
     -t $REGISTRY/$IMAGE_NAME:latest \
