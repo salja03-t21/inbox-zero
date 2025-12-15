@@ -109,7 +109,7 @@ export const GET = withError(async (request) => {
 
   // Construct the Better Auth SSO sign-in URL
   const authUrl = new URL(proxiedRequest.url);
-  authUrl.pathname = "/api/auth/sso/sign-in";
+  authUrl.pathname = "/api/auth/sign-in/sso";
 
   // Create request body with SSO parameters
   const requestBody = JSON.stringify({
