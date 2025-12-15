@@ -143,6 +143,7 @@ export const env = createEnv({
       .optional()
       .default("true")
       .transform((val) => val === "true"),
+    SSO_OKTA_TIGER21_1765774132282_CLIENT_SECRET: z.string().optional(),
 
     // license
     LICENSE_1_SEAT_VARIANT_ID: z.coerce.number().optional(),
