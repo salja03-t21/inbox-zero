@@ -19,8 +19,10 @@ const originalPUT = handler.PUT;
 const wrappedPUT: typeof originalPUT = async (req, ctx) => {
   const response = await originalPUT(req, ctx);
 
-  // After successful function registration, kickstart the cleanup cycle (only once)
-  if (response.status === 200 && !cleanupEventSent) {
+  // Kickstart the cleanup cycle after any PUT call (only once)
+  // Note: We don't check response.status because self-hosted Inngest may return errors
+  // during sync (like "Error deleting removed function") but functions still work fine
+  if (!cleanupEventSent) {
     try {
       await inngest.send({
         name: "inbox-zero/cleanup.scheduled-actions",
