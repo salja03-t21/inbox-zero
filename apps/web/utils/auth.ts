@@ -27,6 +27,35 @@ import prisma from "@/utils/prisma";
 
 const logger = createScopedLogger("auth");
 
+// ============================================================================
+// DEBUG: Log ALL environment variables related to URLs at module initialization
+// This helps trace where 0.0.0.0:3000 might be coming from
+// ============================================================================
+logger.info("=== AUTH MODULE INITIALIZATION START ===", {
+  timestamp: new Date().toISOString(),
+  nodeEnv: process.env.NODE_ENV,
+});
+
+logger.info("AUTH DEBUG: All URL-related environment variables", {
+  // Better Auth specific
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ? "[SET]" : "[NOT SET]",
+  // Base URLs
+  BASE_URL: process.env.BASE_URL,
+  NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+  // NextAuth (legacy)
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  // Host/Port related
+  HOST: process.env.HOST,
+  HOSTNAME: process.env.HOSTNAME,
+  PORT: process.env.PORT,
+  // Vercel/deployment
+  VERCEL_URL: process.env.VERCEL_URL,
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  // From env.ts
+  envNextPublicBaseUrl: env.NEXT_PUBLIC_BASE_URL,
+});
+
 // Helper function to check if an email domain is allowed
 // Exported for testing purposes
 export function isEmailDomainAllowed(
@@ -56,12 +85,58 @@ const resolvedBaseURL =
   process.env.BASE_URL ||
   env.NEXT_PUBLIC_BASE_URL;
 
+// DEBUG: Log the resolution process
+logger.info("AUTH DEBUG: Base URL resolution", {
+  step1_BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || "(empty/undefined)",
+  step2_BASE_URL: process.env.BASE_URL || "(empty/undefined)",
+  step3_NEXT_PUBLIC_BASE_URL: env.NEXT_PUBLIC_BASE_URL || "(empty/undefined)",
+  finalResolvedBaseURL: resolvedBaseURL || "(empty/undefined)",
+  resolvedBaseURLType: typeof resolvedBaseURL,
+  resolvedBaseURLLength: resolvedBaseURL?.length ?? 0,
+});
+
+// Validate that we have a valid base URL
+if (!resolvedBaseURL) {
+  const errorMsg =
+    "CRITICAL: No base URL resolved for Better Auth! SSO and OAuth will fail.";
+  logger.error(errorMsg, {
+    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+    BASE_URL: process.env.BASE_URL,
+    NEXT_PUBLIC_BASE_URL: env.NEXT_PUBLIC_BASE_URL,
+  });
+  // In production, this is a fatal configuration error
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(errorMsg);
+  }
+}
+
+// Validate the URL is parseable
+let isValidUrl = false;
+let urlOrigin = "";
+let urlParseError = "";
+try {
+  const parsed = new URL(resolvedBaseURL || "");
+  isValidUrl = true;
+  urlOrigin = parsed.origin;
+} catch (e) {
+  urlParseError = e instanceof Error ? e.message : String(e);
+}
+
 // Log the resolved base URL for debugging
-logger.info("Better Auth base URL resolved", {
-  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-  BASE_URL: process.env.BASE_URL,
-  NEXT_PUBLIC_BASE_URL: env.NEXT_PUBLIC_BASE_URL,
+logger.info("AUTH DEBUG: Base URL validation", {
   resolvedBaseURL,
+  isValidUrl,
+  urlOrigin,
+  urlParseError: urlParseError || "(none)",
+  contains0000: resolvedBaseURL?.includes("0.0.0.0") ?? false,
+  containsLocalhost: resolvedBaseURL?.includes("localhost") ?? false,
+});
+
+// DEBUG: Log the exact config being passed to Better Auth
+logger.info("AUTH DEBUG: Creating betterAuth config", {
+  baseURL: resolvedBaseURL,
+  trustedOrigins: [resolvedBaseURL],
+  basePath: "/api/auth",
 });
 
 export const betterAuthConfig = betterAuth({
@@ -71,16 +146,10 @@ export const betterAuthConfig = betterAuth({
     },
   },
   logger: {
-    level: "info",
+    level: "debug", // Changed to debug for more verbose logging
     log: (level, message, ...args) => {
-      switch (level) {
-        case "info":
-          logger.info(message, { args });
-          break;
-        case "error":
-          logger.error(message, { args });
-          break;
-      }
+      // Log ALL Better Auth internal messages for debugging
+      logger.info(`[BetterAuth:${level}] ${message}`, { args });
     },
   },
   baseURL: resolvedBaseURL,
@@ -170,11 +239,44 @@ export const betterAuthConfig = betterAuth({
   onAPIError: {
     throw: true,
     onError: (error: unknown, ctx: AuthContext) => {
-      logger.error("Auth API encountered an error", { error, ctx });
+      // DEBUG: Enhanced error logging for Better Auth API errors
+      logger.error("AUTH DEBUG: Better Auth API error", {
+        error: error instanceof Error ? error.message : error,
+        errorStack: error instanceof Error ? error.stack : undefined,
+        contextBaseURL: ctx?.baseURL,
+        contextOptionsBaseURL: ctx?.options?.baseURL,
+        contextBasePath: ctx?.options?.basePath,
+      });
     },
     errorURL: "/login/error",
   },
 });
+
+// DEBUG: Log after betterAuthConfig is created
+logger.info("AUTH DEBUG: betterAuthConfig created successfully", {
+  hasHandler: typeof betterAuthConfig.handler === "function",
+  hasApi: typeof betterAuthConfig.api === "object",
+  apiKeys: Object.keys(betterAuthConfig.api || {}),
+});
+
+// DEBUG: Async check of the context after initialization
+betterAuthConfig.$context
+  .then((ctx) => {
+    logger.info("AUTH DEBUG: Better Auth context resolved", {
+      baseURL: ctx.baseURL,
+      optionsBaseURL: ctx.options?.baseURL,
+      optionsBasePath: ctx.options?.basePath,
+      trustedOrigins: ctx.trustedOrigins,
+      baseURLContains0000: ctx.baseURL?.includes("0.0.0.0") ?? false,
+    });
+  })
+  .catch((err) => {
+    logger.error("AUTH DEBUG: Failed to resolve Better Auth context", {
+      error: err instanceof Error ? err.message : err,
+    });
+  });
+
+logger.info("=== AUTH MODULE INITIALIZATION END ===");
 
 async function handleSignIn({
   user,

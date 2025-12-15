@@ -72,6 +72,44 @@ function withMiddleware<T extends NextRequest>(
       // Execute the handler with the (potentially) enhanced request
       return await handler(enhancedReq as T, context);
     } catch (error) {
+      // ============================================================================
+      // DEBUG: Enhanced error logging to trace 0.0.0.0:3000 issue
+      // ============================================================================
+      logger.info("MIDDLEWARE DEBUG: Error caught in withMiddleware", {
+        errorType: error?.constructor?.name,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        requestUrl: req.url,
+        requestUrlContains0000: req.url.includes("0.0.0.0"),
+        requestMethod: req.method,
+      });
+
+      // Parse the request URL to see its components
+      try {
+        const parsedUrl = new URL(req.url);
+        logger.info("MIDDLEWARE DEBUG: Request URL components", {
+          protocol: parsedUrl.protocol,
+          host: parsedUrl.host,
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port,
+          pathname: parsedUrl.pathname,
+          origin: parsedUrl.origin,
+        });
+      } catch (urlError) {
+        logger.error("MIDDLEWARE DEBUG: Failed to parse request URL", {
+          url: req.url,
+          parseError:
+            urlError instanceof Error ? urlError.message : String(urlError),
+        });
+      }
+
+      // Log relevant headers
+      logger.info("MIDDLEWARE DEBUG: Request headers at error time", {
+        host: req.headers.get("host"),
+        "x-forwarded-host": req.headers.get("x-forwarded-host"),
+        "x-forwarded-proto": req.headers.get("x-forwarded-proto"),
+        origin: req.headers.get("origin"),
+      });
+
       // redirects work by throwing an error. allow these
       if (error instanceof Error && error.message === "NEXT_REDIRECT") {
         throw error;
@@ -127,9 +165,15 @@ function withMiddleware<T extends NextRequest>(
         console.error(error);
       }
 
-      logger.error("Unhandled error", {
+      // DEBUG: Enhanced unhandled error logging
+      logger.error("MIDDLEWARE DEBUG: Unhandled error (full details)", {
         error: error instanceof Error ? error.message : error,
+        errorStack: error instanceof Error ? error.stack : undefined,
         url: req.url,
+        urlContains0000: req.url.includes("0.0.0.0"),
+        isInvalidURLError:
+          error instanceof Error &&
+          error.message.toLowerCase().includes("invalid url"),
       });
       captureException(error, { extra: { url: req.url } });
 
