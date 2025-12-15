@@ -100,65 +100,64 @@ export const GET = withError(async (request) => {
   });
 
   // ============================================================================
-  // FIX: Call Better Auth's handler with a proxied request
-  // This ensures Better Auth receives the correct public URL instead of 0.0.0.0:3000
+  // FIX: Manually construct Okta authorization URL
+  // We bypass Better Auth's handler because it has issues with proxied requests
+  // where request.url contains 0.0.0.0:3000 instead of the public domain
   // ============================================================================
 
-  // Create a proxied request with the correct public URL
-  const proxiedRequest = createProxiedRequest(request);
-
-  // Construct the Better Auth SSO sign-in URL
-  const authUrl = new URL(proxiedRequest.url);
-  authUrl.pathname = "/api/auth/sign-in/sso";
-
-  // Create request body with SSO parameters
-  const requestBody = JSON.stringify({
-    providerId: provider.providerId,
-    callbackURL: "/accounts",
+  // Get the OIDC config from the database
+  const providerData = await prisma.ssoProvider.findUnique({
+    where: { providerId: provider.providerId },
+    select: { oidcConfig: true, issuer: true },
   });
 
-  // Create headers with content-type
-  const authHeaders = new Headers(proxiedRequest.headers);
-  authHeaders.set("content-type", "application/json");
-
-  // Create the request to Better Auth
-  const authRequest = new Request(authUrl.toString(), {
-    method: "POST",
-    headers: authHeaders,
-    body: requestBody,
-    // @ts-expect-error - Required for POST requests
-    duplex: "half",
-  });
-
-  logger.info("SSO: Calling Better Auth handler", {
-    authUrl: authUrl.toString(),
-    host: authRequest.headers.get("host"),
-    body: requestBody,
-  });
-
-  // Call Better Auth's handler directly
-  const authResponse = await betterAuthConfig.handler(authRequest);
-
-  // Extract the redirect URL from Better Auth's response
-  if (authResponse.status === 302 || authResponse.status === 301) {
-    const redirectUrl = authResponse.headers.get("location");
-    if (redirectUrl) {
-      logger.info("SSO: Better Auth returned redirect", { redirectUrl });
-
-      const response: GetSsoSignInResponse = {
-        redirectUrl,
-        providerId: provider.providerId,
-      };
-
-      return NextResponse.json(response);
-    }
+  if (!providerData?.oidcConfig) {
+    throw new SafeError("SSO provider configuration not found");
   }
 
-  // If we get here, something went wrong
-  logger.error("SSO: Unexpected response from Better Auth", {
-    status: authResponse.status,
-    statusText: authResponse.statusText,
+  const oidcConfig = JSON.parse(providerData.oidcConfig as string);
+
+  // Construct the public base URL from forwarded headers
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const publicBaseUrl =
+    forwardedHost && forwardedProto
+      ? `${forwardedProto}://${forwardedHost}`
+      : process.env.BETTER_AUTH_URL || "https://iz.tiger21.com";
+
+  // Construct the callback URL that Okta will redirect to after authentication
+  const callbackURL = `${publicBaseUrl}/api/auth/callback/sso/${provider.providerId}`;
+
+  // Generate a random state for CSRF protection
+  const state = crypto.randomUUID();
+
+  // Fetch the authorization endpoint from the discovery URL
+  const discoveryUrl =
+    oidcConfig.discoveryUrl ||
+    `${providerData.issuer}/.well-known/openid-configuration`;
+  const discoveryResponse = await fetch(discoveryUrl);
+  const discoveryData = await discoveryResponse.json();
+
+  // Construct the Okta authorization URL
+  const authUrl = new URL(discoveryData.authorization_endpoint);
+  authUrl.searchParams.set("client_id", oidcConfig.clientId);
+  authUrl.searchParams.set("redirect_uri", callbackURL);
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("scope", "openid email profile");
+  authUrl.searchParams.set("state", state);
+
+  const redirectUrl = authUrl.toString();
+
+  logger.info("SSO: Constructed Okta redirect URL", {
+    redirectUrl,
+    callbackURL,
+    publicBaseUrl,
   });
 
-  throw new SafeError("Failed to initiate SSO sign-in");
+  const response: GetSsoSignInResponse = {
+    redirectUrl,
+    providerId: provider.providerId,
+  };
+
+  return NextResponse.json(response);
 });
