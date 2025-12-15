@@ -7,11 +7,6 @@ import { z } from "zod";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { toastError, toastSuccess } from "@/components/Toast";
-import { useRouter } from "next/navigation";
-import type {
-  GetSsoSignInParams,
-  GetSsoSignInResponse,
-} from "@/app/api/sso/signin/route";
 
 const ssoLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -20,7 +15,6 @@ const ssoLoginSchema = z.object({
 type SsoLoginBody = z.infer<typeof ssoLoginSchema>;
 
 export default function SSOLoginPage() {
-  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -31,49 +25,46 @@ export default function SSOLoginPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit: SubmitHandler<SsoLoginBody> = useCallback(
-    async (data) => {
-      setIsSubmitting(true);
-      try {
-        const params: GetSsoSignInParams = {
+  const onSubmit: SubmitHandler<SsoLoginBody> = useCallback(async (data) => {
+    setIsSubmitting(true);
+    try {
+      // Use Better Auth's built-in SSO signin endpoint
+      const response = await fetch("/api/auth/sign-in/sso", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           email: data.email,
           organizationSlug: "tiger21", // Always use tiger21 org slug
-        };
+          callbackURL: `${window.location.origin}/`, // Redirect to home after successful login
+        }),
+      });
 
-        const paramsString = new URLSearchParams(params).toString();
-        const url = new URL(
-          `/api/sso/signin?${paramsString}`,
-          window.location.origin,
-        );
+      const responseData = await response.json();
 
-        const response = await fetch(url.toString());
-        const responseData = await response.json();
-
-        if (!response.ok) {
-          toastError({
-            title: "SSO Sign-in Error",
-            description: responseData.error || "Failed to initiate SSO sign-in",
-          });
-          return;
-        }
-
-        const res: GetSsoSignInResponse = responseData;
-
-        if (res.redirectUrl) {
-          toastSuccess({ description: "Redirecting to SSO provider..." });
-          router.push(res.redirectUrl);
-        }
-      } catch {
+      if (!response.ok) {
         toastError({
           title: "SSO Sign-in Error",
-          description: "An unexpected error occurred. Please try again.",
+          description: responseData.error || "Failed to initiate SSO sign-in",
         });
-      } finally {
-        setIsSubmitting(false);
+        return;
       }
-    },
-    [router],
-  );
+
+      // Better Auth returns {url: string, redirect: boolean}
+      if (responseData.url) {
+        toastSuccess({ description: "Redirecting to SSO provider..." });
+        window.location.href = responseData.url; // Use window.location.href for external redirect
+      }
+    } catch {
+      toastError({
+        title: "SSO Sign-in Error",
+        description: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen flex-col justify-center text-foreground">
