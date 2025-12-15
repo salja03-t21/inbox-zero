@@ -36,7 +36,8 @@ export default function SSOLoginPage() {
         },
         body: JSON.stringify({
           email: data.email,
-          organizationSlug: "tiger21", // Always use tiger21 org slug
+          // Use email domain matching instead of organizationSlug since we don't have
+          // Better Auth's organization plugin fully configured
           callbackURL: `${window.location.origin}/`, // Redirect to home after successful login
         }),
       });
