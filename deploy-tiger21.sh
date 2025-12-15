@@ -145,7 +145,7 @@ echo ""
 
 # Step 9: Deploy stack to Docker Swarm
 echo "📦 Deploying stack to Docker Swarm..."
-ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker stack deploy \
+ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && set -a && source .env.tiger21 && set +a && docker stack deploy \
     --compose-file docker-compose.tiger21.yml \
     --with-registry-auth \
     $STACK_NAME"
