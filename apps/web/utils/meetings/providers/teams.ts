@@ -81,11 +81,6 @@ export async function createTeamsMeeting(
       },
     };
   } catch (error) {
-<<<<<<< HEAD
-    logger.error("Failed to create Teams meeting", { error });
-    throw new Error(
-      `Failed to create Teams meeting: ${error instanceof Error ? error.message : "Unknown error"}`,
-=======
     // Extract detailed error information
     const errorDetails: Record<string, any> = {
       errorType: error?.constructor?.name || typeof error,
@@ -109,7 +104,6 @@ export async function createTeamsMeeting(
     logger.error("Failed to create Teams meeting", errorDetails);
     throw new Error(
       `Failed to create Teams meeting: ${errorDetails.message} (${errorDetails.code || "Unknown"})`,
->>>>>>> production
     );
   }
 }

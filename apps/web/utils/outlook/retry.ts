@@ -31,16 +31,12 @@ export function extractErrorInfo(error: unknown): ErrorInfo {
     (cause?.error as string) ??
     (err?.error as string) ??
     ((cause?.error as Record<string, unknown>)?.message as string) ??
-<<<<<<< HEAD
-    (((cause?.response as Record<string, unknown>)?.data as Record<string, unknown>)?.error as string) ??
-=======
     ((
       (cause?.response as Record<string, unknown>)?.data as Record<
         string,
         unknown
       >
     )?.error as string) ??
->>>>>>> production
     "";
 
   const errorMessage = String(primaryMessage);
@@ -73,13 +69,9 @@ export function isRetryableError(errorInfo: ErrorInfo): {
     status === 504 ||
     code === "ServiceUnavailable" ||
     code === "generalException" ||
-<<<<<<< HEAD
-    /502|503|504|server error|temporarily unavailable|service unavailable/i.test(errorMessage);
-=======
     /502|503|504|server error|temporarily unavailable|service unavailable/i.test(
       errorMessage,
     );
->>>>>>> production
 
   // Timeout errors
   const isTimeout =

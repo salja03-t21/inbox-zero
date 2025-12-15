@@ -10,19 +10,12 @@ import {
 import { labelThread, getLabelById } from "@/utils/outlook/label";
 import { SafeError } from "@/utils/error";
 import prisma from "@/utils/prisma";
-<<<<<<< HEAD
-import { isDefined } from "@/utils/types";
-=======
->>>>>>> production
 import { createScopedLogger } from "@/utils/logger";
 import { CleanAction } from "@prisma/client";
 import { updateThread } from "@/utils/redis/clean";
 import { WELL_KNOWN_FOLDERS } from "@/utils/outlook/message";
-<<<<<<< HEAD
-=======
 import { INTERNAL_API_KEY_HEADER } from "@/utils/internal-api";
 import { env } from "@/env";
->>>>>>> production
 
 const logger = createScopedLogger("api/clean/outlook");
 
@@ -83,11 +76,7 @@ async function performOutlookAction({
     // Get all messages in the conversation
     const client = outlook.getClient();
     const response: { value: { id: string }[] } = await client
-<<<<<<< HEAD
-      .api("/me/messages")
-=======
       .api(`${outlook.getBaseUrl()}/messages`)
->>>>>>> production
       .filter(`conversationId eq '${conversationId}'`)
       .select("id")
       .get();
@@ -254,18 +243,6 @@ async function saveToDatabase({
   });
 }
 
-<<<<<<< HEAD
-export const POST = withError(
-  verifySignatureAppRouter(async (request: NextRequest) => {
-    const json = await request.json();
-    const body = cleanOutlookSchema.parse(json);
-
-    await performOutlookAction(body);
-
-    return NextResponse.json({ success: true });
-  }),
-);
-=======
 export const POST = withError(async (request: NextRequest) => {
   // Check if this is an internal call (Inngest fallback mode)
   const internalKey = request.headers.get(INTERNAL_API_KEY_HEADER);
@@ -285,4 +262,3 @@ async function handleRequest(request: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
->>>>>>> production
