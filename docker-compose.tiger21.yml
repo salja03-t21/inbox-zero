@@ -54,7 +54,9 @@ services:
       # Node environment
       NODE_ENV: production
 
-      # Public base URL for external access
+      # Public base URL for external access (runtime server-side)
+      BASE_URL: https://iz.tiger21.com
+      # Public base URL for external access (build-time client-side)
       NEXT_PUBLIC_BASE_URL: https://iz.tiger21.com
 
       # Next.js internal API calls (server-side fetches)
