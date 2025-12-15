@@ -1546,7 +1546,7 @@ describe("Inngest Functions", () => {
     });
 
     describe("Error Recovery", () => {
-      const mockStep = createMockStep();
+      const _mockStep = createMockStep();
 
       it("should mark action as failed on permanent error", async () => {
         const permanentError = new Error("Invalid email address");

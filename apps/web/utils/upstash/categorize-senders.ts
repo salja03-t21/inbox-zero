@@ -1,7 +1,6 @@
 import chunk from "lodash/chunk";
 import { deleteQueue, listQueues } from "@/utils/upstash";
 import { enqueueJob } from "@/utils/queue";
-import { env } from "@/env";
 import type { AiCategorizeSenders } from "@/app/api/user/categorize/senders/batch/handle-batch-validation";
 import { createScopedLogger } from "@/utils/logger";
 

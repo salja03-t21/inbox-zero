@@ -320,7 +320,7 @@ export async function queryBatchMessages(
 
     let response: { value: Message[]; "@odata.nextLink"?: string };
 
-    if (pageToken && pageToken.startsWith("http")) {
+    if (pageToken?.startsWith("http")) {
       // If pageToken is a full URL (@odata.nextLink), fetch it directly
       logger.info("Using full nextLink URL for pagination", {
         nextLinkLength: pageToken.length,

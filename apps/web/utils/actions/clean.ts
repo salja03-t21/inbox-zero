@@ -7,7 +7,6 @@ import {
   changeKeepToDoneSchema,
 } from "@/utils/actions/clean.validation";
 import { enqueueJobsBatch } from "@/utils/queue";
-import { env } from "@/env";
 import { GmailLabel } from "@/utils/gmail/label";
 import type { CleanThreadBody } from "@/app/api/clean/route";
 import { isDefined } from "@/utils/types";

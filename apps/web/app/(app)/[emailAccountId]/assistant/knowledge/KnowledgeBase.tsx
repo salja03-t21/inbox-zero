@@ -30,7 +30,7 @@ import { KnowledgeForm } from "@/app/(app)/[emailAccountId]/assistant/knowledge/
 import { AutoGenerateKnowledge } from "@/app/(app)/[emailAccountId]/assistant/knowledge/AutoGenerateKnowledge";
 import { useAccount } from "@/providers/EmailAccountProvider";
 import type { GetKnowledgeResponse } from "@/app/api/knowledge/route";
-import type { Knowledge, KnowledgeSource } from "@prisma/client";
+import type { Knowledge } from "@prisma/client";
 
 export function KnowledgeBase() {
   const { emailAccountId } = useAccount();

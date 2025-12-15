@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Store original env values to restore after tests
-const originalEnv = { ...process.env };
+const _originalEnv = { ...process.env };
 
 // Mock the env module with a getter so we can modify values per test
 const mockEnv = {

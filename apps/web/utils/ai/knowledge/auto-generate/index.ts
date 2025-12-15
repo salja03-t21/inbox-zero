@@ -1,11 +1,6 @@
 import { createScopedLogger } from "@/utils/logger";
 import type { EmailAccountWithAI } from "@/utils/llms/types";
-import type {
-  AutoGenerateOptions,
-  AutoGenerateResult,
-  GeneratedKnowledgeEntry,
-  PipelineProgress,
-} from "./types";
+import type { AutoGenerateOptions, AutoGenerateResult } from "./types";
 import { preprocessSentEmails } from "./preprocess";
 import { clusterEmails } from "./cluster";
 import { extractPatterns } from "./extract-patterns";

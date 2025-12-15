@@ -140,7 +140,7 @@ export function AutoGenerateKnowledge({
     } else {
       setSelectedIndices(new Set(generatedEntries.map((_, i) => i)));
     }
-  }, [selectedIndices.size, generatedEntries.length]);
+  }, [selectedIndices.size, generatedEntries.length, generatedEntries.map]);
 
   const handleToggleEntry = useCallback((index: number) => {
     setSelectedIndices((prev) => {
@@ -207,7 +207,7 @@ export function AutoGenerateKnowledge({
     } finally {
       setIsGenerating(false);
     }
-  }, [selectedIndices, generatedEntries, onEntriesAdded]);
+  }, [selectedIndices, generatedEntries, onEntriesAdded, emailAccountId]);
 
   const handleRejectAll = useCallback(() => {
     setGeneratedEntries([]);

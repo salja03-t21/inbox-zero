@@ -120,7 +120,6 @@ import { getOutlookClientWithRefresh } from "@/utils/outlook/client";
 import { getThreadMessages as getGmailThreadMessages } from "@/utils/gmail/thread";
 import { getThreadMessages as getOutlookThreadMessages } from "@/utils/outlook/thread";
 import { saveThread, updateThread } from "@/utils/redis/clean";
-import { publishToQstash } from "@/utils/upstash";
 import { aiClean } from "@/utils/ai/clean/ai-clean";
 import { isGoogleProvider } from "@/utils/email/provider-types";
 import { findUnsubscribeLink } from "@/utils/parse/parseHtml.server";
@@ -173,7 +172,7 @@ describe("Clean Functions", () => {
       },
     };
 
-    const mockStep = createMockStep();
+    const _mockStep = createMockStep();
 
     it("should validate payload structure with valid data", () => {
       const result = cleanProcessPayloadSchema.safeParse(validPayload);

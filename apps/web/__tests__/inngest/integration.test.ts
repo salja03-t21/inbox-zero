@@ -116,8 +116,6 @@ vi.mock("@/env", () => ({
 import { bulkProcessWorker } from "@/utils/inngest/functions/bulk-process-worker";
 import { scheduledActionExecute } from "@/utils/inngest/functions/scheduled-action-execute";
 import { processEmail } from "@/utils/bulk-process/worker";
-import { executeScheduledAction } from "@/utils/scheduled-actions/executor";
-import prisma from "@/utils/prisma";
 import { ScheduledActionStatus } from "@prisma/client";
 
 describe("Inngest Integration Tests", () => {
@@ -288,11 +286,11 @@ describe("Inngest Integration Tests", () => {
   });
 
   describe("scheduledActionExecute", () => {
-    const t = new InngestTestEngine({
+    const _t = new InngestTestEngine({
       function: scheduledActionExecute,
     });
 
-    const mockScheduledAction = {
+    const _mockScheduledAction = {
       id: "action-123",
       status: ScheduledActionStatus.PENDING,
       scheduledFor: new Date(Date.now() - 60000), // 1 minute ago

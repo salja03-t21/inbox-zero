@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import subDays from "date-fns/subDays";
 import prisma from "@/utils/prisma";
 import { withError } from "@/utils/middleware";
-import {
-  getCronSecretHeader,
-  hasCronSecret,
-  hasPostCronSecret,
-} from "@/utils/cron";
+import { hasCronSecret, hasPostCronSecret } from "@/utils/cron";
 import { Frequency } from "@prisma/client";
 import { captureException } from "@/utils/error";
 import { createScopedLogger } from "@/utils/logger";

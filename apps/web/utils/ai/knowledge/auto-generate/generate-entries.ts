@@ -34,7 +34,7 @@ export async function generateKnowledgeEntries(
   });
 
   // Create email lookup map for source tracking
-  const emailMap = new Map(emails.map((e) => [e.id, e]));
+  const _emailMap = new Map(emails.map((e) => [e.id, e]));
 
   const entries: GeneratedKnowledgeEntry[] = [];
 
