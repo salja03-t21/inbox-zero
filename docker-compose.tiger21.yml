@@ -7,8 +7,8 @@
 
 services:
   app:
-    # Pinned to working AMD64 image until multi-arch build is fixed
-    image: ghcr.io/tiger21-llc/inbox-zero:latest@sha256:98199558783dec4864667d3c1cd1b6b3cf66fdd8b329ddae99d6a1ae77dc5207
+    # Using latest tag to always pull newest image
+    image: ghcr.io/tiger21-llc/inbox-zero:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.tiger21.prod
