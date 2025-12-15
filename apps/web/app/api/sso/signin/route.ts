@@ -56,7 +56,6 @@ function createProxiedRequest(request: NextRequest): Request {
   return new Request(publicUrl, {
     method: request.method,
     headers: modifiedHeaders,
-    // @ts-expect-error - NextRequest has additional properties
     body: request.body,
     // @ts-expect-error - Required for requests with body
     duplex: "half",
