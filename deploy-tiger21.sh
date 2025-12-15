@@ -144,11 +144,40 @@ echo "✓ Environment file found"
 echo ""
 
 # Step 9: Deploy stack to Docker Swarm
+# CRITICAL: In Docker Swarm mode, env_file directive is IGNORED.
+# Variable substitution in docker-compose.yml happens at deploy time.
+# We must export env vars BEFORE running docker stack deploy so they're
+# available for ${VAR} substitution in the compose file.
 echo "📦 Deploying stack to Docker Swarm..."
-ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && set -a && source .env.tiger21 && set +a && docker stack deploy \
+echo "   Loading environment variables and deploying..."
+
+# Create a deployment script on the server that properly exports env vars
+ssh $SERVER_USER@$SERVER "cat > $DEPLOY_PATH/run-deploy.sh << 'DEPLOY_SCRIPT'
+#!/bin/bash
+set -e
+cd ~/IT-Configs/docker_swarm/inbox-zero
+
+# Export all variables from .env.tiger21 so they're available for docker stack deploy
+# The 'set -a' makes all subsequent variable assignments exported automatically
+set -a
+source .env.tiger21
+set +a
+
+# Debug: Show that critical vars are loaded (masked for security)
+echo \"  DATABASE_URL loaded: \${DATABASE_URL:0:30}...\"
+echo \"  DIRECT_URL loaded: \${DIRECT_URL:0:30}...\"
+
+# Deploy with exported environment variables
+# Docker stack deploy will substitute \${VAR} references in compose file
+docker stack deploy \
     --compose-file docker-compose.tiger21.yml \
     --with-registry-auth \
-    $STACK_NAME"
+    inbox-zero-tiger21
+DEPLOY_SCRIPT
+chmod +x $DEPLOY_PATH/run-deploy.sh"
+
+# Execute the deployment script
+ssh $SERVER_USER@$SERVER "$DEPLOY_PATH/run-deploy.sh"
 
 if [ $? -ne 0 ]; then
     echo "❌ Error: Stack deployment failed"
