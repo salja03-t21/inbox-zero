@@ -32,7 +32,7 @@ VOLUMES_PATH="/mnt/inbox-zero-tiger21"
 STACK_NAME="inbox-zero-tiger21"
 REGISTRY="ghcr.io/tiger21-llc"
 IMAGE_NAME="inbox-zero"
-BRANCH="production"
+BRANCH="main"
 
 echo "🚀 Deploying Inbox Zero to TIGER 21 production..."
 echo "Server: $SERVER"
