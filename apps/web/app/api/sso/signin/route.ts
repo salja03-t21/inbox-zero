@@ -132,6 +132,19 @@ export const GET = withError(async (request) => {
   // Generate a random state for CSRF protection
   const state = crypto.randomUUID();
 
+  // Store the state in the database for Better Auth to verify on callback
+  // This is required for the SSO flow to work correctly
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  await prisma.verificationToken.create({
+    data: {
+      identifier: state,
+      token: state,
+      expires: expiresAt,
+    },
+  });
+
+  logger.info("SSO: Stored verification state", { state, expiresAt });
+
   // Fetch the authorization endpoint from the discovery URL
   const discoveryUrl =
     oidcConfig.discoveryUrl ||

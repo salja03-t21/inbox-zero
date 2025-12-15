@@ -2,16 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { BasicLayout } from "@/components/layouts/BasicLayout";
+import { Header } from "@/app/(landing)/home/Header";
 import { ErrorPage } from "@/components/ErrorPage";
-import { env } from "@/env";
 import { useUser } from "@/hooks/useUser";
 import { LoadingContent } from "@/components/LoadingContent";
 import { Loading } from "@/components/Loading";
 import { WELCOME_PATH } from "@/utils/config";
-import { CrispChatLoggedOutVisible } from "@/components/CrispChat";
 
 export default function LogInErrorPage() {
   const { data, isLoading, error } = useUser();
@@ -30,23 +28,21 @@ export default function LogInErrorPage() {
   if (data?.id) return <Loading />;
 
   return (
-    <BasicLayout>
-      <LoadingContent loading={isLoading} error={error}>
-        <ErrorPage
-          title="Error Logging In"
-          description={`Please try again. If this error persists, please use the support chat or email us at ${env.NEXT_PUBLIC_SUPPORT_EMAIL}.`}
-          button={
-            <Button asChild>
-              <Link href="/login">Log In</Link>
-            </Button>
-          }
-        />
-        {/* <AutoLogOut loggedIn={!!session?.user.email} /> */}
-      </LoadingContent>
-
-      <Suspense>
-        <CrispChatLoggedOutVisible />
-      </Suspense>
-    </BasicLayout>
+    <div className="bg-white">
+      <Header />
+      <main className="isolate">
+        <LoadingContent loading={isLoading} error={error}>
+          <ErrorPage
+            title="Error Logging In"
+            description="Please try again. If this error persists, please email Support at itsupport@tiger21.com."
+            button={
+              <Button asChild>
+                <Link href="/login">Log In</Link>
+              </Button>
+            }
+          />
+        </LoadingContent>
+      </main>
+    </div>
   );
 }
