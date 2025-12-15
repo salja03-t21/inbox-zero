@@ -184,8 +184,6 @@ services:
       INNGEST_REDIS_URI: redis://redis:6379
       INNGEST_POLL_INTERVAL: 60
       INNGEST_DEV: "1"
-    env_file:
-      - .env.tiger21
     networks:
       - inbox-zero-network
     healthcheck:
