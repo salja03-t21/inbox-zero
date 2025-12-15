@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { NextResponse, type NextRequest } from "next/server";
-import { betterAuthConfig } from "@/utils/auth";
+import { NextResponse } from "next/server";
+import { env } from "@/env";
 import { SafeError } from "@/utils/error";
 import { createScopedLogger } from "@/utils/logger";
 import { withError } from "@/utils/middleware";
@@ -19,47 +19,62 @@ export type GetSsoSignInResponse = {
 const logger = createScopedLogger("api/sso/signin");
 
 /**
- * Creates a proxied Request object with the correct public URL.
- * This fixes the issue where Next.js provides request.url as http://0.0.0.0:3000
- * instead of the public domain when running behind a reverse proxy (Traefik/Docker).
+ * Generate a random string of specified length using URL-safe characters
  */
-function createProxiedRequest(request: NextRequest): Request {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  const originalUrl = new URL(request.url);
+function generateRandomString(length: number): string {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) =>
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".charAt(
+      byte % 62,
+    ),
+  ).join("");
+}
 
-  // If we have forwarded headers, construct the public URL
-  let publicUrl: string;
-  if (forwardedHost && forwardedProto) {
-    publicUrl = `${forwardedProto}://${forwardedHost}${originalUrl.pathname}${originalUrl.search}`;
-    logger.info("SSO: Constructed public URL from forwarded headers", {
-      originalUrl: request.url,
-      publicUrl,
-      forwardedHost,
-      forwardedProto,
-    });
-  } else {
-    // Fallback to original URL if no forwarded headers
-    publicUrl = request.url;
-    logger.warn("SSO: No forwarded headers found, using original URL", {
-      url: publicUrl,
-    });
-  }
+/**
+ * Generate a PKCE code verifier (43-128 characters, URL-safe)
+ */
+function generateCodeVerifier(): string {
+  return generateRandomString(128);
+}
 
-  // Create modified headers with the correct host
-  const modifiedHeaders = new Headers(request.headers);
-  if (forwardedHost) {
-    modifiedHeaders.set("host", forwardedHost);
-  }
+/**
+ * Generate a PKCE code challenge from a code verifier
+ */
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
 
-  // Create a new Request with the public URL
-  return new Request(publicUrl, {
-    method: request.method,
-    headers: modifiedHeaders,
-    body: request.body,
-    // @ts-expect-error - Required for requests with body
-    duplex: "half",
-  });
+/**
+ * Sign a value using HMAC-SHA256 (matches Better Auth's signing)
+ */
+async function signValue(value: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(value),
+  );
+  const signatureBase64 = btoa(
+    String.fromCharCode(...new Uint8Array(signature)),
+  )
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  return `${value}.${signatureBase64}`;
 }
 
 export const GET = withError(async (request) => {
@@ -99,12 +114,6 @@ export const GET = withError(async (request) => {
     issuer: provider.issuer,
   });
 
-  // ============================================================================
-  // FIX: Manually construct Okta authorization URL
-  // We bypass Better Auth's handler because it has issues with proxied requests
-  // where request.url contains 0.0.0.0:3000 instead of the public domain
-  // ============================================================================
-
   // Get the OIDC config from the database
   const providerData = await prisma.ssoProvider.findUnique({
     where: { providerId: provider.providerId },
@@ -115,7 +124,28 @@ export const GET = withError(async (request) => {
     throw new SafeError("SSO provider configuration not found");
   }
 
-  const oidcConfig = JSON.parse(providerData.oidcConfig as string);
+  // Parse the OIDC config - handle both string and object types
+  let oidcConfig: {
+    clientId: string;
+    discoveryEndpoint?: string;
+    discoveryUrl?: string;
+    pkce?: boolean;
+    scopes?: string[];
+  };
+
+  if (typeof providerData.oidcConfig === "string") {
+    try {
+      oidcConfig = JSON.parse(providerData.oidcConfig);
+    } catch (e) {
+      logger.error("SSO: Failed to parse oidcConfig", {
+        error: e instanceof Error ? e.message : String(e),
+        oidcConfig: providerData.oidcConfig,
+      });
+      throw new SafeError("Invalid SSO provider configuration");
+    }
+  } else {
+    oidcConfig = providerData.oidcConfig as typeof oidcConfig;
+  }
 
   // Construct the public base URL from forwarded headers
   const forwardedHost = request.headers.get("x-forwarded-host");
@@ -125,53 +155,141 @@ export const GET = withError(async (request) => {
       ? `${forwardedProto}://${forwardedHost}`
       : process.env.BETTER_AUTH_URL || "https://iz.tiger21.com";
 
-  // Construct the callback URL that Okta will redirect to after authentication
-  // Better Auth SSO callback format: /api/auth/sso/callback/{providerId}
-  const callbackURL = `${publicBaseUrl}/api/auth/sso/callback/${provider.providerId}`;
+  // The callback URL where Okta will redirect after authentication
+  // This must match what Better Auth expects: /api/auth/sso/callback/{providerId}
+  const redirectUri = `${publicBaseUrl}/api/auth/sso/callback/${provider.providerId}`;
 
-  // Generate a random state for CSRF protection
-  const state = crypto.randomUUID();
+  // The final callback URL after successful authentication (where user ends up)
+  const finalCallbackUrl = `${publicBaseUrl}/`;
 
-  // Store the state in the database for Better Auth to verify on callback
-  // This is required for the SSO flow to work correctly
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  // Generate state ID (random UUID)
+  const stateId = crypto.randomUUID();
+
+  // Generate PKCE code verifier if PKCE is enabled
+  const usePkce = oidcConfig.pkce !== false; // Default to true
+  const codeVerifier = usePkce ? generateCodeVerifier() : "";
+  const codeChallenge = usePkce
+    ? await generateCodeChallenge(codeVerifier)
+    : "";
+
+  // Create the state data object that Better Auth's parseState expects
+  // This matches the format in better-auth/oauth2 generateState function
+  const stateData = {
+    callbackURL: finalCallbackUrl,
+    codeVerifier: codeVerifier,
+    expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+    // Optional fields:
+    // errorURL: undefined,
+    // newUserURL: undefined,
+    // link: undefined,
+    // requestSignUp: undefined,
+  };
+
+  // Store the state in the verification table
+  // Better Auth stores the state data as the "value" field (which maps to "token" in our schema)
+  const expiresAt = new Date(stateData.expiresAt);
   await prisma.verificationToken.create({
     data: {
-      identifier: state,
-      token: state,
+      identifier: stateId,
+      token: JSON.stringify(stateData), // Store the full state data as JSON
       expires: expiresAt,
     },
   });
 
-  logger.info("SSO: Stored verification state", { state, expiresAt });
+  logger.info("SSO: Stored verification state", {
+    stateId,
+    expiresAt,
+    usePkce,
+    finalCallbackUrl,
+  });
 
   // Fetch the authorization endpoint from the discovery URL
   const discoveryUrl =
+    oidcConfig.discoveryEndpoint ||
     oidcConfig.discoveryUrl ||
     `${providerData.issuer}/.well-known/openid-configuration`;
+
+  logger.info("SSO: Fetching discovery document", { discoveryUrl });
+
   const discoveryResponse = await fetch(discoveryUrl);
+  if (!discoveryResponse.ok) {
+    logger.error("SSO: Failed to fetch discovery document", {
+      status: discoveryResponse.status,
+      statusText: discoveryResponse.statusText,
+    });
+    throw new SafeError("Failed to fetch SSO provider configuration");
+  }
+
   const discoveryData = await discoveryResponse.json();
 
   // Construct the Okta authorization URL
   const authUrl = new URL(discoveryData.authorization_endpoint);
   authUrl.searchParams.set("client_id", oidcConfig.clientId);
-  authUrl.searchParams.set("redirect_uri", callbackURL);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("scope", "openid email profile");
-  authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set(
+    "scope",
+    (
+      oidcConfig.scopes || ["openid", "email", "profile", "offline_access"]
+    ).join(" "),
+  );
+  authUrl.searchParams.set("state", stateId);
+
+  // Add PKCE parameters if enabled
+  if (usePkce && codeChallenge) {
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
+  }
 
   const redirectUrl = authUrl.toString();
 
   logger.info("SSO: Constructed Okta redirect URL", {
     redirectUrl,
-    callbackURL,
+    redirectUri,
     publicBaseUrl,
+    usePkce,
   });
 
-  const response: GetSsoSignInResponse = {
+  // Get the auth secret for signing the state cookie
+  const authSecret = env.AUTH_SECRET || env.NEXTAUTH_SECRET;
+  if (!authSecret) {
+    logger.error("SSO: No auth secret configured");
+    throw new SafeError("Server configuration error");
+  }
+
+  // Sign the state value (matches Better Auth's setSignedCookie)
+  const signedState = await signValue(stateId, authSecret);
+
+  // Determine cookie name based on environment
+  // Better Auth uses "better-auth.state" or "__Secure-better-auth.state" in production
+  const isSecure = publicBaseUrl.startsWith("https://");
+  const cookieName = isSecure
+    ? "__Secure-better-auth.state"
+    : "better-auth.state";
+
+  // Create the response with the state cookie
+  const responseData: GetSsoSignInResponse = {
     redirectUrl,
     providerId: provider.providerId,
   };
 
-  return NextResponse.json(response);
+  const jsonResponse = NextResponse.json(responseData);
+
+  // Set the signed state cookie
+  // This cookie is required by Better Auth's parseState function
+  jsonResponse.cookies.set(cookieName, signedState, {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 5 * 60, // 5 minutes (matches Better Auth)
+  });
+
+  logger.info("SSO: Set state cookie", {
+    cookieName,
+    stateId,
+    isSecure,
+  });
+
+  return jsonResponse;
 });
