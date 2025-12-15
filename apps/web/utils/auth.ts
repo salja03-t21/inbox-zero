@@ -165,7 +165,7 @@ export const betterAuthConfig = betterAuth({
         logger.info(`[BetterAuth:${level}] ${message}`, { args });
       }
     },
-    error: (error, ...args) => {
+    error: (error: unknown, ...args: unknown[]) => {
       // Enhanced error logging
       logger.error(
         `[BetterAuth:ERROR] ${error instanceof Error ? error.message : String(error)}`,
