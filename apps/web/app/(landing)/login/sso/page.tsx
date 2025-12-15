@@ -15,13 +15,6 @@ import type {
 
 const ssoLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  organizationSlug: z
-    .string()
-    .regex(
-      /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/,
-      "Please enter a valid organization slug",
-    )
-    .max(63, "Organization slug must be 63 characters or fewer"),
 });
 
 type SsoLoginBody = z.infer<typeof ssoLoginSchema>;
@@ -44,7 +37,7 @@ export default function SSOLoginPage() {
       try {
         const params: GetSsoSignInParams = {
           email: data.email,
-          organizationSlug: data.organizationSlug,
+          organizationSlug: "tiger21", // Always use tiger21 org slug
         };
 
         const paramsString = new URLSearchParams(params).toString();
@@ -99,17 +92,9 @@ export default function SSOLoginPage() {
                 type="email"
                 name="email"
                 label="Email"
+                placeholder="your-email@tiger21.com"
                 registerProps={register("email")}
                 error={errors.email}
-              />
-
-              <Input
-                type="text"
-                name="organizationSlug"
-                label="Organization Slug"
-                placeholder="your-org-slug"
-                registerProps={register("organizationSlug")}
-                error={errors.organizationSlug}
               />
 
               <Button type="submit" size="lg" full loading={isSubmitting}>
