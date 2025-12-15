@@ -83,3 +83,8 @@ coverage
 memory-bank/
 .env.production
 deploy.log
+.opencode/
+.serena/
+.specify/
+apps/web/.env.*.bak
+apps/web/.env.*.migration
