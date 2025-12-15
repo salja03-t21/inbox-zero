@@ -139,21 +139,6 @@ export const betterAuthConfig = betterAuth({
     signIn: handleSignIn,
   },
   databaseHooks: {
-    user: {
-      create: {
-        before: async (user) => {
-          // Block user creation if email domain is not allowed
-          if (user.email && !isEmailDomainAllowed(user.email)) {
-            logger.warn("Blocked user creation from unauthorized domain", {
-              email: user.email,
-              domain: user.email.split("@")[1],
-            });
-            throw new Error("DomainNotAllowed");
-          }
-          return user;
-        },
-      },
-    },
     account: {
       create: {
         after: async (account: Account) => {
@@ -183,8 +168,32 @@ async function handleSignIn({
   user: User;
   isNewUser: boolean;
 }) {
-  // Domain check now happens in user.create.before hook
-  // This ensures users are blocked BEFORE creation
+  // CRITICAL: Check if email domain is allowed
+  // This blocks unauthorized domains from accessing the application
+  if (user.email && !isEmailDomainAllowed(user.email)) {
+    logger.warn("Sign-in attempt from unauthorized domain - BLOCKED", {
+      email: user.email,
+      domain: user.email.split("@")[1],
+      isNewUser,
+    });
+
+    // If user was just created, delete them immediately
+    if (isNewUser) {
+      await prisma.user
+        .delete({
+          where: { id: user.id },
+        })
+        .catch((error) => {
+          logger.error("Failed to delete unauthorized user", {
+            userId: user.id,
+            email: user.email,
+            error,
+          });
+        });
+    }
+
+    throw new Error("DomainNotAllowed");
+  }
 
   if (isNewUser && user.email) {
     const loops = async () => {
