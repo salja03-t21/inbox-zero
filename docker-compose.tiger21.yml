@@ -54,6 +54,9 @@ services:
       # Node environment
       NODE_ENV: production
 
+      # Public base URL for external access
+      NEXT_PUBLIC_BASE_URL: https://iz.tiger21.com
+
       # Next.js internal API calls (server-side fetches)
       NEXTAUTH_URL: http://localhost:3000
 
