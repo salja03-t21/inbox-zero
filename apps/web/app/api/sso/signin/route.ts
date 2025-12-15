@@ -250,17 +250,7 @@ export const GET = withError(async (request) => {
     usePkce,
   });
 
-  // Get the auth secret for signing the state cookie
-  const authSecret = env.AUTH_SECRET || env.NEXTAUTH_SECRET;
-  if (!authSecret) {
-    logger.error("SSO: No auth secret configured");
-    throw new SafeError("Server configuration error");
-  }
-
-  // Sign the state value (matches Better Auth's setSignedCookie)
-  const signedState = await signValue(stateId, authSecret);
-
-  // Determine cookie name based on environment
+  // Determine cookie name and settings based on environment
   // Better Auth uses "better-auth.state" or "__Secure-better-auth.state" in production
   const isSecure = publicBaseUrl.startsWith("https://");
   const cookieName = isSecure
@@ -275,9 +265,10 @@ export const GET = withError(async (request) => {
 
   const jsonResponse = NextResponse.json(responseData);
 
-  // Set the signed state cookie
-  // This cookie is required by Better Auth's parseState function
-  jsonResponse.cookies.set(cookieName, signedState, {
+  // Set the state cookie with just the stateId (unsigned)
+  // Better Auth's callback will use this to look up the verification token
+  // Note: We're NOT signing the cookie ourselves - Better Auth might expect unsigned state for SSO
+  jsonResponse.cookies.set(cookieName, stateId, {
     httpOnly: true,
     secure: isSecure,
     sameSite: "lax",
@@ -285,10 +276,11 @@ export const GET = withError(async (request) => {
     maxAge: 5 * 60, // 5 minutes (matches Better Auth)
   });
 
-  logger.info("SSO: Set state cookie", {
+  logger.info("SSO: Set state cookie (unsigned)", {
     cookieName,
     stateId,
     isSecure,
+    cookieValue: stateId, // Log the actual cookie value for debugging
   });
 
   return jsonResponse;

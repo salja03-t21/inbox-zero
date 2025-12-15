@@ -149,7 +149,33 @@ export const betterAuthConfig = betterAuth({
     level: "debug", // Changed to debug for more verbose logging
     log: (level, message, ...args) => {
       // Log ALL Better Auth internal messages for debugging
-      logger.info(`[BetterAuth:${level}] ${message}`, { args });
+      // Special attention to SSO-related logs
+      if (
+        message.toLowerCase().includes("sso") ||
+        message.toLowerCase().includes("state") ||
+        message.toLowerCase().includes("callback") ||
+        message.toLowerCase().includes("verification")
+      ) {
+        logger.info(`[BetterAuth:${level}] ⚠️ SSO: ${message}`, {
+          args,
+          level,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        logger.info(`[BetterAuth:${level}] ${message}`, { args });
+      }
+    },
+    error: (error, ...args) => {
+      // Enhanced error logging
+      logger.error(
+        `[BetterAuth:ERROR] ${error instanceof Error ? error.message : String(error)}`,
+        {
+          error,
+          errorStack: error instanceof Error ? error.stack : undefined,
+          args,
+          timestamp: new Date().toISOString(),
+        },
+      );
     },
   },
   baseURL: resolvedBaseURL,
