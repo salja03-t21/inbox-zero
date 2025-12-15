@@ -168,12 +168,30 @@ async function handleSignIn({
   user: User;
   isNewUser: boolean;
 }) {
-  // Check if email domain is allowed
+  // CRITICAL: Check if email domain is allowed
+  // This blocks unauthorized domains from accessing the application
   if (user.email && !isEmailDomainAllowed(user.email)) {
-    logger.warn("Sign-in attempt from unauthorized domain", {
+    logger.warn("Sign-in attempt from unauthorized domain - BLOCKED", {
       email: user.email,
       domain: user.email.split("@")[1],
+      isNewUser,
     });
+
+    // Delete the unauthorized user immediately (both new and existing)
+    // This ensures no unauthorized users can exist in the database
+    await prisma.user
+      .delete({
+        where: { id: user.id },
+      })
+      .catch((error) => {
+        logger.error("Failed to delete unauthorized user", {
+          userId: user.id,
+          email: user.email,
+          isNewUser,
+          error,
+        });
+      });
+
     throw new Error("DomainNotAllowed");
   }
 
