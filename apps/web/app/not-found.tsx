@@ -1,13 +1,13 @@
 import { ErrorPage } from "@/components/ErrorPage";
-import { BasicLayout } from "@/components/layouts/BasicLayout";
+import { MinimalLayout } from "@/components/layouts/MinimalLayout";
 
 export default function NotFound() {
   return (
-    <BasicLayout>
+    <MinimalLayout>
       <ErrorPage
         title="Page Not Found"
         description="The page you are looking for could not be found."
       />
-    </BasicLayout>
+    </MinimalLayout>
   );
 }

@@ -1,12 +1,12 @@
 import { Button } from "@/components/Button";
 import { PageHeading, TypographyP } from "@/components/Typography";
-import { BasicLayout } from "@/components/layouts/BasicLayout";
+import { MinimalLayout } from "@/components/layouts/MinimalLayout";
 import { CardBasic } from "@/components/ui/card";
 
 // same component as not-found
 export default function ThankYouPage() {
   return (
-    <BasicLayout>
+    <MinimalLayout>
       <div className="pb-40 pt-60">
         <CardBasic className="mx-auto max-w-xl text-center">
           <PageHeading>Thank you!</PageHeading>
@@ -20,6 +20,6 @@ export default function ThankYouPage() {
           </Button>
         </CardBasic>
       </div>
-    </BasicLayout>
+    </MinimalLayout>
   );
 }

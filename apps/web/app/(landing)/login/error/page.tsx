@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/app/(landing)/home/Header";
+import { MinimalLayout } from "@/components/layouts/MinimalLayout";
 import { ErrorPage } from "@/components/ErrorPage";
 import { useUser } from "@/hooks/useUser";
 import { LoadingContent } from "@/components/LoadingContent";
@@ -28,21 +28,18 @@ export default function LogInErrorPage() {
   if (data?.id) return <Loading />;
 
   return (
-    <div className="bg-white">
-      <Header />
-      <main className="isolate">
-        <LoadingContent loading={isLoading} error={error}>
-          <ErrorPage
-            title="Error Logging In"
-            description="Please try again. If this error persists, please email Support at itsupport@tiger21.com."
-            button={
-              <Button asChild>
-                <Link href="/login">Log In</Link>
-              </Button>
-            }
-          />
-        </LoadingContent>
-      </main>
-    </div>
+    <MinimalLayout>
+      <LoadingContent loading={isLoading} error={error}>
+        <ErrorPage
+          title="Error Logging In"
+          description="Please try again. If this error persists, please email Support at itsupport@tiger21.com."
+          button={
+            <Button asChild>
+              <Link href="/login">Log In</Link>
+            </Button>
+          }
+        />
+      </LoadingContent>
+    </MinimalLayout>
   );
 }
