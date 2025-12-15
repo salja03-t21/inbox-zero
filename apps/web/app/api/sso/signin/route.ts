@@ -126,7 +126,8 @@ export const GET = withError(async (request) => {
       : process.env.BETTER_AUTH_URL || "https://iz.tiger21.com";
 
   // Construct the callback URL that Okta will redirect to after authentication
-  const callbackURL = `${publicBaseUrl}/api/auth/callback/sso/${provider.providerId}`;
+  // Better Auth SSO callback format: /api/auth/sso/callback/{providerId}
+  const callbackURL = `${publicBaseUrl}/api/auth/sso/callback/${provider.providerId}`;
 
   // Generate a random state for CSRF protection
   const state = crypto.randomUUID();
