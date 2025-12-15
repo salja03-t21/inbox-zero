@@ -16,8 +16,8 @@ const handler = serve({
 
 // Wrap the PUT handler to send cleanup event after successful registration
 const originalPUT = handler.PUT;
-const wrappedPUT: typeof originalPUT = async (req) => {
-  const response = await originalPUT(req);
+const wrappedPUT: typeof originalPUT = async (req, ctx) => {
+  const response = await originalPUT(req, ctx);
 
   // After successful function registration, kickstart the cleanup cycle (only once)
   if (response.status === 200 && !cleanupEventSent) {
