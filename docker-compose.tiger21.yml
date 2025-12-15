@@ -176,7 +176,7 @@ services:
       - sh
       - -c
       - |
-        inngest start --queue-workers 50 --signing-key "$${INNGEST_SIGNING_KEY}"
+        inngest start --queue-workers 50 --signing-key "${INNGEST_SIGNING_KEY}"
     environment:
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
