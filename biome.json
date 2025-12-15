@@ -62,13 +62,15 @@
         "noUnusedFunctionParameters": "warn",
         "useExhaustiveDependencies": "warn",
         "useParseIntRadix": "off",
-        "noNestedComponentDefinitions": "off"
+        "noNestedComponentDefinitions": "off",
+        "useUniqueElementIds": "warn"
       },
       "a11y": {
         "useSemanticElements": "off",
         "noStaticElementInteractions": "off",
         "noSvgWithoutTitle": "off",
-        "noNoninteractiveElementInteractions": "off"
+        "noNoninteractiveElementInteractions": "off",
+        "noLabelWithoutControl": "warn"
       }
     }
   },
