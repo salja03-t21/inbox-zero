@@ -46,11 +46,19 @@ export const GET = withError(async (request) => {
     throw new SafeError("No SSO provider found for this organization");
   }
 
+  // Pass request headers to Better Auth API so it can properly construct URLs
+  // This is important for SSO callbacks to use the correct external URL
   const ssoResponse = await betterAuthConfig.api.signInSSO({
     body: {
       providerId: provider.providerId,
       callbackURL: "/accounts",
     },
+    headers: request.headers,
+  });
+
+  logger.info("SSO sign-in response", {
+    url: ssoResponse.url,
+    providerId: provider.providerId,
   });
 
   const response: GetSsoSignInResponse = {

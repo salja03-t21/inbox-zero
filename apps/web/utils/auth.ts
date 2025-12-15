@@ -49,6 +49,21 @@ export function isEmailDomainAllowed(
   return domains.some((domain) => domain.toLowerCase() === emailDomain);
 }
 
+// Determine the base URL at module load time
+// Priority: BETTER_AUTH_URL > BASE_URL > NEXT_PUBLIC_BASE_URL
+const resolvedBaseURL =
+  process.env.BETTER_AUTH_URL ||
+  process.env.BASE_URL ||
+  env.NEXT_PUBLIC_BASE_URL;
+
+// Log the resolved base URL for debugging
+logger.info("Better Auth base URL resolved", {
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+  BASE_URL: process.env.BASE_URL,
+  NEXT_PUBLIC_BASE_URL: env.NEXT_PUBLIC_BASE_URL,
+  resolvedBaseURL,
+});
+
 export const betterAuthConfig = betterAuth({
   advanced: {
     database: {
@@ -68,8 +83,8 @@ export const betterAuthConfig = betterAuth({
       }
     },
   },
-  baseURL: process.env.BASE_URL || env.NEXT_PUBLIC_BASE_URL,
-  trustedOrigins: [process.env.BASE_URL || env.NEXT_PUBLIC_BASE_URL],
+  baseURL: resolvedBaseURL,
+  trustedOrigins: [resolvedBaseURL],
   secret: env.AUTH_SECRET || env.NEXTAUTH_SECRET,
   emailAndPassword: {
     enabled: false,

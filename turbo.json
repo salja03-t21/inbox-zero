@@ -9,6 +9,8 @@
         "DIRECT_URL",
         "NEXTAUTH_SECRET",
         "AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "BASE_URL",
 
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",

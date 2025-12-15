@@ -54,6 +54,10 @@ services:
       # Node environment
       NODE_ENV: production
 
+      # Better Auth URL - this is the primary URL Better Auth uses
+      # Must be set for SSO and OAuth callbacks to work correctly
+      BETTER_AUTH_URL: https://iz.tiger21.com
+
       # Public base URL for external access (runtime server-side)
       BASE_URL: https://iz.tiger21.com
       # Public base URL for external access (build-time client-side)
