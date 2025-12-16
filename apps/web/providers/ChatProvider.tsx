@@ -15,7 +15,7 @@ import { toastError } from "@/components/Toast";
 import { convertToUIMessages } from "@/components/assistant-chat/helpers";
 import type { ChatMessage } from "@/components/assistant-chat/types";
 import { useChatMessages } from "@/hooks/useChatMessages";
-import { useParams } from "next/navigation";
+import { useAccount } from "@/providers/EmailAccountProvider";
 import { EMAIL_ACCOUNT_HEADER } from "@/utils/config";
 import type { MessageContext } from "@/app/api/chat/validation";
 
@@ -36,21 +36,12 @@ type ChatContextType = {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const params = useParams<{ emailAccountId: string | undefined }>();
-  const emailAccountId = params.emailAccountId || "";
+  const { emailAccountId } = useAccount();
   const { mutate } = useSWRConfig();
 
   const [input, setInput] = useState<string>("");
   const [chatId, setChatId] = useQueryState("chatId", parseAsString);
   const [context, setContext] = useState<MessageContext | null>(null);
-
-  // Clear chatId when email account changes to prevent 403 errors
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (chatId && emailAccountId) {
-      setChatId(null);
-    }
-  }, [emailAccountId, chatId, setChatId]);
 
   const { data } = useChatMessages(chatId);
 
@@ -80,11 +71,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     experimental_throttle: 100,
     generateId: generateUUID,
     onFinish: () => {
-      console.log("[Chat] onFinish called");
       mutate("/api/user/rules");
     },
     onError: (error) => {
-      console.error("[Chat] onError called", error);
+      console.error(error);
       toastError({
         title: "An error occured!",
         description: error.message || "",
