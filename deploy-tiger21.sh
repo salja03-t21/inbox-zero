@@ -3,15 +3,24 @@ set -e
 
 # TIGER 21 Production Deployment Script for Docker Swarm
 # 
-# CRITICAL DEPLOYMENT PRINCIPLE:
-# ===============================
-# SERVERS SHOULD NEVER HAVE SOURCE CODE!
-# 
-# This script follows the correct Docker Swarm deployment pattern:
-# 1. Build Docker image LOCALLY (on development machine)
-# 2. Push image to container registry (ghcr.io)
-# 3. Deploy to swarm using ONLY the docker-compose file and .env
-# 4. Server pulls pre-built image from registry
+# CRITICAL DEPLOYMENT PRINCIPLES:
+# ================================
+#
+# 1. SERVERS SHOULD NEVER HAVE SOURCE CODE!
+#    - Build Docker image LOCALLY (on development machine)
+#    - Push image to container registry (ghcr.io)
+#    - Deploy to swarm using ONLY the docker-compose file and .env
+#    - Server pulls pre-built image from registry
+#
+# 2. ALWAYS BUILD FOR AMD64 ARCHITECTURE!
+#    - Production servers are Linux AMD64 (x86_64)
+#    - Mac M1/M2/M3 builds are ARM64 and WILL NOT RUN on servers
+#    - Always use: docker buildx build --platform linux/amd64
+#    - If you see "exec format error" in logs, you built for wrong architecture
+#
+# 3. CLEANUP AFTER DEPLOYMENT!
+#    - Script automatically prunes old images after successful deploy
+#    - Manual cleanup: docker image prune -f --filter 'until=24h'
 #
 # The production server should ONLY contain:
 # - ~/IT-Configs/docker_swarm/inbox-zero/docker-compose.tiger21.yml
@@ -222,6 +231,14 @@ echo "📌 Deployed commit: $LATEST_COMMIT (branch: $BRANCH)"
 echo "🏷️  Docker image: $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT"
 echo "🏷️  Stack: $STACK_NAME"
 echo ""
+
+# Step 13: Cleanup old Docker images on server
+echo "🧹 Cleaning up old Docker images on server..."
+ssh $SERVER_USER@$SERVER "docker image prune -f --filter 'until=24h' 2>/dev/null || true"
+ssh $SERVER_USER@$SERVER "docker container prune -f 2>/dev/null || true"
+echo "✓ Cleanup complete"
+echo ""
+
 echo "📊 Useful commands:"
 echo "  View services: ssh $SERVER_USER@$SERVER 'docker stack services $STACK_NAME'"
 echo "  View tasks: ssh $SERVER_USER@$SERVER 'docker stack ps $STACK_NAME'"

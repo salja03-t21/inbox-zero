@@ -112,6 +112,23 @@ ssh root@167.99.116.99 'docker service scale inbox-zero-tiger21_app=0 && sleep 5
 
 ## Deployment Process
 
+### ⚠️ Critical Deployment Rules
+
+1. **ALWAYS BUILD FOR AMD64 ARCHITECTURE**
+   - Production servers are Linux AMD64 (x86_64)
+   - Mac M1/M2/M3 builds are ARM64 and **WILL NOT RUN** on servers
+   - Always use: `docker buildx build --platform linux/amd64`
+   - If you see `exec format error` in logs, you built for the wrong architecture
+
+2. **CLEANUP AFTER DEPLOYMENT**
+   - Script automatically prunes old images after successful deploy
+   - Manual cleanup: `docker image prune -f --filter 'until=24h'`
+   - Run cleanup script: `./scripts/tiger21-cleanup.sh`
+
+3. **NO SOURCE CODE ON SERVERS**
+   - Build locally, push to registry, deploy from registry
+   - Server only contains docker-compose.yml and .env files
+
 ### Prerequisites
 
 1. **Local Environment**:
