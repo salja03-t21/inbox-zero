@@ -36,7 +36,7 @@ export default async function SetupPage({
   return (
     <>
       <SetupContent />
-      <LoadStats />
+      <LoadStats loadBefore showToast={false} />
     </>
   );
 }
