@@ -1,0 +1,158 @@
+diff --git a/apps/web/utils/account.ts b/apps/web/utils/account.ts
+index 1234567..abcdefg 100644
+--- a/apps/web/utils/account.ts
++++ b/apps/web/utils/account.ts
+@@ -130,6 +130,7 @@ export async function redirectToEmailAccountPath(path: string) {
+       id: true,
+       email: true,
+       accountId: true,
++      account: { select: { provider: true } },
+     },
+     orderBy: { createdAt: "asc" },
+   });
+@@ -148,6 +149,15 @@ export async function redirectToEmailAccountPath(path: string) {
+     redirect("/accounts");
+   }
+ 
++  // Check if the email account has a valid email provider
++  const hasValidProvider = emailAccounts.some(
++    (account) =>
++      account.account?.provider === "google" ||
++      account.account?.provider === "microsoft"
++  );
++
++  // If no valid email provider, redirect to accounts page to connect one
++  if (!hasValidProvider) {
++    redirect("/accounts");
++  }
++
+   const redirectUrl = `/${emailAccountId}${path}`;
+ 
+   redirect(redirectUrl);
+diff --git a/apps/web/app/(app)/accounts/page.tsx b/apps/web/app/(app)/accounts/page.tsx
+index 1234567..abcdefg 100644
+--- a/apps/web/app/(app)/accounts/page.tsx
++++ b/apps/web/app/(app)/accounts/page.tsx
+@@ -22,10 +22,29 @@ import { AddAccount } from "@/app/(app)/accounts/AddAccount";
+ import { PageHeader } from "@/components/PageHeader";
+ import { PageWrapper } from "@/components/PageWrapper";
++import { Alert, AlertDescription } from "@/components/ui/alert";
++import { InfoIcon } from "lucide-react";
+ 
+ export default function AccountsPage() {
+   const { data, isLoading, error, mutate } = useAccounts();
+ 
++  // Check if user has any email provider connected
++  const hasEmailProvider = data?.emailAccounts.some(
++    (account) =>
++      account.account?.provider === "google" ||
++      account.account?.provider === "microsoft"
++  );
++
++  const hasSSOOnly = data?.emailAccounts.some(
++    (account) =>
++      account.account?.provider !== "google" &&
++      account.account?.provider !== "microsoft"
++  );
++
+   return (
+     <PageWrapper>
+       <PageHeader title="Accounts" description="Manage your email accounts." />
+ 
++      {hasSSOOnly && !hasEmailProvider && (
++        <Alert className="mb-6">
++          <InfoIcon className="h-4 w-4" />
++          <AlertDescription>
++            Welcome! You've successfully logged in with SSO. To start using
++            Inbox Zero, please connect your email account (Google or Microsoft)
++            below.
++          </AlertDescription>
++        </Alert>
++      )}
++
+       <LoadingContent loading={isLoading} error={error}>
+         <div className="grid grid-cols-1 gap-4 py-6 md:grid-cols-2 lg:grid-cols-3">
+           {data?.emailAccounts.map((emailAccount) => (
+@@ -55,6 +74,7 @@ function AccountItem({
+     email: string;
+     image: string | null;
+     isPrimary: boolean;
++    account?: { provider: string };
+   };
+   onAccountDeleted: () => void;
+ }) {
+@@ -75,6 +95,11 @@ function AccountItem({
+     },
+   });
+ 
++  // Don't show assistant/setup buttons for SSO-only accounts
++  const isEmailProvider =
++    emailAccount.account?.provider === "google" ||
++    emailAccount.account?.provider === "microsoft";
++
+   return (
+     <Card>
+       <CardHeader className="flex flex-row items-center gap-3 space-y-0">
+@@ -90,6 +115,7 @@ function AccountItem({
+         </div>
+       </CardHeader>
+       <CardContent className="flex justify-end gap-2 flex-wrap">
++        {isEmailProvider && (
++          <>
+         <Button variant="outline" size="sm" Icon={BotIcon}>
+           <Link href={prefixPath(emailAccount.id, "/automation")}>
+             Assistant
+@@ -99,6 +125,8 @@ function AccountItem({
+         <Button variant="outline" size="sm" Icon={ArrowRight}>
+           <Link href={prefixPath(emailAccount.id, "/setup")}>Setup</Link>
+         </Button>
++          </>
++        )}
+         {!emailAccount.isPrimary && (
+           <ConfirmDialog
+             trigger={
+diff --git a/apps/web/providers/ChatProvider.tsx b/apps/web/providers/ChatProvider.tsx
+index 1234567..abcdefg 100644
+--- a/apps/web/providers/ChatProvider.tsx
++++ b/apps/web/providers/ChatProvider.tsx
+@@ -16,7 +16,7 @@ import { toastError } from "@/components/Toast";
+ import { convertToUIMessages } from "@/components/assistant-chat/helpers";
+ import type { ChatMessage } from "@/components/assistant-chat/types";
+ import { useChatMessages } from "@/hooks/useChatMessages";
+-import { useAccount } from "@/providers/EmailAccountProvider";
++import { useParams } from "next/navigation";
+ import { EMAIL_ACCOUNT_HEADER } from "@/utils/config";
+ import type { MessageContext } from "@/app/api/chat/validation";
+ 
+@@ -36,7 +36,8 @@ type ChatContextType = {
+ const ChatContext = createContext<ChatContextType | undefined>(undefined);
+ 
+ export function ChatProvider({ children }: { children: React.ReactNode }) {
+-  const { emailAccountId } = useAccount();
++  const params = useParams<{ emailAccountId: string | undefined }>();
++  const emailAccountId = params.emailAccountId || "";
+   const { mutate } = useSWRConfig();
+ 
+   const [input, setInput] = useState<string>("");
+diff --git a/apps/web/utils/middleware.ts b/apps/web/utils/middleware.ts
+index 1234567..abcdefg 100644
+--- a/apps/web/utils/middleware.ts
++++ b/apps/web/utils/middleware.ts
+@@ -303,6 +303,16 @@ async function emailProviderMiddleware(
+       );
+     }
+ 
++    // Check if this is an SSO-only account (no email provider)
++    if (
++      emailAccount.account.provider !== "google" &&
++      emailAccount.account.provider !== "microsoft"
++    ) {
++      return NextResponse.json(
++        { error: "Please connect an email account (Google or Microsoft) to use this feature", isKnownError: true },
++        { status: 400 },
++      );
++    }
++
+     const provider = await createEmailProvider({
+       emailAccountId: emailAccount.id,
+       provider: emailAccount.account.provider,

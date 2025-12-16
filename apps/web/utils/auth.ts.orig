@@ -602,18 +602,18 @@ async function getProfileData(providerId: string, accessToken: string) {
       throw error;
     }
   }
-
+  
   // For SSO providers, we can't fetch profile data using access token
   // The profile data should already be available in the user record
-  if (providerId.includes("okta") || providerId.includes("sso")) {
+  if (providerId.includes('okta') || providerId.includes('sso')) {
     logger.info("[getProfileData] SSO provider detected, returning null", {
-      providerId,
+      providerId
     });
     return null;
   }
-
+  
   logger.warn("[getProfileData] Unknown provider type", { providerId });
-
+  
   return null;
 }
 
@@ -624,64 +624,55 @@ async function handleLinkAccount(account: Account) {
 
   try {
     // For SSO providers, get user info from the user record
-    if (
-      account.providerId.includes("okta") ||
-      account.providerId.includes("sso")
-    ) {
-      logger.info(
-        "[handleLinkAccount] SSO provider detected, getting user info from database",
-        {
-          providerId: account.providerId,
-          userId: account.userId,
-        },
-      );
-
+    if (account.providerId.includes('okta') || account.providerId.includes('sso')) {
+      logger.info("[handleLinkAccount] SSO provider detected, getting user info from database", {
+        providerId: account.providerId,
+        userId: account.userId
+      });
+      
       const user = await prisma.user.findUnique({
         where: { id: account.userId },
         select: { email: true, name: true, image: true },
       });
-
+      
       if (!user?.email) {
-        logger.error(
-          "[handleLinkAccount] No user email found for SSO provider",
-          {
-            userId: account.userId,
-            providerId: account.providerId,
-          },
-        );
+        logger.error("[handleLinkAccount] No user email found for SSO provider", {
+          userId: account.userId,
+          providerId: account.providerId,
+        });
         throw new Error("User email not found for SSO account linking.");
       }
-
+      
       primaryEmail = user.email;
       primaryName = user.name;
       primaryPhotoUrl = user.image;
     } else {
       // Original OAuth provider logic
-      if (!account.accessToken) {
-        logger.error(
-          "[linkAccount] No access_token found in data, cannot fetch profile.",
-        );
-        throw new Error("Missing access token during account linking.");
-      }
-      const profileData = await getProfileData(
-        account.providerId,
-        account.accessToken,
+    if (!account.accessToken) {
+      logger.error(
+        "[linkAccount] No access_token found in data, cannot fetch profile.",
       );
+      throw new Error("Missing access token during account linking.");
+    }
+    const profileData = await getProfileData(
+      account.providerId,
+      account.accessToken,
+    );
 
-      if (!profileData?.email) {
-        logger.error("[handleLinkAccount] No email found in profile data");
-      }
+    if (!profileData?.email) {
+      logger.error("[handleLinkAccount] No email found in profile data");
+    }
 
-      primaryEmail = profileData?.email;
-      primaryName = profileData?.name;
-      primaryPhotoUrl = profileData?.image;
+    primaryEmail = profileData?.email;
+    primaryName = profileData?.name;
+    primaryPhotoUrl = profileData?.image;
 
-      if (!primaryEmail) {
-        logger.error(
-          "[linkAccount] Primary email could not be determined from profile.",
-        );
-        throw new Error("Primary email not found for linked account.");
-      }
+    if (!primaryEmail) {
+      logger.error(
+        "[linkAccount] Primary email could not be determined from profile.",
+      );
+      throw new Error("Primary email not found for linked account.");
+    }
     }
 
     const user = await prisma.user.findUnique({
@@ -698,7 +689,7 @@ async function handleLinkAccount(account: Account) {
 
     // --- Create/Update the corresponding EmailAccount record ---
     const emailAccountData: Prisma.EmailAccountUpsertArgs = {
-      where: { email: primaryEmail },
+      where: { email: profileData?.email },
       update: {
         userId: account.userId,
         accountId: account.id,

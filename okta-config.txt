@@ -1,0 +1,12 @@
+
+# Okta OIDC Configuration
+OKTA_CLIENT_ID=0oa251hvxm7RlukZO0h8
+OKTA_CLIENT_SECRET=S35BNiZZ7BmlFf1k3J2_h_9IG8fxT9gAbStytSVEdcwrKUkGNGnJo35yhSiz-DNL
+OKTA_ISSUER=https://tiger21.okta.com
+OKTA_DOMAIN=tiger21.okta.com
+
+# SSO Configuration for Better Auth
+SSO_PROVIDERS=okta
+SSO_OKTA_CLIENT_ID=0oa251hvxm7RlukZO0h8
+SSO_OKTA_CLIENT_SECRET=S35BNiZZ7BmlFf1k3J2_h_9IG8fxT9gAbStytSVEdcwrKUkGNGnJo35yhSiz-DNL
+SSO_OKTA_ISSUER=https://tiger21.okta.com/oauth2/default

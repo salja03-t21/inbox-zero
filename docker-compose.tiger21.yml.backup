@@ -39,12 +39,6 @@ services:
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.path=/api/health/simple"
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.interval=30s"
         - "traefik.http.services.inbox-zero-tiger21.loadbalancer.healthcheck.timeout=5s"
-        # Session affinity configuration for OAuth state consistency
-        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.sticky.cookie=true"
-        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.sticky.cookie.name=inbox_zero_affinity"
-        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.sticky.cookie.httpOnly=true"
-        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.sticky.cookie.secure=true"
-        - "traefik.http.services.inbox-zero-tiger21.loadbalancer.sticky.cookie.sameSite=lax"
         - "traefik.docker.network=traefik-network"
       placement:
         constraints:

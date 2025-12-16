@@ -134,43 +134,20 @@ export async function redirectToEmailAccountPath(path: `/${string}`) {
   const userId = session?.user.id;
   if (!userId) throw new Error("Not authenticated");
 
-  // Get all email accounts with provider info
-  const emailAccounts = await prisma.emailAccount.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      email: true,
-      accountId: true,
-      account: { select: { provider: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
-
-  if (emailAccounts.length === 0) {
-    redirect("/accounts");
-  }
-
-  // Check if user has any valid email provider (Google or Microsoft)
-  const validProviderAccounts = emailAccounts.filter(
-    (account) =>
-      account.account?.provider === "google" ||
-      account.account?.provider === "microsoft",
-  );
-
-  // If no valid email provider, redirect to accounts page
-  if (validProviderAccounts.length === 0) {
-    redirect("/accounts");
-  }
-
   const lastEmailAccountId = await getLastEmailAccountFromCookie(userId);
 
-  // Use last account if it's valid, otherwise use first valid provider account
   let emailAccountId = lastEmailAccountId;
-  if (
-    !emailAccountId ||
-    !validProviderAccounts.find((a) => a.id === emailAccountId)
-  ) {
-    emailAccountId = validProviderAccounts[0].id;
+
+  // If no last account or it doesn't exist, fall back to first account
+  if (!emailAccountId) {
+    const emailAccount = await prisma.emailAccount.findFirst({
+      where: { userId },
+    });
+    emailAccountId = emailAccount?.id ?? null;
+  }
+
+  if (!emailAccountId) {
+    notFound();
   }
 
   const redirectUrl = `/${emailAccountId}${path}`;

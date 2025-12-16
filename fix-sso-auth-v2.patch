@@ -1,0 +1,11 @@
+--- a/apps/web/utils/auth.ts
++++ b/apps/web/utils/auth.ts
+@@ -692,7 +692,7 @@ async function handleLinkAccount(account: Account) {
+ 
+     // --- Create/Update the corresponding EmailAccount record ---
+     const emailAccountData: Prisma.EmailAccountUpsertArgs = {
+-      where: { email: profileData?.email },
++      where: { email: primaryEmail },
+       update: {
+         userId: account.userId,
+         accountId: account.id,
