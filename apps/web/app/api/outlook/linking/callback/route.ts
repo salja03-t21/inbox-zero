@@ -128,6 +128,7 @@ export const GET = withError(async (request) => {
 
     if (!existingAccount) {
       if (action === "merge") {
+        // Strict merge - account must exist
         logger.warn(
           "Merge Failed: Microsoft account not found in the system. Cannot merge.",
           { email: providerEmail },
@@ -137,6 +138,7 @@ export const GET = withError(async (request) => {
           headers: response.headers,
         });
       } else {
+        // action === "create" or action === "auto" - create new account
         logger.info(
           "Creating new Microsoft account and linking to current user",
           {
@@ -217,10 +219,20 @@ export const GET = withError(async (request) => {
     }
 
     if (existingAccount.userId === targetUserId) {
-      logger.warn(
-        "Microsoft account is already linked to the correct user. Merge action unnecessary.",
-        { email: providerEmail, targetUserId },
-      );
+      // Account already belongs to this user - this is success for "auto" action
+      logger.info("Microsoft account is already linked to the correct user.", {
+        email: providerEmail,
+        targetUserId,
+        action,
+      });
+      if (action === "auto") {
+        // For auto action, this is expected - just redirect to accounts
+        redirectUrl.searchParams.set("success", "account_already_linked");
+        return NextResponse.redirect(redirectUrl, {
+          headers: response.headers,
+        });
+      }
+      // For explicit merge action, inform user it's already linked
       redirectUrl.searchParams.set("error", "already_linked_to_self");
       return NextResponse.redirect(redirectUrl, {
         headers: response.headers,

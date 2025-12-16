@@ -31,9 +31,9 @@ export function AddAccount() {
   };
 
   const handleConnectMicrosoft = async () => {
-    // For Tiger21, always use merge flow (existing account)
+    // Use auto action - backend will check if account exists to merge or create new
     const response = await fetch(
-      `/api/outlook/linking/auth-url?action=create`,
+      `/api/outlook/linking/auth-url?action=auto`,
       {
         method: "GET",
         headers: { "Content-Type": "application/json" },
