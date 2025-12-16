@@ -149,33 +149,41 @@ export const betterAuthConfig = betterAuth({
     level: "debug", // Changed to debug for more verbose logging
     log: (level, message, ...args) => {
       // Log ALL Better Auth internal messages for debugging
-      // Special attention to SSO-related logs
+      const logData = {
+        args: args.length > 0 ? args : undefined,
+        level,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Special attention to SSO, session, user, and callback-related logs
       if (
         message.toLowerCase().includes("sso") ||
         message.toLowerCase().includes("state") ||
         message.toLowerCase().includes("callback") ||
-        message.toLowerCase().includes("verification")
+        message.toLowerCase().includes("verification") ||
+        message.toLowerCase().includes("session") ||
+        message.toLowerCase().includes("user") ||
+        message.toLowerCase().includes("account") ||
+        message.toLowerCase().includes("token")
       ) {
-        logger.info(`[BetterAuth:${level}] ⚠️ SSO: ${message}`, {
-          args,
-          level,
-          timestamp: new Date().toISOString(),
-        });
+        logger.info(`[BetterAuth:${level}] 🔍 ${message}`, logData);
       } else {
-        logger.info(`[BetterAuth:${level}] ${message}`, { args });
+        logger.info(`[BetterAuth:${level}] ${message}`, logData);
       }
     },
     error: (error: unknown, ...args: unknown[]) => {
-      // Enhanced error logging
-      logger.error(
-        `[BetterAuth:ERROR] ${error instanceof Error ? error.message : String(error)}`,
-        {
-          error,
-          errorStack: error instanceof Error ? error.stack : undefined,
-          args,
-          timestamp: new Date().toISOString(),
-        },
-      );
+      // Enhanced error logging with full details
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      logger.error(`[BetterAuth:ERROR] ❌ ${errorMessage}`, {
+        error,
+        errorStack,
+        errorName: error instanceof Error ? error.name : "Unknown",
+        args: args.length > 0 ? args : undefined,
+        timestamp: new Date().toISOString(),
+      });
     },
   },
   baseURL: resolvedBaseURL,
@@ -192,6 +200,21 @@ export const betterAuthConfig = betterAuth({
     sso({
       disableImplicitSignUp: false,
       organizationProvisioning: { disabled: true },
+      // Add custom user provisioning to log what's happening
+      provisionUser: async ({ user, userInfo, token, provider }) => {
+        logger.info("[SSO] 🎯 User provisioning triggered", {
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          userInfoEmail: userInfo.email,
+          userInfoName: userInfo.name,
+          providerId: provider.providerId,
+          providerIssuer: provider.issuer,
+          hasAccessToken: !!token?.accessToken,
+          hasRefreshToken: !!token?.refreshToken,
+          timestamp: new Date().toISOString(),
+        });
+      },
     }),
   ],
   session: {
