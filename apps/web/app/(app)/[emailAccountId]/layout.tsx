@@ -11,7 +11,7 @@ export default async function EmailAccountLayout({
 }) {
   const { emailAccountId } = await params;
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     redirect("/login");
   }
@@ -22,9 +22,9 @@ export default async function EmailAccountLayout({
     select: {
       userId: true,
       account: {
-        select: { provider: true }
-      }
-    }
+        select: { provider: true },
+      },
+    },
   });
 
   // If account doesn't exist or doesn't belong to this user, redirect to accounts
@@ -33,7 +33,7 @@ export default async function EmailAccountLayout({
   }
 
   const provider = emailAccount.account?.provider;
-  
+
   // If not a valid email provider (Google/Microsoft), find a valid one or redirect to accounts
   if (provider !== "google" && provider !== "microsoft") {
     // Find a valid email account for this user
@@ -41,10 +41,10 @@ export default async function EmailAccountLayout({
       where: {
         userId: session.user.id,
         account: {
-          provider: { in: ["google", "microsoft"] }
-        }
+          provider: { in: ["google", "microsoft"] },
+        },
       },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (validAccount) {

@@ -32,13 +32,10 @@ export function AddAccount() {
 
   const handleConnectMicrosoft = async () => {
     // Use auto action - backend will check if account exists to merge or create new
-    const response = await fetch(
-      `/api/outlook/linking/auth-url?action=auto`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    const response = await fetch(`/api/outlook/linking/auth-url?action=auto`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
     if (!response.ok) {
       toastError({
@@ -67,7 +64,6 @@ export function AddAccount() {
           image="/images/microsoft.svg"
           handleConnect={handleConnectMicrosoft}
         />
-
       </CardContent>
     </Card>
   );
