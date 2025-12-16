@@ -15,7 +15,6 @@ import { Dialog } from "@/components/ui/dialog";
 import type { GetAuthLinkUrlResponse } from "@/app/api/google/linking/auth-url/route";
 import type { GetOutlookAuthLinkUrlResponse } from "@/app/api/outlook/linking/auth-url/route";
 import { SCOPES as GMAIL_SCOPES } from "@/utils/gmail/scopes";
-import { TypographyP } from "@/components/Typography";
 
 export function AddAccount() {
   const _handleConnectGoogle = async () => {
@@ -79,9 +78,7 @@ export function AddAccount() {
           handleMerge={handleMergeMicrosoft}
         />
 
-        <TypographyP className="text-sm">
-          You will be billed for each additional account
-        </TypographyP>
+
       </CardContent>
     </Card>
   );
