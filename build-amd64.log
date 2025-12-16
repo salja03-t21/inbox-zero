@@ -1,0 +1,1369 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.tiger21.prod
+#1 transferring dockerfile: 4.78kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:22-alpine
+#2 DONE 0.2s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 397B done
+#3 DONE 0.0s
+
+#4 [base 1/4] FROM docker.io/library/node:22-alpine@sha256:9632533eda8061fc1e9960cfb3f8762781c07a00ee7317f5dc0e13c05e15166f
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 141.84kB 0.1s done
+#5 DONE 0.1s
+
+#6 [base 3/4] RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+#6 CACHED
+
+#7 [base 4/4] RUN addgroup -g 1001 -S nodejs &&     adduser -S nextjs -u 1001 -G nodejs
+#7 CACHED
+
+#8 [builder  1/16] WORKDIR /app
+#8 CACHED
+
+#9 [builder  3/16] COPY .npmrc* ./
+#9 CACHED
+
+#10 [builder  5/16] COPY apps/unsubscriber/package.json apps/unsubscriber/package.json
+#10 CACHED
+
+#11 [builder  9/16] COPY packages/tinybird-ai-analytics/package.json packages/tinybird-ai-analytics/package.json
+#11 CACHED
+
+#12 [builder 10/16] COPY packages/tsconfig/package.json packages/tsconfig/package.json
+#12 CACHED
+
+#13 [base 2/4] RUN apk update &&     apk upgrade &&     apk add --no-cache         openssl         ca-certificates         dumb-init         curl         wget &&     rm -rf /var/cache/apk/*
+#13 CACHED
+
+#14 [builder 11/16] COPY patches/ patches/
+#14 CACHED
+
+#15 [builder  7/16] COPY packages/resend/package.json packages/resend/package.json
+#15 CACHED
+
+#16 [builder  4/16] COPY apps/web/package.json apps/web/package.json
+#16 CACHED
+
+#17 [builder 12/16] COPY apps/web/prisma/schema.prisma apps/web/prisma/schema.prisma
+#17 CACHED
+
+#18 [builder 13/16] RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store     pnpm install --frozen-lockfile
+#18 CACHED
+
+#19 [builder  8/16] COPY packages/tinybird/package.json packages/tinybird/package.json
+#19 CACHED
+
+#20 [builder  6/16] COPY packages/loops/package.json packages/loops/package.json
+#20 CACHED
+
+#21 [builder  2/16] COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+#21 CACHED
+
+#22 [builder 14/16] COPY . .
+#22 CACHED
+
+#23 [builder 15/16] RUN pnpm --filter=inbox-zero-ai exec -- prisma generate
+#23 CACHED
+
+#24 [builder 16/16] RUN pnpm --filter=inbox-zero-ai exec -- next build
+#24 3.039 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#24 3.040 This information is used to shape Next.js' roadmap and prioritize features.
+#24 3.040 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#24 3.040 https://nextjs.org/telemetry
+#24 3.040 
+#24 3.127    ▲ Next.js 15.5.7
+#24 3.127    - Environments: .env.local, .env.production
+#24 3.127 
+#24 3.377    Creating an optimized production build ...
+#24 3.717  ✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+#24 241.8  ✓ Compiled successfully in 4.0min
+#24 241.8    Linting and checking validity of types ...
+#24 338.5    Collecting page data ...
+#24 340.1 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.1   "timestamp": "2025-12-16T13:48:01.871Z",
+#24 340.1   "nodeEnv": "production"
+#24 340.1 }
+#24 340.1 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.1   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.1   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.1   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.1 }
+#24 340.1 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.1   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.1   "step2_BASE_URL": "(empty/undefined)",
+#24 340.1   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.1   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.1   "resolvedBaseURLType": "string",
+#24 340.1   "resolvedBaseURLLength": 22
+#24 340.1 }
+#24 340.1 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.1   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.1   "isValidUrl": true,
+#24 340.1   "urlOrigin": "https://iz.tiger21.com",
+#24 340.1   "urlParseError": "(none)",
+#24 340.1   "contains0000": false,
+#24 340.1   "containsLocalhost": false
+#24 340.1 }
+#24 340.1 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.1   "baseURL": "https://iz.tiger21.com",
+#24 340.1   "trustedOrigins": [
+#24 340.1     "https://iz.tiger21.com"
+#24 340.1   ],
+#24 340.1   "basePath": "/api/auth"
+#24 340.1 }
+#24 340.1 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.1   "hasHandler": true,
+#24 340.1   "hasApi": true,
+#24 340.1   "apiKeys": [
+#24 340.1     "signInSocial",
+#24 340.1     "callbackOAuth",
+#24 340.1     "getSession",
+#24 340.1     "signOut",
+#24 340.1     "signUpEmail",
+#24 340.1     "signInEmail",
+#24 340.1     "resetPassword",
+#24 340.1     "verifyEmail",
+#24 340.1     "sendVerificationEmail",
+#24 340.1     "changeEmail",
+#24 340.1     "changePassword",
+#24 340.1     "setPassword",
+#24 340.1     "updateUser",
+#24 340.1     "deleteUser",
+#24 340.1     "requestPasswordReset",
+#24 340.1     "requestPasswordResetCallback",
+#24 340.1     "listSessions",
+#24 340.1     "revokeSession",
+#24 340.1     "revokeSessions",
+#24 340.1     "revokeOtherSessions",
+#24 340.1     "linkSocialAccount",
+#24 340.1     "listUserAccounts",
+#24 340.1     "deleteUserCallback",
+#24 340.1     "unlinkAccount",
+#24 340.1     "refreshToken",
+#24 340.1     "getAccessToken",
+#24 340.1     "accountInfo",
+#24 340.1     "spMetadata",
+#24 340.1     "registerSSOProvider",
+#24 340.1     "signInSSO",
+#24 340.1     "callbackSSO",
+#24 340.1     "callbackSSOSAML",
+#24 340.1     "acsEndpoint",
+#24 340.1     "ok",
+#24 340.1     "error"
+#24 340.1   ]
+#24 340.1 }
+#24 340.1 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.2 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.2   "timestamp": "2025-12-16T13:48:01.949Z",
+#24 340.2   "nodeEnv": "production"
+#24 340.2 }
+#24 340.2 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.2   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.2   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.2   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.2 }
+#24 340.2 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.2   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.2   "step2_BASE_URL": "(empty/undefined)",
+#24 340.2   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.2   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.2   "resolvedBaseURLType": "string",
+#24 340.2   "resolvedBaseURLLength": 22
+#24 340.2 }
+#24 340.2 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.2   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.2   "isValidUrl": true,
+#24 340.2   "urlOrigin": "https://iz.tiger21.com",
+#24 340.2   "urlParseError": "(none)",
+#24 340.2   "contains0000": false,
+#24 340.2   "containsLocalhost": false
+#24 340.2 }
+#24 340.2 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.2   "baseURL": "https://iz.tiger21.com",
+#24 340.2   "trustedOrigins": [
+#24 340.2     "https://iz.tiger21.com"
+#24 340.2   ],
+#24 340.2   "basePath": "/api/auth"
+#24 340.2 }
+#24 340.2 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.2   "hasHandler": true,
+#24 340.2   "hasApi": true,
+#24 340.2   "apiKeys": [
+#24 340.2     "signInSocial",
+#24 340.2     "callbackOAuth",
+#24 340.2     "getSession",
+#24 340.2     "signOut",
+#24 340.2     "signUpEmail",
+#24 340.2     "signInEmail",
+#24 340.2     "resetPassword",
+#24 340.2     "verifyEmail",
+#24 340.2     "sendVerificationEmail",
+#24 340.2     "changeEmail",
+#24 340.2     "changePassword",
+#24 340.2     "setPassword",
+#24 340.2     "updateUser",
+#24 340.2     "deleteUser",
+#24 340.2     "requestPasswordReset",
+#24 340.2     "requestPasswordResetCallback",
+#24 340.2     "listSessions",
+#24 340.2     "revokeSession",
+#24 340.2     "revokeSessions",
+#24 340.2     "revokeOtherSessions",
+#24 340.2     "linkSocialAccount",
+#24 340.2     "listUserAccounts",
+#24 340.2     "deleteUserCallback",
+#24 340.2     "unlinkAccount",
+#24 340.2     "refreshToken",
+#24 340.2     "getAccessToken",
+#24 340.2     "accountInfo",
+#24 340.2     "spMetadata",
+#24 340.2     "registerSSOProvider",
+#24 340.2     "signInSSO",
+#24 340.2     "callbackSSO",
+#24 340.2     "callbackSSOSAML",
+#24 340.2     "acsEndpoint",
+#24 340.2     "ok",
+#24 340.2     "error"
+#24 340.2   ]
+#24 340.2 }
+#24 340.2 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.3 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.3   "timestamp": "2025-12-16T13:48:02.093Z",
+#24 340.3   "nodeEnv": "production"
+#24 340.3 }
+#24 340.3 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.3   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.3   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.3   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.3 }
+#24 340.3 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.3   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.3   "step2_BASE_URL": "(empty/undefined)",
+#24 340.3   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.3   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.3   "resolvedBaseURLType": "string",
+#24 340.3   "resolvedBaseURLLength": 22
+#24 340.3 }
+#24 340.3 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.3   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.3   "isValidUrl": true,
+#24 340.3   "urlOrigin": "https://iz.tiger21.com",
+#24 340.3   "urlParseError": "(none)",
+#24 340.3   "contains0000": false,
+#24 340.3   "containsLocalhost": false
+#24 340.3 }
+#24 340.3 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.3   "baseURL": "https://iz.tiger21.com",
+#24 340.3   "trustedOrigins": [
+#24 340.3     "https://iz.tiger21.com"
+#24 340.3   ],
+#24 340.3   "basePath": "/api/auth"
+#24 340.3 }
+#24 340.3 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.3   "hasHandler": true,
+#24 340.3   "hasApi": true,
+#24 340.3   "apiKeys": [
+#24 340.3     "signInSocial",
+#24 340.3     "callbackOAuth",
+#24 340.3     "getSession",
+#24 340.3     "signOut",
+#24 340.3     "signUpEmail",
+#24 340.3     "signInEmail",
+#24 340.3     "resetPassword",
+#24 340.3     "verifyEmail",
+#24 340.3     "sendVerificationEmail",
+#24 340.3     "changeEmail",
+#24 340.3     "changePassword",
+#24 340.3     "setPassword",
+#24 340.3     "updateUser",
+#24 340.3     "deleteUser",
+#24 340.3     "requestPasswordReset",
+#24 340.3     "requestPasswordResetCallback",
+#24 340.3     "listSessions",
+#24 340.3     "revokeSession",
+#24 340.3     "revokeSessions",
+#24 340.3     "revokeOtherSessions",
+#24 340.3     "linkSocialAccount",
+#24 340.3     "listUserAccounts",
+#24 340.3     "deleteUserCallback",
+#24 340.3     "unlinkAccount",
+#24 340.3     "refreshToken",
+#24 340.3     "getAccessToken",
+#24 340.3     "accountInfo",
+#24 340.3     "spMetadata",
+#24 340.3     "registerSSOProvider",
+#24 340.3     "signInSSO",
+#24 340.3     "callbackSSO",
+#24 340.3     "callbackSSOSAML",
+#24 340.3     "acsEndpoint",
+#24 340.3     "ok",
+#24 340.3     "error"
+#24 340.3   ]
+#24 340.3 }
+#24 340.3 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.4 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 340.4   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 340.4   "optionsBaseURL": "https://iz.tiger21.com",
+#24 340.4   "optionsBasePath": "/api/auth",
+#24 340.4   "trustedOrigins": [
+#24 340.4     "https://iz.tiger21.com",
+#24 340.4     "https://iz.tiger21.com"
+#24 340.4   ],
+#24 340.4   "baseURLContains0000": false
+#24 340.4 }
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.4   "timestamp": "2025-12-16T13:48:02.152Z",
+#24 340.4   "nodeEnv": "production"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.4   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.4   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.4   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.4   "step2_BASE_URL": "(empty/undefined)",
+#24 340.4   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "resolvedBaseURLType": "string",
+#24 340.4   "resolvedBaseURLLength": 22
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.4   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "isValidUrl": true,
+#24 340.4   "urlOrigin": "https://iz.tiger21.com",
+#24 340.4   "urlParseError": "(none)",
+#24 340.4   "contains0000": false,
+#24 340.4   "containsLocalhost": false
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.4   "baseURL": "https://iz.tiger21.com",
+#24 340.4   "trustedOrigins": [
+#24 340.4     "https://iz.tiger21.com"
+#24 340.4   ],
+#24 340.4   "basePath": "/api/auth"
+#24 340.4 }
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.4   "timestamp": "2025-12-16T13:48:02.157Z",
+#24 340.4   "nodeEnv": "production"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.4   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.4   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.4   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.4   "step2_BASE_URL": "(empty/undefined)",
+#24 340.4   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "resolvedBaseURLType": "string",
+#24 340.4   "resolvedBaseURLLength": 22
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.4   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "isValidUrl": true,
+#24 340.4   "urlOrigin": "https://iz.tiger21.com",
+#24 340.4   "urlParseError": "(none)",
+#24 340.4   "contains0000": false,
+#24 340.4   "containsLocalhost": false
+#24 340.4 }
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.4   "timestamp": "2025-12-16T13:48:02.160Z",
+#24 340.4   "nodeEnv": "production"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.4   "baseURL": "https://iz.tiger21.com",
+#24 340.4   "trustedOrigins": [
+#24 340.4     "https://iz.tiger21.com"
+#24 340.4   ],
+#24 340.4   "basePath": "/api/auth"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.4   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.4   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.4   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.4   "step2_BASE_URL": "(empty/undefined)",
+#24 340.4   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "resolvedBaseURLType": "string",
+#24 340.4   "resolvedBaseURLLength": 22
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.4   "hasHandler": true,
+#24 340.4   "hasApi": true,
+#24 340.4   "apiKeys": [
+#24 340.4     "signInSocial",
+#24 340.4     "callbackOAuth",
+#24 340.4     "getSession",
+#24 340.4     "signOut",
+#24 340.4     "signUpEmail",
+#24 340.4     "signInEmail",
+#24 340.4     "resetPassword",
+#24 340.4     "verifyEmail",
+#24 340.4     "sendVerificationEmail",
+#24 340.4     "changeEmail",
+#24 340.4     "changePassword",
+#24 340.4     "setPassword",
+#24 340.4     "updateUser",
+#24 340.4     "deleteUser",
+#24 340.4     "requestPasswordReset",
+#24 340.4     "requestPasswordResetCallback",
+#24 340.4     "listSessions",
+#24 340.4     "revokeSession",
+#24 340.4     "revokeSessions",
+#24 340.4     "revokeOtherSessions",
+#24 340.4     "linkSocialAccount",
+#24 340.4     "listUserAccounts",
+#24 340.4     "deleteUserCallback",
+#24 340.4     "unlinkAccount",
+#24 340.4     "refreshToken",
+#24 340.4     "getAccessToken",
+#24 340.4     "accountInfo",
+#24 340.4     "spMetadata",
+#24 340.4     "registerSSOProvider",
+#24 340.4     "signInSSO",
+#24 340.4     "callbackSSO",
+#24 340.4     "callbackSSOSAML",
+#24 340.4     "acsEndpoint",
+#24 340.4     "ok",
+#24 340.4     "error"
+#24 340.4   ]
+#24 340.4 }
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.4 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.4   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "isValidUrl": true,
+#24 340.4   "urlOrigin": "https://iz.tiger21.com",
+#24 340.4   "urlParseError": "(none)",
+#24 340.4   "contains0000": false,
+#24 340.4   "containsLocalhost": false
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.4   "baseURL": "https://iz.tiger21.com",
+#24 340.4   "trustedOrigins": [
+#24 340.4     "https://iz.tiger21.com"
+#24 340.4   ],
+#24 340.4   "basePath": "/api/auth"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.4   "hasHandler": true,
+#24 340.4   "hasApi": true,
+#24 340.4   "apiKeys": [
+#24 340.4     "signInSocial",
+#24 340.4     "callbackOAuth",
+#24 340.4     "getSession",
+#24 340.4     "signOut",
+#24 340.4     "signUpEmail",
+#24 340.4     "signInEmail",
+#24 340.4     "resetPassword",
+#24 340.4     "verifyEmail",
+#24 340.4     "sendVerificationEmail",
+#24 340.4     "changeEmail",
+#24 340.4     "changePassword",
+#24 340.4     "setPassword",
+#24 340.4     "updateUser",
+#24 340.4     "deleteUser",
+#24 340.4     "requestPasswordReset",
+#24 340.4     "requestPasswordResetCallback",
+#24 340.4     "listSessions",
+#24 340.4     "revokeSession",
+#24 340.4     "revokeSessions",
+#24 340.4     "revokeOtherSessions",
+#24 340.4     "linkSocialAccount",
+#24 340.4     "listUserAccounts",
+#24 340.4     "deleteUserCallback",
+#24 340.4     "unlinkAccount",
+#24 340.4     "refreshToken",
+#24 340.4     "getAccessToken",
+#24 340.4     "accountInfo",
+#24 340.4     "spMetadata",
+#24 340.4     "registerSSOProvider",
+#24 340.4     "signInSSO",
+#24 340.4     "callbackSSO",
+#24 340.4     "callbackSSOSAML",
+#24 340.4     "acsEndpoint",
+#24 340.4     "ok",
+#24 340.4     "error"
+#24 340.4   ]
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.4   "hasHandler": true,
+#24 340.4   "hasApi": true,
+#24 340.4   "apiKeys": [
+#24 340.4     "signInSocial",
+#24 340.4     "callbackOAuth",
+#24 340.4     "getSession",
+#24 340.4     "signOut",
+#24 340.4     "signUpEmail",
+#24 340.4     "signInEmail",
+#24 340.4     "resetPassword",
+#24 340.4     "verifyEmail",
+#24 340.4     "sendVerificationEmail",
+#24 340.4     "changeEmail",
+#24 340.4     "changePassword",
+#24 340.4     "setPassword",
+#24 340.4     "updateUser",
+#24 340.4     "deleteUser",
+#24 340.4     "requestPasswordReset",
+#24 340.4     "requestPasswordResetCallback",
+#24 340.4     "listSessions",
+#24 340.4     "revokeSession",
+#24 340.4     "revokeSessions",
+#24 340.4     "revokeOtherSessions",
+#24 340.4     "linkSocialAccount",
+#24 340.4     "listUserAccounts",
+#24 340.4     "deleteUserCallback",
+#24 340.4     "unlinkAccount",
+#24 340.4     "refreshToken",
+#24 340.4     "getAccessToken",
+#24 340.4     "accountInfo",
+#24 340.4     "spMetadata",
+#24 340.4     "registerSSOProvider",
+#24 340.4     "signInSSO",
+#24 340.4     "callbackSSO",
+#24 340.4     "callbackSSOSAML",
+#24 340.4     "acsEndpoint",
+#24 340.4     "ok",
+#24 340.4     "error"
+#24 340.4   ]
+#24 340.4 }
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.4   "timestamp": "2025-12-16T13:48:02.178Z",
+#24 340.4   "nodeEnv": "production"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.4   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.4   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.4   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.4   "step2_BASE_URL": "(empty/undefined)",
+#24 340.4   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.4   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "resolvedBaseURLType": "string",
+#24 340.4   "resolvedBaseURLLength": 22
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.4   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.4   "isValidUrl": true,
+#24 340.4   "urlOrigin": "https://iz.tiger21.com",
+#24 340.4   "urlParseError": "(none)",
+#24 340.4   "contains0000": false,
+#24 340.4   "containsLocalhost": false
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.4   "baseURL": "https://iz.tiger21.com",
+#24 340.4   "trustedOrigins": [
+#24 340.4     "https://iz.tiger21.com"
+#24 340.4   ],
+#24 340.4   "basePath": "/api/auth"
+#24 340.4 }
+#24 340.4 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.4   "hasHandler": true,
+#24 340.4   "hasApi": true,
+#24 340.4   "apiKeys": [
+#24 340.4     "signInSocial",
+#24 340.4     "callbackOAuth",
+#24 340.4     "getSession",
+#24 340.4     "signOut",
+#24 340.4     "signUpEmail",
+#24 340.4     "signInEmail",
+#24 340.4     "resetPassword",
+#24 340.4     "verifyEmail",
+#24 340.4     "sendVerificationEmail",
+#24 340.4     "changeEmail",
+#24 340.4     "changePassword",
+#24 340.4     "setPassword",
+#24 340.4     "updateUser",
+#24 340.4     "deleteUser",
+#24 340.4     "requestPasswordReset",
+#24 340.4     "requestPasswordResetCallback",
+#24 340.4     "listSessions",
+#24 340.4     "revokeSession",
+#24 340.4     "revokeSessions",
+#24 340.4     "revokeOtherSessions",
+#24 340.4     "linkSocialAccount",
+#24 340.4     "listUserAccounts",
+#24 340.4     "deleteUserCallback",
+#24 340.4     "unlinkAccount",
+#24 340.4     "refreshToken",
+#24 340.4     "getAccessToken",
+#24 340.4     "accountInfo",
+#24 340.4     "spMetadata",
+#24 340.4     "registerSSOProvider",
+#24 340.4     "signInSSO",
+#24 340.4     "callbackSSO",
+#24 340.4     "callbackSSOSAML",
+#24 340.4     "acsEndpoint",
+#24 340.4     "ok",
+#24 340.4     "error"
+#24 340.4   ]
+#24 340.4 }
+#24 340.4 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.5 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.5   "timestamp": "2025-12-16T13:48:02.222Z",
+#24 340.5   "nodeEnv": "production"
+#24 340.5 }
+#24 340.5 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.5   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.5   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.5   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.5 }
+#24 340.5 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.5   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.5   "step2_BASE_URL": "(empty/undefined)",
+#24 340.5   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.5   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.5   "resolvedBaseURLType": "string",
+#24 340.5   "resolvedBaseURLLength": 22
+#24 340.5 }
+#24 340.5 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.5   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.5   "isValidUrl": true,
+#24 340.5   "urlOrigin": "https://iz.tiger21.com",
+#24 340.5   "urlParseError": "(none)",
+#24 340.5   "contains0000": false,
+#24 340.5   "containsLocalhost": false
+#24 340.5 }
+#24 340.5 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.5   "baseURL": "https://iz.tiger21.com",
+#24 340.5   "trustedOrigins": [
+#24 340.5     "https://iz.tiger21.com"
+#24 340.5   ],
+#24 340.5   "basePath": "/api/auth"
+#24 340.5 }
+#24 340.5 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.5   "hasHandler": true,
+#24 340.5   "hasApi": true,
+#24 340.5   "apiKeys": [
+#24 340.5     "signInSocial",
+#24 340.5     "callbackOAuth",
+#24 340.5     "getSession",
+#24 340.5     "signOut",
+#24 340.5     "signUpEmail",
+#24 340.5     "signInEmail",
+#24 340.5     "resetPassword",
+#24 340.5     "verifyEmail",
+#24 340.5     "sendVerificationEmail",
+#24 340.5     "changeEmail",
+#24 340.5     "changePassword",
+#24 340.5     "setPassword",
+#24 340.5     "updateUser",
+#24 340.5     "deleteUser",
+#24 340.5     "requestPasswordReset",
+#24 340.5     "requestPasswordResetCallback",
+#24 340.5     "listSessions",
+#24 340.5     "revokeSession",
+#24 340.5     "revokeSessions",
+#24 340.5     "revokeOtherSessions",
+#24 340.5     "linkSocialAccount",
+#24 340.5     "listUserAccounts",
+#24 340.5     "deleteUserCallback",
+#24 340.5     "unlinkAccount",
+#24 340.5     "refreshToken",
+#24 340.5     "getAccessToken",
+#24 340.5     "accountInfo",
+#24 340.5     "spMetadata",
+#24 340.5     "registerSSOProvider",
+#24 340.5     "signInSSO",
+#24 340.5     "callbackSSO",
+#24 340.5     "callbackSSOSAML",
+#24 340.5     "acsEndpoint",
+#24 340.5     "ok",
+#24 340.5     "error"
+#24 340.5   ]
+#24 340.5 }
+#24 340.5 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.6 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 340.6   "timestamp": "2025-12-16T13:48:02.347Z",
+#24 340.6   "nodeEnv": "production"
+#24 340.6 }
+#24 340.6 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 340.6   "BETTER_AUTH_SECRET": "[SET]",
+#24 340.6   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.6   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 340.6 }
+#24 340.6 [auth]: AUTH DEBUG: Base URL resolution {
+#24 340.6   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 340.6   "step2_BASE_URL": "(empty/undefined)",
+#24 340.6   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 340.6   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 340.6   "resolvedBaseURLType": "string",
+#24 340.6   "resolvedBaseURLLength": 22
+#24 340.6 }
+#24 340.6 [auth]: AUTH DEBUG: Base URL validation {
+#24 340.6   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 340.6   "isValidUrl": true,
+#24 340.6   "urlOrigin": "https://iz.tiger21.com",
+#24 340.6   "urlParseError": "(none)",
+#24 340.6   "contains0000": false,
+#24 340.6   "containsLocalhost": false
+#24 340.6 }
+#24 340.6 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 340.6   "baseURL": "https://iz.tiger21.com",
+#24 340.6   "trustedOrigins": [
+#24 340.6     "https://iz.tiger21.com"
+#24 340.6   ],
+#24 340.6   "basePath": "/api/auth"
+#24 340.6 }
+#24 340.6 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 340.6   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 340.6   "optionsBaseURL": "https://iz.tiger21.com",
+#24 340.6   "optionsBasePath": "/api/auth",
+#24 340.6   "trustedOrigins": [
+#24 340.6     "https://iz.tiger21.com",
+#24 340.6     "https://iz.tiger21.com"
+#24 340.6   ],
+#24 340.6   "baseURLContains0000": false
+#24 340.6 }
+#24 340.6 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 340.6   "hasHandler": true,
+#24 340.6   "hasApi": true,
+#24 340.6   "apiKeys": [
+#24 340.6     "signInSocial",
+#24 340.6     "callbackOAuth",
+#24 340.6     "getSession",
+#24 340.6     "signOut",
+#24 340.6     "signUpEmail",
+#24 340.6     "signInEmail",
+#24 340.6     "resetPassword",
+#24 340.6     "verifyEmail",
+#24 340.6     "sendVerificationEmail",
+#24 340.6     "changeEmail",
+#24 340.6     "changePassword",
+#24 340.6     "setPassword",
+#24 340.6     "updateUser",
+#24 340.6     "deleteUser",
+#24 340.6     "requestPasswordReset",
+#24 340.6     "requestPasswordResetCallback",
+#24 340.6     "listSessions",
+#24 340.6     "revokeSession",
+#24 340.6     "revokeSessions",
+#24 340.6     "revokeOtherSessions",
+#24 340.6     "linkSocialAccount",
+#24 340.6     "listUserAccounts",
+#24 340.6     "deleteUserCallback",
+#24 340.6     "unlinkAccount",
+#24 340.6     "refreshToken",
+#24 340.6     "getAccessToken",
+#24 340.6     "accountInfo",
+#24 340.6     "spMetadata",
+#24 340.6     "registerSSOProvider",
+#24 340.6     "signInSSO",
+#24 340.6     "callbackSSO",
+#24 340.6     "callbackSSOSAML",
+#24 340.6     "acsEndpoint",
+#24 340.6     "ok",
+#24 340.6     "error"
+#24 340.6   ]
+#24 340.6 }
+#24 340.6 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 340.6 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 340.6   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 340.6   "optionsBaseURL": "https://iz.tiger21.com",
+#24 340.6   "optionsBasePath": "/api/auth",
+#24 340.6   "trustedOrigins": [
+#24 340.6     "https://iz.tiger21.com",
+#24 340.6     "https://iz.tiger21.com"
+#24 340.6   ],
+#24 340.6   "baseURLContains0000": false
+#24 340.6 }
+#24 340.9 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 340.9   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 340.9   "optionsBaseURL": "https://iz.tiger21.com",
+#24 340.9   "optionsBasePath": "/api/auth",
+#24 340.9   "trustedOrigins": [
+#24 340.9     "https://iz.tiger21.com",
+#24 340.9     "https://iz.tiger21.com"
+#24 340.9   ],
+#24 340.9   "baseURLContains0000": false
+#24 340.9 }
+#24 340.9 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 340.9   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 340.9   "optionsBaseURL": "https://iz.tiger21.com",
+#24 340.9   "optionsBasePath": "/api/auth",
+#24 340.9   "trustedOrigins": [
+#24 340.9     "https://iz.tiger21.com",
+#24 340.9     "https://iz.tiger21.com"
+#24 340.9   ],
+#24 340.9   "baseURLContains0000": false
+#24 340.9 }
+#24 341.0 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 341.0   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 341.0   "optionsBaseURL": "https://iz.tiger21.com",
+#24 341.0   "optionsBasePath": "/api/auth",
+#24 341.0   "trustedOrigins": [
+#24 341.0     "https://iz.tiger21.com",
+#24 341.0     "https://iz.tiger21.com"
+#24 341.0   ],
+#24 341.0   "baseURLContains0000": false
+#24 341.0 }
+#24 341.0 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 341.0   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 341.0   "optionsBaseURL": "https://iz.tiger21.com",
+#24 341.0   "optionsBasePath": "/api/auth",
+#24 341.0   "trustedOrigins": [
+#24 341.0     "https://iz.tiger21.com",
+#24 341.0     "https://iz.tiger21.com"
+#24 341.0   ],
+#24 341.0   "baseURLContains0000": false
+#24 341.0 }
+#24 341.0 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 341.0   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 341.0   "optionsBaseURL": "https://iz.tiger21.com",
+#24 341.0   "optionsBasePath": "/api/auth",
+#24 341.0   "trustedOrigins": [
+#24 341.0     "https://iz.tiger21.com",
+#24 341.0     "https://iz.tiger21.com"
+#24 341.0   ],
+#24 341.0   "baseURLContains0000": false
+#24 341.0 }
+#24 341.1 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 341.1   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 341.1   "optionsBaseURL": "https://iz.tiger21.com",
+#24 341.1   "optionsBasePath": "/api/auth",
+#24 341.1   "trustedOrigins": [
+#24 341.1     "https://iz.tiger21.com",
+#24 341.1     "https://iz.tiger21.com"
+#24 341.1   ],
+#24 341.1   "baseURLContains0000": false
+#24 341.1 }
+#24 363.7    Generating static pages (0/130) ...
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 373.0   "timestamp": "2025-12-16T13:48:34.454Z",
+#24 373.0   "nodeEnv": "production"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 373.0   "BETTER_AUTH_SECRET": "[SET]",
+#24 373.0   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL resolution {
+#24 373.0   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 373.0   "step2_BASE_URL": "(empty/undefined)",
+#24 373.0   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "resolvedBaseURLType": "string",
+#24 373.0   "resolvedBaseURLLength": 22
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL validation {
+#24 373.0   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "isValidUrl": true,
+#24 373.0   "urlOrigin": "https://iz.tiger21.com",
+#24 373.0   "urlParseError": "(none)",
+#24 373.0   "contains0000": false,
+#24 373.0   "containsLocalhost": false
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 373.0   "baseURL": "https://iz.tiger21.com",
+#24 373.0   "trustedOrigins": [
+#24 373.0     "https://iz.tiger21.com"
+#24 373.0   ],
+#24 373.0   "basePath": "/api/auth"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 373.0   "hasHandler": true,
+#24 373.0   "hasApi": true,
+#24 373.0   "apiKeys": [
+#24 373.0     "signInSocial",
+#24 373.0     "callbackOAuth",
+#24 373.0     "getSession",
+#24 373.0     "signOut",
+#24 373.0     "signUpEmail",
+#24 373.0     "signInEmail",
+#24 373.0     "resetPassword",
+#24 373.0     "verifyEmail",
+#24 373.0     "sendVerificationEmail",
+#24 373.0     "changeEmail",
+#24 373.0     "changePassword",
+#24 373.0     "setPassword",
+#24 373.0     "updateUser",
+#24 373.0     "deleteUser",
+#24 373.0     "requestPasswordReset",
+#24 373.0     "requestPasswordResetCallback",
+#24 373.0     "listSessions",
+#24 373.0     "revokeSession",
+#24 373.0     "revokeSessions",
+#24 373.0     "revokeOtherSessions",
+#24 373.0     "linkSocialAccount",
+#24 373.0     "listUserAccounts",
+#24 373.0     "deleteUserCallback",
+#24 373.0     "unlinkAccount",
+#24 373.0     "refreshToken",
+#24 373.0     "getAccessToken",
+#24 373.0     "accountInfo",
+#24 373.0     "spMetadata",
+#24 373.0     "registerSSOProvider",
+#24 373.0     "signInSSO",
+#24 373.0     "callbackSSO",
+#24 373.0     "callbackSSOSAML",
+#24 373.0     "acsEndpoint",
+#24 373.0     "ok",
+#24 373.0     "error"
+#24 373.0   ]
+#24 373.0 }
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 373.0   "timestamp": "2025-12-16T13:48:34.456Z",
+#24 373.0   "nodeEnv": "production"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 373.0   "BETTER_AUTH_SECRET": "[SET]",
+#24 373.0   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL resolution {
+#24 373.0   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 373.0   "step2_BASE_URL": "(empty/undefined)",
+#24 373.0   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "resolvedBaseURLType": "string",
+#24 373.0   "resolvedBaseURLLength": 22
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL validation {
+#24 373.0   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "isValidUrl": true,
+#24 373.0   "urlOrigin": "https://iz.tiger21.com",
+#24 373.0   "urlParseError": "(none)",
+#24 373.0   "contains0000": false,
+#24 373.0   "containsLocalhost": false
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 373.0   "baseURL": "https://iz.tiger21.com",
+#24 373.0   "trustedOrigins": [
+#24 373.0     "https://iz.tiger21.com"
+#24 373.0   ],
+#24 373.0   "basePath": "/api/auth"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 373.0   "hasHandler": true,
+#24 373.0   "hasApi": true,
+#24 373.0   "apiKeys": [
+#24 373.0     "signInSocial",
+#24 373.0     "callbackOAuth",
+#24 373.0     "getSession",
+#24 373.0     "signOut",
+#24 373.0     "signUpEmail",
+#24 373.0     "signInEmail",
+#24 373.0     "resetPassword",
+#24 373.0     "verifyEmail",
+#24 373.0     "sendVerificationEmail",
+#24 373.0     "changeEmail",
+#24 373.0     "changePassword",
+#24 373.0     "setPassword",
+#24 373.0     "updateUser",
+#24 373.0     "deleteUser",
+#24 373.0     "requestPasswordReset",
+#24 373.0     "requestPasswordResetCallback",
+#24 373.0     "listSessions",
+#24 373.0     "revokeSession",
+#24 373.0     "revokeSessions",
+#24 373.0     "revokeOtherSessions",
+#24 373.0     "linkSocialAccount",
+#24 373.0     "listUserAccounts",
+#24 373.0     "deleteUserCallback",
+#24 373.0     "unlinkAccount",
+#24 373.0     "refreshToken",
+#24 373.0     "getAccessToken",
+#24 373.0     "accountInfo",
+#24 373.0     "spMetadata",
+#24 373.0     "registerSSOProvider",
+#24 373.0     "signInSSO",
+#24 373.0     "callbackSSO",
+#24 373.0     "callbackSSOSAML",
+#24 373.0     "acsEndpoint",
+#24 373.0     "ok",
+#24 373.0     "error"
+#24 373.0   ]
+#24 373.0 }
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 373.0   "timestamp": "2025-12-16T13:48:34.487Z",
+#24 373.0   "nodeEnv": "production"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 373.0   "BETTER_AUTH_SECRET": "[SET]",
+#24 373.0   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL resolution {
+#24 373.0   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 373.0   "step2_BASE_URL": "(empty/undefined)",
+#24 373.0   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "resolvedBaseURLType": "string",
+#24 373.0   "resolvedBaseURLLength": 22
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL validation {
+#24 373.0   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "isValidUrl": true,
+#24 373.0   "urlOrigin": "https://iz.tiger21.com",
+#24 373.0   "urlParseError": "(none)",
+#24 373.0   "contains0000": false,
+#24 373.0   "containsLocalhost": false
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 373.0   "baseURL": "https://iz.tiger21.com",
+#24 373.0   "trustedOrigins": [
+#24 373.0     "https://iz.tiger21.com"
+#24 373.0   ],
+#24 373.0   "basePath": "/api/auth"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 373.0   "hasHandler": true,
+#24 373.0   "hasApi": true,
+#24 373.0   "apiKeys": [
+#24 373.0     "signInSocial",
+#24 373.0     "callbackOAuth",
+#24 373.0     "getSession",
+#24 373.0     "signOut",
+#24 373.0     "signUpEmail",
+#24 373.0     "signInEmail",
+#24 373.0     "resetPassword",
+#24 373.0     "verifyEmail",
+#24 373.0     "sendVerificationEmail",
+#24 373.0     "changeEmail",
+#24 373.0     "changePassword",
+#24 373.0     "setPassword",
+#24 373.0     "updateUser",
+#24 373.0     "deleteUser",
+#24 373.0     "requestPasswordReset",
+#24 373.0     "requestPasswordResetCallback",
+#24 373.0     "listSessions",
+#24 373.0     "revokeSession",
+#24 373.0     "revokeSessions",
+#24 373.0     "revokeOtherSessions",
+#24 373.0     "linkSocialAccount",
+#24 373.0     "listUserAccounts",
+#24 373.0     "deleteUserCallback",
+#24 373.0     "unlinkAccount",
+#24 373.0     "refreshToken",
+#24 373.0     "getAccessToken",
+#24 373.0     "accountInfo",
+#24 373.0     "spMetadata",
+#24 373.0     "registerSSOProvider",
+#24 373.0     "signInSSO",
+#24 373.0     "callbackSSO",
+#24 373.0     "callbackSSOSAML",
+#24 373.0     "acsEndpoint",
+#24 373.0     "ok",
+#24 373.0     "error"
+#24 373.0   ]
+#24 373.0 }
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 373.0   "timestamp": "2025-12-16T13:48:34.487Z",
+#24 373.0   "nodeEnv": "production"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 373.0   "BETTER_AUTH_SECRET": "[SET]",
+#24 373.0   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL resolution {
+#24 373.0   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 373.0   "step2_BASE_URL": "(empty/undefined)",
+#24 373.0   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.0   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "resolvedBaseURLType": "string",
+#24 373.0   "resolvedBaseURLLength": 22
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Base URL validation {
+#24 373.0   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 373.0   "isValidUrl": true,
+#24 373.0   "urlOrigin": "https://iz.tiger21.com",
+#24 373.0   "urlParseError": "(none)",
+#24 373.0   "contains0000": false,
+#24 373.0   "containsLocalhost": false
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 373.0   "baseURL": "https://iz.tiger21.com",
+#24 373.0   "trustedOrigins": [
+#24 373.0     "https://iz.tiger21.com"
+#24 373.0   ],
+#24 373.0   "basePath": "/api/auth"
+#24 373.0 }
+#24 373.0 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 373.0   "hasHandler": true,
+#24 373.0   "hasApi": true,
+#24 373.0   "apiKeys": [
+#24 373.0     "signInSocial",
+#24 373.0     "callbackOAuth",
+#24 373.0     "getSession",
+#24 373.0     "signOut",
+#24 373.0     "signUpEmail",
+#24 373.0     "signInEmail",
+#24 373.0     "resetPassword",
+#24 373.0     "verifyEmail",
+#24 373.0     "sendVerificationEmail",
+#24 373.0     "changeEmail",
+#24 373.0     "changePassword",
+#24 373.0     "setPassword",
+#24 373.0     "updateUser",
+#24 373.0     "deleteUser",
+#24 373.0     "requestPasswordReset",
+#24 373.0     "requestPasswordResetCallback",
+#24 373.0     "listSessions",
+#24 373.0     "revokeSession",
+#24 373.0     "revokeSessions",
+#24 373.0     "revokeOtherSessions",
+#24 373.0     "linkSocialAccount",
+#24 373.0     "listUserAccounts",
+#24 373.0     "deleteUserCallback",
+#24 373.0     "unlinkAccount",
+#24 373.0     "refreshToken",
+#24 373.0     "getAccessToken",
+#24 373.0     "accountInfo",
+#24 373.0     "spMetadata",
+#24 373.0     "registerSSOProvider",
+#24 373.0     "signInSSO",
+#24 373.0     "callbackSSO",
+#24 373.0     "callbackSSOSAML",
+#24 373.0     "acsEndpoint",
+#24 373.0     "ok",
+#24 373.0     "error"
+#24 373.0   ]
+#24 373.0 }
+#24 373.0 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 373.1 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 373.1   "timestamp": "2025-12-16T13:48:34.749Z",
+#24 373.1   "nodeEnv": "production"
+#24 373.1 }
+#24 373.1 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 373.1   "BETTER_AUTH_SECRET": "[SET]",
+#24 373.1   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.1   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 373.1 }
+#24 373.1 [auth]: AUTH DEBUG: Base URL resolution {
+#24 373.1   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 373.1   "step2_BASE_URL": "(empty/undefined)",
+#24 373.1   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.1   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 373.1   "resolvedBaseURLType": "string",
+#24 373.1   "resolvedBaseURLLength": 22
+#24 373.1 }
+#24 373.1 [auth]: AUTH DEBUG: Base URL validation {
+#24 373.1   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 373.1   "isValidUrl": true,
+#24 373.1   "urlOrigin": "https://iz.tiger21.com",
+#24 373.1   "urlParseError": "(none)",
+#24 373.1   "contains0000": false,
+#24 373.1   "containsLocalhost": false
+#24 373.1 }
+#24 373.1 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 373.1   "baseURL": "https://iz.tiger21.com",
+#24 373.1   "trustedOrigins": [
+#24 373.1     "https://iz.tiger21.com"
+#24 373.1   ],
+#24 373.1   "basePath": "/api/auth"
+#24 373.1 }
+#24 373.1 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 373.1   "hasHandler": true,
+#24 373.1   "hasApi": true,
+#24 373.1   "apiKeys": [
+#24 373.1     "signInSocial",
+#24 373.1     "callbackOAuth",
+#24 373.1     "getSession",
+#24 373.1     "signOut",
+#24 373.1     "signUpEmail",
+#24 373.1     "signInEmail",
+#24 373.1     "resetPassword",
+#24 373.1     "verifyEmail",
+#24 373.1     "sendVerificationEmail",
+#24 373.1     "changeEmail",
+#24 373.1     "changePassword",
+#24 373.1     "setPassword",
+#24 373.1     "updateUser",
+#24 373.1     "deleteUser",
+#24 373.1     "requestPasswordReset",
+#24 373.1     "requestPasswordResetCallback",
+#24 373.1     "listSessions",
+#24 373.1     "revokeSession",
+#24 373.1     "revokeSessions",
+#24 373.1     "revokeOtherSessions",
+#24 373.1     "linkSocialAccount",
+#24 373.1     "listUserAccounts",
+#24 373.1     "deleteUserCallback",
+#24 373.1     "unlinkAccount",
+#24 373.1     "refreshToken",
+#24 373.1     "getAccessToken",
+#24 373.1     "accountInfo",
+#24 373.1     "spMetadata",
+#24 373.1     "registerSSOProvider",
+#24 373.1     "signInSSO",
+#24 373.1     "callbackSSO",
+#24 373.1     "callbackSSOSAML",
+#24 373.1     "acsEndpoint",
+#24 373.1     "ok",
+#24 373.1     "error"
+#24 373.1   ]
+#24 373.1 }
+#24 373.1 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 373.1 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 373.1   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 373.1   "optionsBaseURL": "https://iz.tiger21.com",
+#24 373.1   "optionsBasePath": "/api/auth",
+#24 373.1   "trustedOrigins": [
+#24 373.1     "https://iz.tiger21.com",
+#24 373.1     "https://iz.tiger21.com"
+#24 373.1   ],
+#24 373.1   "baseURLContains0000": false
+#24 373.1 }
+#24 373.3 [auth]: === AUTH MODULE INITIALIZATION START === {
+#24 373.3   "timestamp": "2025-12-16T13:48:34.757Z",
+#24 373.3   "nodeEnv": "production"
+#24 373.3 }
+#24 373.3 [auth]: AUTH DEBUG: All URL-related environment variables {
+#24 373.3   "BETTER_AUTH_SECRET": "[SET]",
+#24 373.3   "NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.3   "envNextPublicBaseUrl": "https://iz.tiger21.com"
+#24 373.3 }
+#24 373.3 [auth]: AUTH DEBUG: Base URL resolution {
+#24 373.3   "step1_BETTER_AUTH_URL": "(empty/undefined)",
+#24 373.3   "step2_BASE_URL": "(empty/undefined)",
+#24 373.3   "step3_NEXT_PUBLIC_BASE_URL": "https://iz.tiger21.com",
+#24 373.3   "finalResolvedBaseURL": "https://iz.tiger21.com",
+#24 373.3   "resolvedBaseURLType": "string",
+#24 373.3   "resolvedBaseURLLength": 22
+#24 373.3 }
+#24 373.3 [auth]: AUTH DEBUG: Base URL validation {
+#24 373.3   "resolvedBaseURL": "https://iz.tiger21.com",
+#24 373.3   "isValidUrl": true,
+#24 373.3   "urlOrigin": "https://iz.tiger21.com",
+#24 373.3   "urlParseError": "(none)",
+#24 373.3   "contains0000": false,
+#24 373.3   "containsLocalhost": false
+#24 373.3 }
+#24 373.3 [auth]: AUTH DEBUG: Creating betterAuth config {
+#24 373.3   "baseURL": "https://iz.tiger21.com",
+#24 373.3   "trustedOrigins": [
+#24 373.3     "https://iz.tiger21.com"
+#24 373.3   ],
+#24 373.3   "basePath": "/api/auth"
+#24 373.3 }
+#24 373.3 [auth]: AUTH DEBUG: betterAuthConfig created successfully {
+#24 373.3   "hasHandler": true,
+#24 373.3   "hasApi": true,
+#24 373.3   "apiKeys": [
+#24 373.3     "signInSocial",
+#24 373.3     "callbackOAuth",
+#24 373.3     "getSession",
+#24 373.3     "signOut",
+#24 373.3     "signUpEmail",
+#24 373.3     "signInEmail",
+#24 373.3     "resetPassword",
+#24 373.3     "verifyEmail",
+#24 373.3     "sendVerificationEmail",
+#24 373.3     "changeEmail",
+#24 373.3     "changePassword",
+#24 373.3     "setPassword",
+#24 373.3     "updateUser",
+#24 373.3     "deleteUser",
+#24 373.3     "requestPasswordReset",
+#24 373.3     "requestPasswordResetCallback",
+#24 373.3     "listSessions",
+#24 373.3     "revokeSession",
+#24 373.3     "revokeSessions",
+#24 373.3     "revokeOtherSessions",
+#24 373.3     "linkSocialAccount",
+#24 373.3     "listUserAccounts",
+#24 373.3     "deleteUserCallback",
+#24 373.3     "unlinkAccount",
+#24 373.3     "refreshToken",
+#24 373.3     "getAccessToken",
+#24 373.3     "accountInfo",
+#24 373.3     "spMetadata",
+#24 373.3     "registerSSOProvider",
+#24 373.3     "signInSSO",
+#24 373.3     "callbackSSO",
+#24 373.3     "callbackSSOSAML",
+#24 373.3     "acsEndpoint",
+#24 373.3     "ok",
+#24 373.3     "error"
+#24 373.3   ]
+#24 373.3 }
+#24 373.3 [auth]: === AUTH MODULE INITIALIZATION END === 
+#24 373.4 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 373.4   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 373.4   "optionsBaseURL": "https://iz.tiger21.com",
+#24 373.4   "optionsBasePath": "/api/auth",
+#24 373.4   "trustedOrigins": [
+#24 373.4     "https://iz.tiger21.com",
+#24 373.4     "https://iz.tiger21.com"
+#24 373.4   ],
+#24 373.4   "baseURLContains0000": false
+#24 373.4 }
+#24 373.4 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 373.4   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 373.4   "optionsBaseURL": "https://iz.tiger21.com",
+#24 373.4   "optionsBasePath": "/api/auth",
+#24 373.4   "trustedOrigins": [
+#24 373.4     "https://iz.tiger21.com",
+#24 373.4     "https://iz.tiger21.com"
+#24 373.4   ],
+#24 373.4   "baseURLContains0000": false
+#24 373.4 }
+#24 373.4    Generating static pages (32/130) 
+#24 373.4 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 373.4   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 373.4   "optionsBaseURL": "https://iz.tiger21.com",
+#24 373.4   "optionsBasePath": "/api/auth",
+#24 373.4   "trustedOrigins": [
+#24 373.4     "https://iz.tiger21.com",
+#24 373.4     "https://iz.tiger21.com"
+#24 373.4   ],
+#24 373.4   "baseURLContains0000": false
+#24 373.4 }
+#24 373.4 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 373.4   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 373.4   "optionsBaseURL": "https://iz.tiger21.com",
+#24 373.4   "optionsBasePath": "/api/auth",
+#24 373.4   "trustedOrigins": [
+#24 373.4     "https://iz.tiger21.com",
+#24 373.4     "https://iz.tiger21.com"
+#24 373.4   ],
+#24 373.4   "baseURLContains0000": false
+#24 373.4 }
+#24 373.4    Generating static pages (64/130) 
+#24 374.1 [auth]: AUTH DEBUG: Better Auth context resolved {
+#24 374.1   "baseURL": "https://iz.tiger21.com/api/auth",
+#24 374.1   "optionsBaseURL": "https://iz.tiger21.com",
+#24 374.1   "optionsBasePath": "/api/auth",
+#24 374.1   "trustedOrigins": [
+#24 374.1     "https://iz.tiger21.com",
+#24 374.1     "https://iz.tiger21.com"
+#24 374.1   ],
+#24 374.1   "baseURLContains0000": false
+#24 374.1 }
+#24 374.1    Generating static pages (97/130) 
+#24 374.4  ✓ Generating static pages (130/130)
+#24 378.4    Finalizing page optimization ...
+#24 378.4    Collecting build traces ...
+#24 CANCELED
+
+ [33m10 warnings found (use docker --debug to expand):
+[0m - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "AUTH_SECRET") (line 65)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "INTERNAL_API_KEY") (line 72)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "UPSTASH_REDIS_TOKEN") (line 75)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "QSTASH_TOKEN") (line 77)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "QSTASH_CURRENT_SIGNING_KEY") (line 78)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "QSTASH_NEXT_SIGNING_KEY") (line 79)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "GOOGLE_CLIENT_SECRET") (line 67)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "EMAIL_ENCRYPT_SECRET") (line 68)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "GOOGLE_PUBSUB_VERIFICATION_TOKEN") (line 71)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "API_KEY_SALT") (line 73)
+ERROR: failed to build: failed to solve: Canceled: context canceled
