@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import type { GetEmailAccountsResponse } from "@/app/api/user/email-accounts/route";
 import { setLastEmailAccountAction } from "@/utils/actions/email-account-cookie";
+import { isValidEmailProvider } from "@/utils/email/provider-types";
 
 type Context = {
   emailAccount: GetEmailAccountsResponse["emailAccounts"][number] | undefined;
@@ -47,9 +48,20 @@ export function EmailAccountProvider({
 
   const emailAccount = useMemo(() => {
     if (data?.emailAccounts) {
+      // Defense layer: Filter to only valid email providers (Google, Microsoft)
+      // The API should already filter these, but this provides client-side safety
+      // to prevent SSO accounts from being used
+      const validAccounts = data.emailAccounts.filter((acc) =>
+        isValidEmailProvider(acc.account?.provider),
+      );
+
+      if (validAccounts.length === 0) {
+        return undefined;
+      }
+
       const currentEmailAccount =
-        data.emailAccounts.find((acc) => acc.id === emailAccountId) ??
-        data.emailAccounts[0];
+        validAccounts.find((acc) => acc.id === emailAccountId) ??
+        validAccounts[0];
 
       return currentEmailAccount;
     }

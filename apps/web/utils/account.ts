@@ -15,6 +15,7 @@ import {
   LAST_EMAIL_ACCOUNT_COOKIE,
   type LastEmailAccountCookieValue,
 } from "@/utils/cookies";
+import { isValidEmailProvider } from "@/utils/email/provider-types";
 
 export async function getGmailClientForEmail({
   emailAccountId,
@@ -151,10 +152,9 @@ export async function redirectToEmailAccountPath(path: `/${string}`) {
   }
 
   // Check if user has any valid email provider (Google or Microsoft)
-  const validProviderAccounts = emailAccounts.filter(
-    (account) =>
-      account.account?.provider === "google" ||
-      account.account?.provider === "microsoft",
+  // SSO providers (like Okta) are NOT valid - they only provide auth, not email access
+  const validProviderAccounts = emailAccounts.filter((account) =>
+    isValidEmailProvider(account.account?.provider),
   );
 
   // If no valid email provider, redirect to accounts page
