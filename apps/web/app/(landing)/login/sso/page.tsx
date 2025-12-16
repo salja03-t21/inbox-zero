@@ -35,9 +35,9 @@ export default function SSOLoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: data.email,
-          // Use email domain matching instead of organizationSlug since we don't have
-          // Better Auth's organization plugin fully configured
+          // Use providerId directly since we support multiple domains (@tiger21.com and @tiger21chair.com)
+          // but they all use the same Okta provider
+          providerId: "okta-tiger21-1765774132282",
           callbackURL: `${window.location.origin}/`, // Redirect to home after successful login
         }),
       });
