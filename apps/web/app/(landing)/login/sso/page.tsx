@@ -27,8 +27,15 @@ export default function SSOLoginPage() {
 
   const onSubmit: SubmitHandler<SsoLoginBody> = useCallback(async (data) => {
     setIsSubmitting(true);
+
+    console.log("[SSO Login] Starting SSO signin flow...", {
+      email: data.email,
+    });
+
     try {
       // Use Better Auth's built-in SSO signin endpoint
+      console.log("[SSO Login] Calling /api/auth/sign-in/sso...");
+
       const response = await fetch("/api/auth/sign-in/sso", {
         method: "POST",
         headers: {
@@ -42,9 +49,13 @@ export default function SSOLoginPage() {
         }),
       });
 
+      console.log("[SSO Login] Response status:", response.status);
+
       const responseData = await response.json();
+      console.log("[SSO Login] Response data:", responseData);
 
       if (!response.ok) {
+        console.error("[SSO Login] SSO signin failed:", responseData);
         toastError({
           title: "SSO Sign-in Error",
           description: responseData.error || "Failed to initiate SSO sign-in",
@@ -54,10 +65,14 @@ export default function SSOLoginPage() {
 
       // Better Auth returns {url: string, redirect: boolean}
       if (responseData.url) {
+        console.log("[SSO Login] Redirecting to:", responseData.url);
         toastSuccess({ description: "Redirecting to SSO provider..." });
         window.location.href = responseData.url; // Use window.location.href for external redirect
+      } else {
+        console.error("[SSO Login] No redirect URL in response");
       }
-    } catch {
+    } catch (error) {
+      console.error("[SSO Login] Exception during SSO signin:", error);
       toastError({
         title: "SSO Sign-in Error",
         description: "An unexpected error occurred. Please try again.",
