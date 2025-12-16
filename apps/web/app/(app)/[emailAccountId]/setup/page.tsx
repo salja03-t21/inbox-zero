@@ -30,15 +30,13 @@ export default async function SetupPage({
     // This is an SSO-only account, redirect to accounts page
     redirect("/accounts");
   }
-  params: Promise<{ emailAccountId: string }>;
-}) {
-  const { emailAccountId } = await props.params;
+  
   await checkUserOwnsEmailAccount({ emailAccountId });
 
   return (
     <>
       <SetupContent />
-      <LoadStats loadBefore showToast={false} />
+      <LoadStats />
     </>
   );
 }
