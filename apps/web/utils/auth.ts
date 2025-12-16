@@ -200,6 +200,9 @@ export const betterAuthConfig = betterAuth({
     sso({
       disableImplicitSignUp: false,
       organizationProvisioning: { disabled: true },
+      // Trust email verification from Okta SSO provider
+      // This allows automatic account linking when email matches
+      trustEmailVerified: true,
       // Add custom user provisioning to log what's happening
       provisionUser: async ({ user, userInfo, token, provider }) => {
         logger.info("[SSO] 🎯 User provisioning triggered", {
@@ -240,6 +243,12 @@ export const betterAuthConfig = betterAuth({
       accessToken: "access_token",
       accessTokenExpiresAt: "expires_at",
       idToken: "id_token",
+    },
+    // Enable account linking for trusted SSO providers
+    accountLinking: {
+      enabled: true,
+      // Trust our Okta SSO provider for automatic linking
+      trustedProviders: ["okta-tiger21-1765774132282"],
     },
   },
   verification: {
