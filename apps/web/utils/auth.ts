@@ -623,65 +623,73 @@ async function handleLinkAccount(account: Account) {
   let primaryPhotoUrl: string | null | undefined;
 
   try {
-    // For SSO providers, get user info from the user record
+    // SSO providers (like Okta) are for AUTHENTICATION ONLY.
+    // They don't provide email access (read/send), so we should NOT create
+    // EmailAccount records for them. EmailAccount records are only for
+    // email providers (Google/Microsoft OAuth) that provide mailbox access.
+    //
+    // When users log in via SSO, they:
+    // 1. Get a User record (for auth identity)
+    // 2. Get an Account record linked to the SSO provider (for auth tokens)
+    // 3. Do NOT get an EmailAccount record (no email access)
+    // 4. Must separately link a Google/Microsoft account for email access
     if (
       account.providerId.includes("okta") ||
-      account.providerId.includes("sso")
+      account.providerId.includes("sso") ||
+      account.providerId.includes("saml")
     ) {
       logger.info(
-        "[handleLinkAccount] SSO provider detected, getting user info from database",
+        "[handleLinkAccount] SSO provider detected - skipping EmailAccount creation",
+        {
+          providerId: account.providerId,
+          userId: account.userId,
+          reason: "SSO providers are for authentication only, not email access",
+        },
+      );
+      // Early return - do NOT create EmailAccount for SSO providers
+      return;
+    }
+
+    // Only Google and Microsoft OAuth providers should create EmailAccount records
+    if (
+      !isGoogleProvider(account.providerId) &&
+      !isMicrosoftProvider(account.providerId)
+    ) {
+      logger.warn(
+        "[handleLinkAccount] Unknown provider type - skipping EmailAccount creation",
         {
           providerId: account.providerId,
           userId: account.userId,
         },
       );
+      return;
+    }
 
-      const user = await prisma.user.findUnique({
-        where: { id: account.userId },
-        select: { email: true, name: true, image: true },
-      });
-
-      if (!user?.email) {
-        logger.error(
-          "[handleLinkAccount] No user email found for SSO provider",
-          {
-            userId: account.userId,
-            providerId: account.providerId,
-          },
-        );
-        throw new Error("User email not found for SSO account linking.");
-      }
-
-      primaryEmail = user.email;
-      primaryName = user.name;
-      primaryPhotoUrl = user.image;
-    } else {
-      // Original OAuth provider logic
-      if (!account.accessToken) {
-        logger.error(
-          "[linkAccount] No access_token found in data, cannot fetch profile.",
-        );
-        throw new Error("Missing access token during account linking.");
-      }
-      const profileData = await getProfileData(
-        account.providerId,
-        account.accessToken,
+    // OAuth provider logic - fetch profile data using access token
+    if (!account.accessToken) {
+      logger.error(
+        "[linkAccount] No access_token found in data, cannot fetch profile.",
       );
+      throw new Error("Missing access token during account linking.");
+    }
+    const profileData = await getProfileData(
+      account.providerId,
+      account.accessToken,
+    );
 
-      if (!profileData?.email) {
-        logger.error("[handleLinkAccount] No email found in profile data");
-      }
+    if (!profileData?.email) {
+      logger.error("[handleLinkAccount] No email found in profile data");
+    }
 
-      primaryEmail = profileData?.email;
-      primaryName = profileData?.name;
-      primaryPhotoUrl = profileData?.image;
+    primaryEmail = profileData?.email;
+    primaryName = profileData?.name;
+    primaryPhotoUrl = profileData?.image;
 
-      if (!primaryEmail) {
-        logger.error(
-          "[linkAccount] Primary email could not be determined from profile.",
-        );
-        throw new Error("Primary email not found for linked account.");
-      }
+    if (!primaryEmail) {
+      logger.error(
+        "[linkAccount] Primary email could not be determined from profile.",
+      );
+      throw new Error("Primary email not found for linked account.");
     }
 
     const user = await prisma.user.findUnique({
