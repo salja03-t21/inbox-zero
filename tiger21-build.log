@@ -1,0 +1,149 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.tiger21.prod
+#1 transferring dockerfile: 4.78kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:22-alpine
+#2 DONE 0.3s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 397B done
+#3 DONE 0.0s
+
+#4 [base 1/4] FROM docker.io/library/node:22-alpine@sha256:9632533eda8061fc1e9960cfb3f8762781c07a00ee7317f5dc0e13c05e15166f
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 149.95kB 0.1s done
+#5 DONE 0.1s
+
+#6 [builder  9/16] COPY packages/tinybird-ai-analytics/package.json packages/tinybird-ai-analytics/package.json
+#6 CACHED
+
+#7 [base 3/4] RUN corepack enable && corepack prepare pnpm@10.19.0 --activate
+#7 CACHED
+
+#8 [builder  6/16] COPY packages/loops/package.json packages/loops/package.json
+#8 CACHED
+
+#9 [base 4/4] RUN addgroup -g 1001 -S nodejs &&     adduser -S nextjs -u 1001 -G nodejs
+#9 CACHED
+
+#10 [builder  3/16] COPY .npmrc* ./
+#10 CACHED
+
+#11 [builder  7/16] COPY packages/resend/package.json packages/resend/package.json
+#11 CACHED
+
+#12 [builder 12/16] COPY apps/web/prisma/schema.prisma apps/web/prisma/schema.prisma
+#12 CACHED
+
+#13 [builder 11/16] COPY patches/ patches/
+#13 CACHED
+
+#14 [builder  5/16] COPY apps/unsubscriber/package.json apps/unsubscriber/package.json
+#14 CACHED
+
+#15 [builder  2/16] COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+#15 CACHED
+
+#16 [builder  1/16] WORKDIR /app
+#16 CACHED
+
+#17 [base 2/4] RUN apk update &&     apk upgrade &&     apk add --no-cache         openssl         ca-certificates         dumb-init         curl         wget &&     rm -rf /var/cache/apk/*
+#17 CACHED
+
+#18 [builder  4/16] COPY apps/web/package.json apps/web/package.json
+#18 CACHED
+
+#19 [builder  8/16] COPY packages/tinybird/package.json packages/tinybird/package.json
+#19 CACHED
+
+#20 [builder 10/16] COPY packages/tsconfig/package.json packages/tsconfig/package.json
+#20 CACHED
+
+#21 [builder 13/16] RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store     pnpm install --frozen-lockfile
+#21 CACHED
+
+#22 [builder 14/16] COPY . .
+#22 DONE 0.1s
+
+#23 [builder 15/16] RUN pnpm --filter=inbox-zero-ai exec -- prisma generate
+#23 0.592 Prisma schema loaded from prisma/schema.prisma
+#23 0.773 Warning: You did not specify an output path for your `generator` in schema.prisma. This behavior is deprecated and will no longer be supported in Prisma 7.0.0. To learn more visit https://pris.ly/cli/output-path
+#23 0.995 
+#23 0.995 ✔ Generated Prisma Client (v6.6.0) to ./../../node_modules/.pnpm/@prisma+client@6.6.0_prisma@6.6.0_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client in 170ms
+#23 0.995 
+#23 0.995 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+#23 0.995 
+#23 0.995 Tip: Want real-time updates to your database without manual polling? Discover how with Pulse: https://pris.ly/tip-0-pulse
+#23 0.995 
+#23 DONE 1.0s
+
+#24 [builder 16/16] RUN pnpm --filter=inbox-zero-ai exec -- next build
+#24 1.046 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#24 1.046 This information is used to shape Next.js' roadmap and prioritize features.
+#24 1.046 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#24 1.046 https://nextjs.org/telemetry
+#24 1.046 
+#24 1.089    ▲ Next.js 15.5.7
+#24 1.089    - Environments: .env.local, .env.production
+#24 1.089 
+#24 1.149    Creating an optimized production build ...
+#24 1.301  ✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+#24 84.35  ✓ Compiled successfully in 83s
+#24 84.36    Linting and checking validity of types ...
+#24 107.0 Failed to compile.
+#24 107.0 
+#24 107.0 ./app/(app)/[emailAccountId]/setup/page.tsx:39:8
+#24 107.0 Type error: Type '{}' is missing the following properties from type '{ loadBefore: boolean; showToast: boolean; }': loadBefore, showToast
+#24 107.0 
+#24 107.0 [0m [90m 37 |[39m     [33m<[39m[33m>[39m
+#24 107.0  [90m 38 |[39m       [33m<[39m[33mSetupContent[39m [33m/[39m[33m>[39m
+#24 107.0 [31m[1m>[22m[39m[90m 39 |[39m       [33m<[39m[33mLoadStats[39m [33m/[39m[33m>[39m
+#24 107.0  [90m    |[39m        [31m[1m^[22m[39m
+#24 107.0  [90m 40 |[39m     [33m<[39m[33m/[39m[33m>[39m
+#24 107.0  [90m 41 |[39m   )[33m;[39m
+#24 107.0  [90m 42 |[39m }[0m
+#24 107.1 Next.js build worker exited with code: 1 and signal: null
+#24 107.3 undefined
+#24 107.3 /app/apps/web:
+#24 107.3  ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: next build
+#24 ERROR: process "/bin/sh -c pnpm --filter=inbox-zero-ai exec -- next build" did not complete successfully: exit code: 1
+------
+ > [builder 16/16] RUN pnpm --filter=inbox-zero-ai exec -- next build:
+107.0  [90m 38 |[39m       [33m<[39m[33mSetupContent[39m [33m/[39m[33m>[39m
+107.0 [31m[1m>[22m[39m[90m 39 |[39m       [33m<[39m[33mLoadStats[39m [33m/[39m[33m>[39m
+107.0  [90m    |[39m        [31m[1m^[22m[39m
+107.0  [90m 40 |[39m     [33m<[39m[33m/[39m[33m>[39m
+107.0  [90m 41 |[39m   )[33m;[39m
+107.0  [90m 42 |[39m }[0m
+107.1 Next.js build worker exited with code: 1 and signal: null
+107.3 undefined
+107.3 /app/apps/web:
+107.3  ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: next build
+------
+
+ [33m10 warnings found (use docker --debug to expand):
+[0m - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "QSTASH_CURRENT_SIGNING_KEY") (line 78)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "QSTASH_NEXT_SIGNING_KEY") (line 79)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "AUTH_SECRET") (line 65)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "GOOGLE_CLIENT_SECRET") (line 67)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "GOOGLE_PUBSUB_VERIFICATION_TOKEN") (line 71)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "INTERNAL_API_KEY") (line 72)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "QSTASH_TOKEN") (line 77)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "EMAIL_ENCRYPT_SECRET") (line 68)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "API_KEY_SALT") (line 73)
+ - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "UPSTASH_REDIS_TOKEN") (line 75)
+Dockerfile.tiger21.prod:89
+--------------------
+  87 |     # Increase Node.js memory limit for large Next.js builds
+  88 |     ENV NODE_OPTIONS="--max-old-space-size=4096"
+  89 | >>> RUN pnpm --filter=inbox-zero-ai exec -- next build
+  90 |     
+  91 |     # Note: Skipping pnpm prune to speed up build
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c pnpm --filter=inbox-zero-ai exec -- next build" did not complete successfully: exit code: 1
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/mx0b851pmfbo52a2qi1ks13yj
