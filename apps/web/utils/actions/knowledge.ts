@@ -65,7 +65,7 @@ export const startAutoGenerateKnowledgeAction = actionClient
   .action(
     async ({
       ctx: { emailAccountId, logger },
-      parsedInput: { startDate, endDate, maxEntries, groupBy },
+      parsedInput: { startDate, endDate, maxEntries, groupBy, autoApprove },
     }) => {
       // Rate limit: 100 auto-generate requests per hour per account
       await checkAIRateLimit(emailAccountId, "auto-generate-knowledge", {
@@ -145,13 +145,10 @@ export const startAutoGenerateKnowledgeAction = actionClient
           },
         });
 
-        // Check if auto-approve is enabled
-        const settings = await prisma.emailAccount.findUnique({
-          where: { id: emailAccountId },
-          select: { knowledgeAutoApprove: true },
-        });
+        // Use autoApprove from request (defaults to true)
+        const shouldAutoApprove = autoApprove ?? true;
 
-        if (settings?.knowledgeAutoApprove && result.entries.length > 0) {
+        if (shouldAutoApprove && result.entries.length > 0) {
           // Auto-approve: create knowledge entries immediately
           await createKnowledgeEntriesFromGenerated(
             emailAccountId,
@@ -173,7 +170,7 @@ export const startAutoGenerateKnowledgeAction = actionClient
           jobId: job.id,
           entries: result.entries,
           stats: result.stats,
-          autoApproved: settings?.knowledgeAutoApprove ?? false,
+          autoApproved: shouldAutoApprove,
         };
       } catch (error) {
         // Update job status on error

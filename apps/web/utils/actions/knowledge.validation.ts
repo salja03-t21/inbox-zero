@@ -27,6 +27,7 @@ export const startAutoGenerateBody = z.object({
   endDate: z.coerce.date().optional(),
   maxEntries: z.number().min(1).max(50).default(20),
   groupBy: z.enum(["topic", "sender", "both"]).default("both"),
+  autoApprove: z.boolean().default(true),
 });
 
 export type StartAutoGenerateBody = z.infer<typeof startAutoGenerateBody>;

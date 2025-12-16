@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useId } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { subDays } from "date-fns";
@@ -46,6 +46,7 @@ interface AutoGenerateKnowledgeProps {
 export function AutoGenerateKnowledge({
   onEntriesAdded,
 }: AutoGenerateKnowledgeProps) {
+  const autoApproveId = useId();
   const { emailAccountId, emailAccount } = useAccount();
   const isAdmin = emailAccount?.user?.isAdmin ?? false;
   const [isOpen, setIsOpen] = useState(false);
@@ -72,6 +73,7 @@ export function AutoGenerateKnowledge({
       startDate: subDays(new Date(), 30),
       maxEntries: 20,
       groupBy: "both",
+      autoApprove: true,
     },
   });
 
@@ -333,6 +335,27 @@ export function AutoGenerateKnowledge({
                 />
               </div>
             </div>
+
+            <Controller
+              name="autoApprove"
+              control={control}
+              render={({ field }) => (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={autoApproveId}
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <Label
+                    htmlFor={autoApproveId}
+                    className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Auto-approve generated entries (save directly without
+                    review)
+                  </Label>
+                </div>
+              )}
+            />
 
             {lastJob && (
               <div className="rounded-lg border bg-muted/50 p-3 text-sm">
