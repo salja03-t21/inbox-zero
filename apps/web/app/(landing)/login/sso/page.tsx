@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, Suspense } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { z } from "zod";
@@ -21,7 +21,7 @@ const KNOWN_ISSUERS: Record<string, string> = {
   "https://apps.tiger21.com": "okta-tiger21-1765774132282",
 };
 
-export default function SSOLoginPage() {
+function SSOLoginContent() {
   const searchParams = useSearchParams();
   const issuer = searchParams.get("iss");
 
@@ -145,5 +145,22 @@ export default function SSOLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex h-screen flex-col items-center justify-center text-foreground">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="mt-4 text-muted-foreground">Loading...</p>
+    </div>
+  );
+}
+
+export default function SSOLoginPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <SSOLoginContent />
+    </Suspense>
   );
 }
