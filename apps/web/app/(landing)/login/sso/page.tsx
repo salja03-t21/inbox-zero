@@ -1,12 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { toastError, toastSuccess } from "@/components/Toast";
+import { Loader2 } from "lucide-react";
 
 const ssoLoginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -14,7 +16,15 @@ const ssoLoginSchema = z.object({
 
 type SsoLoginBody = z.infer<typeof ssoLoginSchema>;
 
+// Known Okta issuers that should trigger auto-login
+const KNOWN_ISSUERS: Record<string, string> = {
+  "https://apps.tiger21.com": "okta-tiger21-1765774132282",
+};
+
 export default function SSOLoginPage() {
+  const searchParams = useSearchParams();
+  const issuer = searchParams.get("iss");
+
   const {
     register,
     handleSubmit,
@@ -24,16 +34,15 @@ export default function SSOLoginPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAutoLogin, setIsAutoLogin] = useState(false);
 
-  const onSubmit: SubmitHandler<SsoLoginBody> = useCallback(async (data) => {
+  // Function to trigger SSO login
+  const triggerSSOLogin = useCallback(async (providerId: string) => {
     setIsSubmitting(true);
 
-    console.log("[SSO Login] Starting SSO signin flow...", {
-      email: data.email,
-    });
+    console.log("[SSO Login] Starting SSO signin flow...", { providerId });
 
     try {
-      // Use Better Auth's built-in SSO signin endpoint
       console.log("[SSO Login] Calling /api/auth/sign-in/sso...");
 
       const response = await fetch("/api/auth/sign-in/sso", {
@@ -42,9 +51,7 @@ export default function SSOLoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          // Use providerId directly since we support multiple domains (@tiger21.com and @tiger21chair.com)
-          // but they all use the same Okta provider
-          providerId: "okta-tiger21-1765774132282",
+          providerId,
           callbackURL: `${window.location.origin}/`, // Redirect to home after successful login
         }),
       });
@@ -60,6 +67,7 @@ export default function SSOLoginPage() {
           title: "SSO Sign-in Error",
           description: responseData.error || "Failed to initiate SSO sign-in",
         });
+        setIsAutoLogin(false);
         return;
       }
 
@@ -67,9 +75,10 @@ export default function SSOLoginPage() {
       if (responseData.url) {
         console.log("[SSO Login] Redirecting to:", responseData.url);
         toastSuccess({ description: "Redirecting to SSO provider..." });
-        window.location.href = responseData.url; // Use window.location.href for external redirect
+        window.location.href = responseData.url;
       } else {
         console.error("[SSO Login] No redirect URL in response");
+        setIsAutoLogin(false);
       }
     } catch (error) {
       console.error("[SSO Login] Exception during SSO signin:", error);
@@ -77,10 +86,34 @@ export default function SSOLoginPage() {
         title: "SSO Sign-in Error",
         description: "An unexpected error occurred. Please try again.",
       });
+      setIsAutoLogin(false);
     } finally {
       setIsSubmitting(false);
     }
   }, []);
+
+  // Auto-trigger SSO login if issuer is present (IdP-initiated flow)
+  useEffect(() => {
+    if (issuer && KNOWN_ISSUERS[issuer]) {
+      console.log("[SSO Login] IdP-initiated login detected", { issuer });
+      setIsAutoLogin(true);
+      triggerSSOLogin(KNOWN_ISSUERS[issuer]);
+    }
+  }, [issuer, triggerSSOLogin]);
+
+  const onSubmit: SubmitHandler<SsoLoginBody> = useCallback(async () => {
+    await triggerSSOLogin("okta-tiger21-1765774132282");
+  }, [triggerSSOLogin]);
+
+  // Show loading state for IdP-initiated login
+  if (isAutoLogin) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center text-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Signing you in via SSO...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col justify-center text-foreground">
