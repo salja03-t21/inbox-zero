@@ -224,7 +224,97 @@ export async function getOutlookFolderTree(
 }
 
 /**
- * Get or create a folder by name.
+ * Find a folder by navigating a path like "Inbox ⦙ Brex Receipts"
+ * Returns the folder ID if found, undefined otherwise
+ */
+async function findFolderByPath(
+  client: OutlookClient,
+  pathParts: string[],
+): Promise<string | undefined> {
+  if (pathParts.length === 0) return undefined;
+
+  // Map well-known folder names to their API names
+  const wellKnownFolderMap: Record<string, string> = {
+    inbox: "inbox",
+    "sent items": "sentitems",
+    sent: "sentitems",
+    drafts: "drafts",
+    "deleted items": "deleteditems",
+    deleted: "deleteditems",
+    trash: "deleteditems",
+    junk: "junkemail",
+    "junk email": "junkemail",
+    spam: "junkemail",
+    archive: "archive",
+  };
+
+  let currentFolderId: string | undefined;
+
+  for (let i = 0; i < pathParts.length; i++) {
+    const partName = pathParts[i].trim();
+    const escapedName = partName.replace(/'/g, "''");
+
+    if (i === 0) {
+      // First part - check if it's a well-known folder
+      const wellKnownName = wellKnownFolderMap[partName.toLowerCase()];
+      if (wellKnownName) {
+        try {
+          currentFolderId = await getWellKnownFolderId(
+            client,
+            wellKnownName as
+              | "inbox"
+              | "sentitems"
+              | "deleteditems"
+              | "drafts"
+              | "junkemail"
+              | "archive",
+          );
+          continue;
+        } catch {
+          // Not a well-known folder, search at root
+        }
+      }
+
+      // Search at root level
+      const rootResponse: { value: Array<{ id: string }> } = await client
+        .getClient()
+        .api(`${client.getBaseUrl()}/mailFolders`)
+        .filter(`displayName eq '${escapedName}'`)
+        .select("id")
+        .get();
+
+      if (rootResponse.value.length > 0) {
+        currentFolderId = rootResponse.value[0].id;
+      } else {
+        return undefined; // Parent folder not found
+      }
+    } else {
+      // Subsequent parts - search within parent folder
+      if (!currentFolderId) return undefined;
+
+      const childResponse: { value: Array<{ id: string }> } = await client
+        .getClient()
+        .api(
+          `${client.getBaseUrl()}/mailFolders/${currentFolderId}/childFolders`,
+        )
+        .filter(`displayName eq '${escapedName}'`)
+        .select("id")
+        .get();
+
+      if (childResponse.value.length > 0) {
+        currentFolderId = childResponse.value[0].id;
+      } else {
+        return undefined; // Child folder not found
+      }
+    }
+  }
+
+  return currentFolderId;
+}
+
+/**
+ * Get or create a folder by name or path.
+ * Supports paths like "Inbox ⦙ Brex Receipts" to navigate to subfolders.
  * Creates folders under Inbox (standard location for mail organization).
  * Searches Inbox first, then root level for backward compatibility.
  */
@@ -238,6 +328,103 @@ export async function getOrCreateOutlookFolderIdByName(
     throw new Error("Folder name cannot be empty");
   }
 
+  // Check if this is a path (contains the separator)
+  const pathParts = trimmedName.split(FOLDER_SEPARATOR).map((p) => p.trim());
+
+  if (pathParts.length > 1) {
+    // This is a path like "Inbox ⦙ Brex Receipts"
+    logger.info("Parsing folder path", {
+      folderPath: trimmedName,
+      pathParts,
+    });
+
+    // Try to find the folder by navigating the path
+    const existingFolderId = await findFolderByPath(client, pathParts);
+    if (existingFolderId) {
+      logger.info("Found existing folder by path", {
+        folderPath: trimmedName,
+        folderId: existingFolderId,
+      });
+      return existingFolderId;
+    }
+
+    // Folder doesn't exist - create it
+    // First, find or get the parent folder
+    const parentParts = pathParts.slice(0, -1);
+    const targetFolderName = pathParts[pathParts.length - 1];
+
+    let parentFolderId = await findFolderByPath(client, parentParts);
+
+    if (!parentFolderId) {
+      // If parent doesn't exist and it's a single part, try well-known folders
+      if (parentParts.length === 1) {
+        const wellKnownMap: Record<string, string> = {
+          inbox: "inbox",
+          "sent items": "sentitems",
+          drafts: "drafts",
+          archive: "archive",
+        };
+        const wellKnown = wellKnownMap[parentParts[0].toLowerCase()];
+        if (wellKnown) {
+          try {
+            parentFolderId = await getWellKnownFolderId(
+              client,
+              wellKnown as "inbox" | "sentitems" | "drafts" | "archive",
+            );
+          } catch {
+            logger.warn("Well-known folder not found", {
+              folder: parentParts[0],
+            });
+          }
+        }
+      }
+    }
+
+    if (!parentFolderId) {
+      logger.error("Parent folder not found for path", {
+        folderPath: trimmedName,
+        parentParts,
+      });
+      throw new Error(`Parent folder not found: ${parentParts.join(" > ")}`);
+    }
+
+    // Create the target folder under the parent
+    logger.info("Creating folder under parent", {
+      folderName: targetFolderName,
+      parentPath: parentParts.join(FOLDER_SEPARATOR),
+      parentId: parentFolderId,
+    });
+
+    try {
+      const response = await client
+        .getClient()
+        .api(
+          `${client.getBaseUrl()}/mailFolders/${parentFolderId}/childFolders`,
+        )
+        .post({
+          displayName: targetFolderName,
+        });
+
+      logger.info("Folder created successfully", {
+        folderName: targetFolderName,
+        folderId: response.id,
+        parentPath: parentParts.join(FOLDER_SEPARATOR),
+      });
+
+      return response.id;
+    } catch (error) {
+      // biome-ignore lint/suspicious/noExplicitAny: simplest
+      const err = error as any;
+      if (err?.code === "ErrorFolderExists" || err?.statusCode === 409) {
+        // Race condition - folder was created between check and create
+        const folderId = await findFolderByPath(client, pathParts);
+        if (folderId) return folderId;
+      }
+      throw error;
+    }
+  }
+
+  // Simple folder name (no path) - use original logic
   // Check if folder already exists (searches Inbox first, then root)
   const existingFolder = await findOutlookFolderByName(client, trimmedName);
 
