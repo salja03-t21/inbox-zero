@@ -12,7 +12,29 @@ const defaultAdmins = `${adminEmail},${anotherAdmin}`;
 vi.mock("@/env", () => ({
   env: {
     ADMINS: defaultAdmins,
+    EMAIL_ENCRYPT_SECRET:
+      "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
   },
+}));
+
+// Mock prisma to avoid database connections
+vi.mock("@/utils/prisma", () => ({
+  default: {
+    user: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+  },
+}));
+
+// Mock logger
+vi.mock("@/utils/logger", () => ({
+  createScopedLogger: () => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    trace: vi.fn(),
+  }),
 }));
 
 describe("isAdmin", () => {
@@ -24,73 +46,137 @@ describe("isAdmin", () => {
 
   it("should return true if the email is in ADMINS", async () => {
     // Establish mock state for this test
-    await vi.doMock("@/env", () => ({ env: { ADMINS: defaultAdmins } }));
+    await vi.doMock("@/env", () => ({
+      env: {
+        ADMINS: defaultAdmins,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
+    }));
     // Dynamically import the module *after* mocking
     const { isAdmin } = await import("./admin");
-    expect(isAdmin({ email: adminEmail })).toBe(true);
+    expect(await isAdmin({ email: adminEmail })).toBe(true);
   });
 
   it("should return false if the email is not in ADMINS", async () => {
-    await vi.doMock("@/env", () => ({ env: { ADMINS: defaultAdmins } }));
+    await vi.doMock("@/env", () => ({
+      env: {
+        ADMINS: defaultAdmins,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
+    }));
     const { isAdmin } = await import("./admin");
-    expect(isAdmin({ email: nonAdminEmail })).toBe(false);
+    expect(await isAdmin({ email: nonAdminEmail })).toBe(false);
   });
 
   it("should return false if the email is null", async () => {
-    await vi.doMock("@/env", () => ({ env: { ADMINS: defaultAdmins } }));
+    await vi.doMock("@/env", () => ({
+      env: {
+        ADMINS: defaultAdmins,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
+    }));
     const { isAdmin } = await import("./admin");
-    expect(isAdmin({ email: null })).toBe(false);
+    expect(await isAdmin({ email: null })).toBe(false);
   });
 
   it("should return false if the email is undefined", async () => {
-    await vi.doMock("@/env", () => ({ env: { ADMINS: defaultAdmins } }));
+    await vi.doMock("@/env", () => ({
+      env: {
+        ADMINS: defaultAdmins,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
+    }));
     const { isAdmin } = await import("./admin");
-    expect(isAdmin({ email: undefined })).toBe(false);
+    expect(await isAdmin({ email: undefined })).toBe(false);
   });
 
   it("should be case-sensitive and return false if casing differs", async () => {
-    await vi.doMock("@/env", () => ({ env: { ADMINS: defaultAdmins } }));
+    await vi.doMock("@/env", () => ({
+      env: {
+        ADMINS: defaultAdmins,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
+    }));
     const { isAdmin } = await import("./admin");
     // String.includes is case-sensitive. "Admin@example.com" is not in "admin@example.com,..."
-    expect(isAdmin({ email: "Admin@example.com" })).toBe(false);
+    expect(await isAdmin({ email: "Admin@example.com" })).toBe(false);
   });
 
   it("should return true if casing matches exactly in ADMINS", async () => {
     await vi.doMock("@/env", () => ({
-      env: { ADMINS: `Admin@example.com,${anotherAdmin}` },
+      env: {
+        ADMINS: `Admin@example.com,${anotherAdmin}`,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
     }));
     const { isAdmin } = await import("./admin");
-    expect(isAdmin({ email: "Admin@example.com" })).toBe(true);
+    expect(await isAdmin({ email: "Admin@example.com" })).toBe(true);
   });
 
   it("should return false if ADMINS env var is not set (undefined)", async () => {
-    await vi.doMock("@/env", () => ({ env: { ADMINS: undefined } }));
+    await vi.doMock("@/env", () => ({
+      env: {
+        ADMINS: undefined,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
+    }));
     const { isAdmin } = await import("./admin");
-    expect(isAdmin({ email: adminEmail })).toBeFalsy();
+    expect(await isAdmin({ email: adminEmail })).toBeFalsy();
   });
 
   it("should return false if ADMINS env var is empty", async () => {
-    await vi.doMock("@/env", () => ({ env: { ADMINS: "" } }));
+    await vi.doMock("@/env", () => ({
+      env: {
+        ADMINS: "",
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
+    }));
     const { isAdmin } = await import("./admin");
-    expect(isAdmin({ email: adminEmail })).toBe(false);
+    expect(await isAdmin({ email: adminEmail })).toBe(false);
   });
 
   it("should handle spaces around emails in ADMINS env var", async () => {
     // Testing current behavior: String.includes finds substrings
     await vi.doMock("@/env", () => ({
-      env: { ADMINS: ` ${adminEmail} , ${anotherAdmin} ` },
+      env: {
+        ADMINS: ` ${adminEmail} , ${anotherAdmin} `,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
     }));
     const { isAdmin } = await import("./admin");
     // " ${adminEmail} , ...".includes(adminEmail) is true
-    expect(isAdmin({ email: adminEmail })).toBe(true);
+    expect(await isAdmin({ email: adminEmail })).toBe(true);
   });
 
   it("should handle email match when ADMINS list has extra spaces", async () => {
     await vi.doMock("@/env", () => ({
-      env: { ADMINS: `   ${adminEmail}    ,    ${anotherAdmin}   ` },
+      env: {
+        ADMINS: `   ${adminEmail}    ,    ${anotherAdmin}   `,
+        EMAIL_ENCRYPT_SECRET:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
+      },
     }));
     const { isAdmin } = await import("./admin");
     // "   ${adminEmail}    , ...".includes(adminEmail) is true
-    expect(isAdmin({ email: adminEmail })).toBe(true);
+    expect(await isAdmin({ email: adminEmail })).toBe(true);
   });
 });
