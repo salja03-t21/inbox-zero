@@ -71,7 +71,12 @@ export function RuleDialog({
                   alwaysEditMode={editMode}
                   onSuccess={handleSuccess}
                   isDialog={true}
-                  mutate={mutate}
+                  mutate={
+                    mutate as (
+                      data?: unknown,
+                      shouldRevalidate?: boolean,
+                    ) => unknown
+                  }
                   onCancel={onClose}
                 />
               )}
