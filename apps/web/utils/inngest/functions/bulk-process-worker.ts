@@ -18,6 +18,12 @@ export const bulkProcessWorker = inngest.createFunction(
     retries: 3,
     // 5 minute timeout to match the original route.ts maxDuration
     timeouts: { finish: "5m" },
+    // Per-user concurrency control: max 3 concurrent bulk processing jobs per emailAccountId
+    // This prevents overwhelming the Microsoft Graph API with too many concurrent requests
+    concurrency: {
+      limit: 3,
+      key: "event.data.emailAccountId",
+    },
   },
   { event: "inbox-zero/bulk-process.worker" },
   async ({ event, step }) => {

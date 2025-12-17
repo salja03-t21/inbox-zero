@@ -49,6 +49,12 @@ export const cleanProcess = inngest.createFunction(
   {
     id: "clean-process",
     retries: 3,
+    // Per-user concurrency control: max 3 concurrent clean process jobs per emailAccountId
+    // This prevents overwhelming the Microsoft Graph API with too many concurrent requests
+    concurrency: {
+      limit: 3,
+      key: "event.data.emailAccountId",
+    },
   },
   { event: "inbox-zero/clean.process" },
   async ({ event, step }) => {

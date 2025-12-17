@@ -48,6 +48,12 @@ export const aiDigest = inngest.createFunction(
     retries: 3,
     // 2 minute timeout for AI summarization
     timeouts: { finish: "2m" },
+    // Per-user concurrency control: max 2 concurrent digest jobs per emailAccountId
+    // This prevents overwhelming the Microsoft Graph API with too many concurrent requests
+    concurrency: {
+      limit: 2,
+      key: "event.data.emailAccountId",
+    },
   },
   { event: "inbox-zero/ai.digest" },
   async ({ event, step }) => {
