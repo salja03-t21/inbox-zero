@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toastError, toastSuccess, toastInfo } from "@/components/Toast";
 import { useAccount } from "@/providers/EmailAccountProvider";
@@ -65,6 +65,7 @@ function SignatureDialog({
 }) {
   const [open, setOpen] = useState(false);
   const { emailAccountId, provider } = useAccount();
+  const signatureId = useId();
   const { mutate } = useEmailAccountFull();
   const [signatures, setSignatures] = useState<EmailSignature[]>([]);
   const [selectedSignature, setSelectedSignature] = useState<string>("");
@@ -202,9 +203,9 @@ function SignatureDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="signature">Signature (HTML supported)</Label>
+              <Label htmlFor={signatureId}>Signature (HTML supported)</Label>
               <Textarea
-                id="signature"
+                id={signatureId}
                 value={manualSignature}
                 onChange={(e) => setManualSignature(e.target.value)}
                 placeholder="Enter your email signature..."

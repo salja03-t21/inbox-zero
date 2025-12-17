@@ -8,7 +8,7 @@ import {
   fireEvent,
   cleanup,
 } from "@testing-library/react";
-import type React from "react";
+import React from "react";
 import { BulkRunRules } from "./BulkRunRules";
 
 // Mock dependencies
@@ -33,8 +33,7 @@ vi.mock("@/components/ui/button", () => ({
       disabled={disabled || loading}
       data-loading={loading}
       data-variant={variant}
-      // biome-ignore lint/suspicious/noExplicitAny: test mock
-      type={type as any}
+      type={(type as "button" | "submit" | "reset") || "button"}
     >
       {children}
     </button>

@@ -1,5 +1,5 @@
 import { MessageCircleIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { ParsedMessage } from "@/utils/types";
 import type { RunRulesResult } from "@/utils/ai/choose-rule/run-rules";
@@ -46,6 +46,8 @@ export function FixWithChat({
 
   const { setOpen } = useSidebar();
   const { setContext } = useChat();
+  const explanationId = useId();
+  const explanationHelpId = useId();
 
   const selectedRuleName = useMemo(() => {
     if (!data) return null;
@@ -173,16 +175,19 @@ export function FixWithChat({
                   label="Why should this rule have been applied? (optional)"
                 />
                 <Textarea
-                  id="explanation"
+                  id={explanationId}
                   name="explanation"
                   className="mt-1"
                   rows={2}
                   value={explanation}
                   onChange={(e) => setExplanation(e.target.value)}
-                  aria-describedby="explanation-help"
+                  aria-describedby={explanationHelpId}
                   autoFocus
                 />
-                <p id="explanation-help" className="mt-1 text-xs text-gray-500">
+                <p
+                  id={explanationHelpId}
+                  className="mt-1 text-xs text-gray-500"
+                >
                   Providing an explanation helps the AI understand your intent
                   better
                 </p>

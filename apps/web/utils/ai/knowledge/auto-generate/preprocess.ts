@@ -291,10 +291,15 @@ function shouldIncludeEmail(email: ParsedMessage): boolean {
 function sanitizeForJson(text: string): string {
   if (!text) return "";
 
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally matching control characters to sanitize text
+  const controlCharsRegex = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally matching non-printable characters
+  const nonPrintableRegex = /[^\x20-\x7E\xA0-\uFFFC\n\t]/g;
+
   return (
     text
       // Remove null bytes and other control characters (except newline, tab, carriage return)
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+      .replace(controlCharsRegex, "")
       // Remove Unicode replacement character and other problematic chars
       .replace(/[\uFFFD\uFFFE\uFFFF]/g, "")
       // Remove zero-width characters that can cause issues
@@ -303,7 +308,7 @@ function sanitizeForJson(text: string): string {
       .replace(/\r\n/g, "\n")
       .replace(/\r/g, "\n")
       // Remove any remaining non-printable characters outside basic multilingual plane issues
-      .replace(/[^\x20-\x7E\xA0-\uFFFC\n\t]/g, " ")
+      .replace(nonPrintableRegex, " ")
       .trim()
   );
 }

@@ -37,8 +37,7 @@ export default function Mail(props: {
       query.nextPageToken = previousPageData.nextPageToken;
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: params
-    const queryParams = new URLSearchParams(query as any);
+    const queryParams = new URLSearchParams(query as Record<string, string>);
 
     return `/api/threads?${queryParams.toString()}`;
   };

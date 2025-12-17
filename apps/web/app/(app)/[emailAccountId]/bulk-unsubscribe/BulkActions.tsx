@@ -22,8 +22,7 @@ export function BulkActions({
   mutate,
 }: {
   selected: Map<string, boolean>;
-  // biome-ignore lint/suspicious/noExplicitAny: lazy
-  mutate: () => Promise<any>;
+  mutate: () => Promise<unknown>;
 }) {
   const posthog = usePostHog();
   const { hasUnsubscribeAccess, mutate: refetchPremium } = usePremium();

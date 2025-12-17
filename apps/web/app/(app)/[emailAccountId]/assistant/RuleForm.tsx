@@ -120,8 +120,7 @@ export function RuleForm({
   alwaysEditMode?: boolean;
   onSuccess?: () => void;
   isDialog?: boolean;
-  // biome-ignore lint/suspicious/noExplicitAny: lazy
-  mutate?: (data?: any, options?: any) => void;
+  mutate?: (data?: unknown, options?: unknown) => void;
   onCancel?: () => void;
 }) {
   const { emailAccountId, provider } = useAccount();
