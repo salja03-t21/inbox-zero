@@ -101,7 +101,9 @@ export function Rule({
         <RuleForm
           rule={data.rule}
           alwaysEditMode={alwaysEditMode}
-          mutate={mutate}
+          mutate={
+            mutate as (data?: unknown, shouldRevalidate?: boolean) => unknown
+          }
         />
       )}
     </LoadingContent>
