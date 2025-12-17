@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { APICallError, RetryError } from "ai";
 import {
   extractLLMErrorInfo,
@@ -17,6 +17,15 @@ vi.mock("@/utils/logger", () => ({
     error: vi.fn(),
   }),
 }));
+
+// Use fake timers for retry tests
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("extractLLMErrorInfo", () => {
   it("should extract info from APICallError with 429 status", () => {
@@ -177,7 +186,13 @@ describe("withLLMRetry", () => {
       return "success";
     });
 
-    const result = await withLLMRetry(operation, { maxRetries: 3 });
+    // Start the retry operation
+    const resultPromise = withLLMRetry(operation, { maxRetries: 3 });
+
+    // Advance timers to allow retry delays to complete
+    await vi.runAllTimersAsync();
+
+    const result = await resultPromise;
 
     expect(result).toBe("success");
     expect(operation).toHaveBeenCalledTimes(2); // Initial + 1 retry
@@ -215,9 +230,20 @@ describe("withLLMRetry", () => {
       });
     });
 
-    await expect(withLLMRetry(operation, { maxRetries: 2 })).rejects.toThrow(
-      "Rate limit exceeded",
+    // Start the retry operation and handle the expected rejection
+    let caughtError: Error | undefined;
+    const resultPromise = withLLMRetry(operation, { maxRetries: 2 }).catch(
+      (e) => {
+        caughtError = e;
+      },
     );
+
+    // Advance timers to allow retry delays to complete
+    await vi.runAllTimersAsync();
+    await resultPromise;
+
+    expect(caughtError).toBeDefined();
+    expect(caughtError?.message).toBe("Rate limit exceeded");
     expect(operation).toHaveBeenCalledTimes(3); // Initial + 2 retries
   });
 });

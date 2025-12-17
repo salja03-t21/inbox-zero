@@ -5,10 +5,14 @@ import { env } from "@/env";
 import type { UserAIFields } from "./types";
 
 // Mock AI provider imports
+// OpenAI uses .chat() method, others are called directly
 vi.mock("@ai-sdk/openai", () => ({
-  createOpenAI: vi.fn(() => (model: string) => ({ model })),
+  createOpenAI: vi.fn(() => ({
+    chat: vi.fn((model: string) => ({ model })),
+  })),
 }));
 
+// Anthropic is called directly: createAnthropic({...})(modelName)
 vi.mock("@ai-sdk/anthropic", () => ({
   createAnthropic: vi.fn(() => (model: string) => ({ model })),
 }));
@@ -25,6 +29,7 @@ vi.mock("@ai-sdk/groq", () => ({
   createGroq: vi.fn(() => (model: string) => ({ model })),
 }));
 
+// OpenRouter uses .chat() method
 vi.mock("@openrouter/ai-sdk-provider", () => ({
   createOpenRouter: vi.fn(() => ({
     chat: vi.fn((model: string) => ({ model })),

@@ -14,6 +14,9 @@ vi.mock("@/utils/prisma", () => ({
     calendarConnection: {
       findMany: vi.fn(),
     },
+    emailAccount: {
+      findUnique: vi.fn(),
+    },
   },
 }));
 
@@ -40,6 +43,12 @@ describe("Find Availability", () => {
 
     // Default mock: no busy periods
     vi.mocked(getUnifiedCalendarAvailability).mockResolvedValue([]);
+
+    // Default mock: email account with default working hours
+    vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
+      meetingSchedulerWorkingHoursStart: 9,
+      meetingSchedulerWorkingHoursEnd: 17,
+    } as never);
   });
 
   describe("Natural language time parsing", () => {
@@ -255,14 +264,23 @@ describe("Find Availability", () => {
 
     test("detects partial overlap conflicts", async () => {
       const tomorrow = addDays(startOfDay(new Date()), 1);
-      const busyStart = new Date(tomorrow);
-      busyStart.setHours(14, 30, 0, 0); // 2:30pm
+      // Create conflict time in UTC to match the default timezone used by the implementation
+      const conflictTime = new Date(
+        Date.UTC(
+          tomorrow.getFullYear(),
+          tomorrow.getMonth(),
+          tomorrow.getDate(),
+          14, // 2pm UTC
+          30, // 2:30pm UTC - partial overlap with 2pm-3pm
+          0,
+        ),
+      );
 
-      // Mock busy period that partially overlaps
+      // Mock busy period that partially overlaps (2:30pm-3:30pm UTC)
       vi.mocked(getUnifiedCalendarAvailability).mockResolvedValue([
         {
-          start: busyStart.toISOString(),
-          end: addMinutes(busyStart, 60).toISOString(),
+          start: conflictTime.toISOString(),
+          end: addMinutes(conflictTime, 60).toISOString(),
         },
       ]);
 
