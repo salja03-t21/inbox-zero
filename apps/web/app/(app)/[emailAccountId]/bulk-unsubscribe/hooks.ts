@@ -24,7 +24,7 @@ async function unsubscribeAndArchive({
   emailAccountId,
 }: {
   newsletterEmail: string;
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   refetchPremium: () => Promise<UserResponse | null | undefined>;
   emailAccountId: string;
 }) {
@@ -52,7 +52,7 @@ export function useUnsubscribe<T extends Row>({
   item: T;
   emailAccountId: string;
   hasUnsubscribeAccess: boolean;
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   posthog: PostHog;
   refetchPremium: () => Promise<UserResponse | null | undefined>;
 }) {
@@ -113,7 +113,7 @@ export function useBulkUnsubscribe<T extends Row>({
   emailAccountId,
 }: {
   hasUnsubscribeAccess: boolean;
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   posthog: PostHog;
   refetchPremium: () => Promise<UserResponse | null | undefined>;
   emailAccountId: string;
@@ -167,7 +167,7 @@ async function autoArchive({
   name: string;
   labelId: string | undefined;
   labelName: string | undefined;
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   refetchPremium: () => Promise<UserResponse | null | undefined>;
   emailAccountId: string;
 }) {
@@ -201,7 +201,7 @@ export function useAutoArchive<T extends Row>({
 }: {
   item: T;
   hasUnsubscribeAccess: boolean;
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   posthog: PostHog;
   refetchPremium: () => Promise<UserResponse | null | undefined>;
   emailAccountId: string;
@@ -287,7 +287,7 @@ export function useBulkAutoArchive<T extends Row>({
   emailAccountId,
 }: {
   hasUnsubscribeAccess: boolean;
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   refetchPremium: () => Promise<UserResponse | null | undefined>;
   emailAccountId: string;
 }) {
@@ -328,7 +328,7 @@ export function useApproveButton<T extends Row>({
   emailAccountId,
 }: {
   item: T;
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   posthog: PostHog;
   emailAccountId: string;
 }) {
@@ -368,7 +368,7 @@ export function useBulkApprove<T extends Row>({
   posthog,
   emailAccountId,
 }: {
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   posthog: PostHog;
   emailAccountId: string;
 }) {
@@ -468,7 +468,7 @@ export function useBulkArchive<T extends Row>({
   posthog,
   emailAccountId,
 }: {
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   posthog: PostHog;
   emailAccountId: string;
 }) {
@@ -567,7 +567,7 @@ export function useBulkDelete<T extends Row>({
   posthog,
   emailAccountId,
 }: {
-  mutate: () => Promise<void>;
+  mutate: () => Promise<unknown>;
   posthog: PostHog;
   emailAccountId: string;
 }) {
