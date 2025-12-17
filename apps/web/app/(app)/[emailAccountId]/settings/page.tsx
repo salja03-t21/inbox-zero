@@ -28,11 +28,14 @@ export default function SettingsPage() {
       (member) => member.emailAccountId === emailAccount?.id,
     ) || [];
   const hasOrganization = currentEmailAccountMembers.length > 0;
-  const isAdmin = isOrganizationAdmin(currentEmailAccountMembers);
+  const isOrgAdmin = isOrganizationAdmin(currentEmailAccountMembers);
+
+  // Check if user is a global admin (can see User tab)
+  const isGlobalAdmin = user?.isAdmin === true;
 
   // If user is in an organization, only admins can access settings
   // If user is not in an organization, they can access their own settings
-  if (hasOrganization && !isAdmin) {
+  if (hasOrganization && !isOrgAdmin) {
     return (
       <div className="content-container">
         <PageHeader
@@ -43,32 +46,37 @@ export default function SettingsPage() {
     );
   }
 
+  // Default to "email" tab for non-global-admins, "user" tab for global admins
+  const defaultTab = isGlobalAdmin ? "user" : "email";
+
   return (
     <div>
       <div className="content-container mb-4">
         <PageHeader title="Settings" description="Manage your settings." />
       </div>
 
-      <Tabs defaultValue="user">
+      <Tabs defaultValue={defaultTab}>
         <TabsToolbar>
           <div className="w-full overflow-x-auto">
             <TabsList>
-              <TabsTrigger value="user">User</TabsTrigger>
+              {isGlobalAdmin && <TabsTrigger value="user">User</TabsTrigger>}
               <TabsTrigger value="email">Email Account</TabsTrigger>
             </TabsList>
           </div>
         </TabsToolbar>
 
-        <TabsContent value="user">
-          <FormWrapper>
-            <MultiAccountSection />
-            <BillingSection />
-            <ModelSection />
-            <WebhookSection />
-            <ApiKeysSection />
-            <DeleteSection />
-          </FormWrapper>
-        </TabsContent>
+        {isGlobalAdmin && (
+          <TabsContent value="user">
+            <FormWrapper>
+              <MultiAccountSection />
+              <BillingSection />
+              <ModelSection />
+              <WebhookSection />
+              <ApiKeysSection />
+              <DeleteSection />
+            </FormWrapper>
+          </TabsContent>
+        )}
 
         <TabsContent value="email" className="content-container mb-10">
           {emailAccount && (
