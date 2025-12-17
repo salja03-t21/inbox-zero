@@ -256,10 +256,7 @@ export async function chatCompletionStream({
       logger.error("Error in chat completion stream", {
         label,
         userEmail,
-        error:
-          error instanceof Error
-            ? { message: error.message, stack: error.stack, name: error.name }
-            : error,
+        error,
       });
       captureException(
         error,

@@ -1021,17 +1021,8 @@ IMPORTANT: After using any tools, you MUST provide a text response to the user e
       ...hiddenContextMessage,
       ...messages,
     ],
-    onStepFinish: async ({ text, toolCalls, toolResults, finishReason }) => {
-      logger.info("Step finished", {
-        text: text?.slice(0, 200),
-        toolCallsCount: toolCalls?.length || 0,
-        toolCalls: toolCalls?.map((tc) => ({
-          name: tc.toolName,
-          id: tc.toolCallId,
-        })),
-        toolResultsCount: toolResults?.length || 0,
-        finishReason,
-      });
+    onStepFinish: async ({ text, toolCalls }) => {
+      logger.trace("Step finished", { text, toolCalls });
     },
     maxSteps: 10,
     tools: {
