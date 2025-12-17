@@ -9,6 +9,10 @@ import type { CalendarOAuthProvider, CalendarTokens } from "../oauth-types";
 
 const logger = createScopedLogger("microsoft/calendar/provider");
 
+// Tiger21 tenant ID - using tenant-specific endpoint since the Azure AD app
+// is registered as single-tenant (not multi-tenant)
+const TIGER21_TENANT_ID = "89f2f6c3-aa52-4af9-953e-02a633d0da4d";
+
 export const microsoftCalendarProvider: CalendarOAuthProvider = {
   name: "microsoft",
 
@@ -17,9 +21,9 @@ export const microsoftCalendarProvider: CalendarOAuthProvider = {
       throw new Error("Microsoft credentials not configured");
     }
 
-    // Exchange code for tokens
+    // Exchange code for tokens using tenant-specific endpoint (single-tenant app)
     const tokenResponse = await fetch(
-      "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {

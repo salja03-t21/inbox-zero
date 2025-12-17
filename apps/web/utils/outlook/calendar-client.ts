@@ -22,13 +22,17 @@ class CalendarAuthProvider implements AuthenticationProvider {
   }
 }
 
+// Tiger21 tenant ID - using tenant-specific endpoint since the Azure AD app
+// is registered as single-tenant (not multi-tenant)
+const TIGER21_TENANT_ID = "89f2f6c3-aa52-4af9-953e-02a633d0da4d";
+
 export function getCalendarOAuth2Url(state: string): string {
   if (!env.MICROSOFT_CLIENT_ID) {
     throw new Error("Microsoft login not enabled - missing client ID");
   }
 
-  const baseUrl =
-    "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
+  // Use tenant-specific endpoint instead of /common for single-tenant app
+  const baseUrl = `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/authorize`;
   const params = new URLSearchParams({
     client_id: env.MICROSOFT_CLIENT_ID,
     response_type: "code",
@@ -66,8 +70,9 @@ export const getCalendarClientWithRefresh = async ({
       throw new Error("Microsoft login not enabled - missing credentials");
     }
 
+    // Use tenant-specific endpoint instead of /common for single-tenant app
     const response = await fetch(
-      "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {

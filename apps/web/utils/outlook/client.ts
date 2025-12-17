@@ -8,6 +8,10 @@ import { SafeError } from "@/utils/error";
 
 const logger = createScopedLogger("outlook/client");
 
+// Tiger21 tenant ID - using tenant-specific endpoint since the Azure AD app
+// is registered as single-tenant (not multi-tenant)
+const TIGER21_TENANT_ID = "89f2f6c3-aa52-4af9-953e-02a633d0da4d";
+
 type AuthOptions = {
   accessToken?: string | null;
   refreshToken?: string | null;
@@ -134,8 +138,9 @@ export const getOutlookClientWithRefresh = async ({
       throw new Error("Microsoft login not enabled - missing credentials");
     }
 
+    // Use tenant-specific endpoint instead of /common for single-tenant app
     const response = await fetch(
-      "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {
@@ -193,8 +198,8 @@ export function getLinkingOAuth2Url() {
     throw new Error("Microsoft login not enabled - missing client ID");
   }
 
-  const baseUrl =
-    "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
+  // Use tenant-specific endpoint instead of /common for single-tenant app
+  const baseUrl = `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/authorize`;
   const redirectUri = `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`;
 
   const params = new URLSearchParams({

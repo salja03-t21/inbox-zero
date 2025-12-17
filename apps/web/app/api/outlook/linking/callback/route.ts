@@ -10,6 +10,10 @@ import { parseOAuthState } from "@/utils/oauth/state";
 
 const logger = createScopedLogger("outlook/linking/callback");
 
+// Tiger21 tenant ID - using tenant-specific endpoint since the Azure AD app
+// is registered as single-tenant (not multi-tenant)
+const TIGER21_TENANT_ID = "89f2f6c3-aa52-4af9-953e-02a633d0da4d";
+
 export const GET = withError(async (request) => {
   if (!env.MICROSOFT_CLIENT_ID || !env.MICROSOFT_CLIENT_SECRET)
     throw new SafeError("Microsoft login not enabled");
@@ -56,9 +60,9 @@ export const GET = withError(async (request) => {
   }
 
   try {
-    // Exchange code for tokens
+    // Exchange code for tokens using tenant-specific endpoint (single-tenant app)
     const tokenResponse = await fetch(
-      "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {
