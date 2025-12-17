@@ -14,10 +14,19 @@ export const POST = withError(async (request) => {
 
   let logger = createScopedLogger("google/webhook");
 
-  if (
-    env.GOOGLE_PUBSUB_VERIFICATION_TOKEN &&
-    token !== env.GOOGLE_PUBSUB_VERIFICATION_TOKEN
-  ) {
+  // SECURITY: Webhook token validation is mandatory
+  // The GOOGLE_PUBSUB_VERIFICATION_TOKEN env var must be set in production
+  if (!env.GOOGLE_PUBSUB_VERIFICATION_TOKEN) {
+    logger.error("GOOGLE_PUBSUB_VERIFICATION_TOKEN not configured");
+    return NextResponse.json(
+      {
+        message: "Webhook not configured",
+      },
+      { status: 500 },
+    );
+  }
+
+  if (token !== env.GOOGLE_PUBSUB_VERIFICATION_TOKEN) {
     logger.error("Invalid verification token", { token });
     return NextResponse.json(
       {

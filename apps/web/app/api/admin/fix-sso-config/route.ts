@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { env } from "@/env";
 import { createScopedLogger } from "@/utils/logger";
 import prisma from "@/utils/prisma";
+import { withAuth } from "@/utils/middleware";
+import { isAdmin as checkIsAdmin } from "@/utils/admin";
 
 const logger = createScopedLogger("api/admin/fix-sso-config");
 
@@ -21,8 +23,31 @@ export const dynamic = "force-dynamic";
  * - scopes: string[] (optional) - Defaults to ["openid", "email", "profile", "offline_access"]
  *
  * The config is stored as a JSON string in the database.
+ *
+ * SECURITY: Requires authenticated admin user.
  */
-export async function GET() {
+export const GET = withAuth(async (request) => {
+  const userId = request.auth.userId;
+
+  // Get user's email for admin check
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Check if the requesting user is a global admin
+  const userIsAdmin = await checkIsAdmin({ userId, email: user.email });
+
+  if (!userIsAdmin) {
+    return NextResponse.json(
+      { error: "Unauthorized: Global admin access required" },
+      { status: 403 },
+    );
+  }
   const providerId = "okta-tiger21-1765774132282";
   const issuer = "https://apps.tiger21.com";
 
@@ -126,4 +151,4 @@ export async function GET() {
     message:
       "Updated OIDC config with correct Better Auth format (issuer, discoveryEndpoint, pkce, clientSecret)",
   });
-}
+});

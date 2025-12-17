@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/utils/prisma";
+import { withAuth } from "@/utils/middleware";
+import { isAdmin as checkIsAdmin } from "@/utils/admin";
 
 // Force dynamic route - do not pre-render at build time
 export const dynamic = "force-dynamic";
@@ -7,8 +9,31 @@ export const dynamic = "force-dynamic";
 /**
  * Debug endpoint to analyze SSO provider configuration.
  * This helps diagnose JSON parsing issues in the oidcConfig field.
+ *
+ * SECURITY: Requires authenticated admin user.
  */
-export async function GET() {
+export const GET = withAuth(async (request) => {
+  const userId = request.auth.userId;
+
+  // Get user's email for admin check
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Check if the requesting user is a global admin
+  const userIsAdmin = await checkIsAdmin({ userId, email: user.email });
+
+  if (!userIsAdmin) {
+    return NextResponse.json(
+      { error: "Unauthorized: Global admin access required" },
+      { status: 403 },
+    );
+  }
   const providerId = "okta-tiger21-1765774132282";
 
   const provider = await prisma.ssoProvider.findFirst({
@@ -87,4 +112,4 @@ export async function GET() {
   }
 
   return NextResponse.json(analysis, { status: 200 });
-}
+});
