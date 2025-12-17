@@ -2,12 +2,12 @@ import { Inngest } from "inngest";
 import { env } from "@/env";
 
 // Create Inngest client for self-hosted Inngest server
-// NOTE: For self-hosted, we DON'T set eventKey - that's only for Inngest Cloud
-// The SDK will automatically use dev/self-hosted mode when INNGEST_BASE_URL is set
+// For self-hosted servers that require authentication, we need to set the eventKey
+// The baseUrl is automatically read from INNGEST_BASE_URL env var by the SDK
 export const inngest = new Inngest({
   id: "inbox-zero",
-  // baseUrl is set via INNGEST_BASE_URL env var automatically by the SDK
-  // When INNGEST_BASE_URL is set, the SDK uses self-hosted mode
+  // Event key is required when self-hosted Inngest server is configured with INNGEST_EVENT_KEY
+  eventKey: env.INNGEST_EVENT_KEY,
 });
 
 // Helper to check if Inngest is configured
