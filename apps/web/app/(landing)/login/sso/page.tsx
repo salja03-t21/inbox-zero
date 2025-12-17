@@ -1,13 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useState, useEffect, Suspense } from "react";
+import { useCallback, useState, useEffect, Suspense, useRef } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { toastError, toastSuccess } from "@/components/Toast";
+import { toastError } from "@/components/Toast";
 import { Loader2 } from "lucide-react";
 
 const ssoLoginSchema = z.object({
@@ -24,6 +24,7 @@ const KNOWN_ISSUERS: Record<string, string> = {
 function SSOLoginContent() {
   const searchParams = useSearchParams();
   const issuer = searchParams.get("iss");
+  const autoLoginAttempted = useRef(false);
 
   const {
     register,
@@ -43,8 +44,6 @@ function SSOLoginContent() {
     console.log("[SSO Login] Starting SSO signin flow...", { providerId });
 
     try {
-      console.log("[SSO Login] Calling /api/auth/sign-in/sso...");
-
       const response = await fetch("/api/auth/sign-in/sso", {
         method: "POST",
         headers: {
@@ -52,7 +51,7 @@ function SSOLoginContent() {
         },
         body: JSON.stringify({
           providerId,
-          callbackURL: `${window.location.origin}/`, // Redirect to home after successful login
+          callbackURL: `${window.location.origin}/`,
         }),
       });
 
@@ -74,7 +73,6 @@ function SSOLoginContent() {
       // Better Auth returns {url: string, redirect: boolean}
       if (responseData.url) {
         console.log("[SSO Login] Redirecting to:", responseData.url);
-        toastSuccess({ description: "Redirecting to SSO provider..." });
         window.location.href = responseData.url;
       } else {
         console.error("[SSO Login] No redirect URL in response");
@@ -92,9 +90,11 @@ function SSOLoginContent() {
     }
   }, []);
 
-  // Auto-trigger SSO login if issuer is present (IdP-initiated flow)
+  // Handle IdP-initiated login (user clicks app in Okta dashboard)
   useEffect(() => {
-    if (issuer && KNOWN_ISSUERS[issuer]) {
+    // Only auto-login once when coming from a known issuer
+    if (issuer && KNOWN_ISSUERS[issuer] && !autoLoginAttempted.current) {
+      autoLoginAttempted.current = true;
       console.log("[SSO Login] IdP-initiated login detected", { issuer });
       setIsAutoLogin(true);
       triggerSSOLogin(KNOWN_ISSUERS[issuer]);
