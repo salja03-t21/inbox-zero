@@ -35,7 +35,7 @@ export function getCalendarOAuth2Url(state: string): string {
     redirect_uri: `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/calendar/callback`,
     scope: CALENDAR_SCOPES.join(" "),
     state,
-    prompt: "consent", // Force consent to get longest-lived refresh token
+    prompt: "select_account", // Allow account selection but don't force consent if already granted
   });
 
   return `${baseUrl}?${params.toString()}`;
