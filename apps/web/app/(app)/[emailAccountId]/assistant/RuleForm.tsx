@@ -120,7 +120,7 @@ export function RuleForm({
   alwaysEditMode?: boolean;
   onSuccess?: () => void;
   isDialog?: boolean;
-  mutate?: (data?: unknown, shouldRevalidate?: boolean) => void;
+  mutate?: (data?: unknown, shouldRevalidate?: boolean) => unknown;
   onCancel?: () => void;
 }) {
   const { emailAccountId, provider } = useAccount();
