@@ -107,7 +107,9 @@ export function BulkUnsubscribe() {
     includeMissingUnsubscribe: true,
     ...getDateRangeParams(dateRange),
   };
-  const urlParams = new URLSearchParams(params as Record<string, string>);
+  const urlParams = new URLSearchParams(
+    params as unknown as Record<string, string>,
+  );
   const { data, isLoading, error, mutate } = useSWR<
     NewsletterStatsResponse,
     { error: string }

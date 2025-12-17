@@ -37,7 +37,9 @@ export default function Mail(props: {
       query.nextPageToken = previousPageData.nextPageToken;
     }
 
-    const queryParams = new URLSearchParams(query as Record<string, string>);
+    const queryParams = new URLSearchParams(
+      query as unknown as Record<string, string>,
+    );
 
     return `/api/threads?${queryParams.toString()}`;
   };
