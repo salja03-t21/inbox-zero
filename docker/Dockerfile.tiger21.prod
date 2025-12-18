@@ -1,9 +1,10 @@
 # Multi-stage hardened production Dockerfile for TIGER 21
 # Based on Node.js 22 Alpine with security best practices
 # Built for Docker Swarm deployment
+# IMPORTANT: Always builds for linux/amd64 (Tiger21 servers are AMD64)
 
 # Stage 1: Base image with security updates
-FROM node:22-alpine AS base
+FROM --platform=linux/amd64 node:22-alpine AS base
 
 # Install security updates and required packages
 RUN apk update && \
