@@ -30,7 +30,7 @@ export async function attemptSubscriptionRecovery(
   const now = Date.now();
 
   if (lastAttempt && now - lastAttempt < RECOVERY_COOLDOWN_MS) {
-    log.debug("Skipping recovery - cooldown active", {
+    log.trace("Skipping recovery - cooldown active", {
       lastAttemptMs: now - lastAttempt,
       cooldownMs: RECOVERY_COOLDOWN_MS,
     });
