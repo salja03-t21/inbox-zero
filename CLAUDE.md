@@ -1,5 +1,9 @@
 # CLAUDE.md - Claude Code Development Guidelines
 
+**Note**: This project uses [bd (beads)](https://github.com/steveyegge/beads)
+for issue tracking. Use `bd` commands instead of markdown TODOs.
+See AGENTS.md for workflow details.
+
 **IMPORTANT**: This is a forked custom version. Always verify you're working with `origin` (salja03-t21/inbox-zero), NEVER `upstream` (elie222/inbox-zero).
 
 ## Initialization Checklist
@@ -52,6 +56,7 @@ pnpm --filter=web prisma generate     # Generate Prisma client
 ## Development Patterns (Load Detail as Needed)
 
 ### When working on features:
+
 - **API Routes**: Read `.cursor/rules/get-api-route.mdc` for GET route patterns
 - **Server Actions**: Read `.cursor/rules/server-actions.mdc` for mutation patterns
 - **Forms**: Read `.cursor/rules/form-handling.mdc` for React Hook Form + Zod
@@ -59,15 +64,19 @@ pnpm --filter=web prisma generate     # Generate Prisma client
 - **Email APIs**: Read `.cursor/rules/gmail-api.mdc` for Gmail integration patterns
 
 ### When adding environment variables:
+
 Read `.cursor/rules/environment-variables.mdc` for the 4-step process (`.env.example`, `env.ts`, `turbo.json`, naming conventions).
 
 ### When writing tests:
+
 Read `.cursor/rules/testing.mdc` for Vitest patterns and `.cursor/rules/llm-test.mdc` for AI tests.
 
 ### When working with UI:
+
 Read `.cursor/rules/ui-components.mdc` for shadcn/ui component usage and `LoadingContent` patterns.
 
 ### When working with database:
+
 Read `.cursor/rules/prisma.mdc` for schema patterns and migration workflows.
 
 ## Feature-Specific Context (Load Only When Needed)
@@ -82,16 +91,19 @@ Read `.cursor/rules/prisma.mdc` for schema patterns and migration workflows.
 ## Critical Safety Rules
 
 ### Git Repository Safety
+
 - **NEVER** commit or push to `upstream` (elie222/inbox-zero)
 - **ALWAYS** commit to `origin` (salja03-t21/inbox-zero)
 - **Verify** before EVERY commit: `git remote -v`
 
 ### Data Safety
+
 - **NEVER** destroy volume data without explicit user permission
 - **NO** `docker volume rm`, `docker compose down -v`, or `prisma migrate reset` without asking
 - This applies to BOTH local and production databases
 
 ### Deployment Safety
+
 - **ALWAYS** run `pnpm tsc --noEmit` before deploying (local dev doesn't use Docker, so this is the only TypeScript validation)
 - **ONLY** deploy from `production` branch
 - **NEVER** skip pre-commit hooks unless linting fails (use `--no-verify` sparingly)
@@ -114,6 +126,7 @@ Read `.cursor/rules/prisma.mdc` for schema patterns and migration workflows.
 ## Using Serena MCP Efficiently
 
 ### At Start of Conversation
+
 ```
 1. mcp__serena__get_current_config - Check active project
 2. mcp__serena__check_onboarding_performed - See if onboarding exists
@@ -121,6 +134,7 @@ Read `.cursor/rules/prisma.mdc` for schema patterns and migration workflows.
 ```
 
 ### During Development
+
 - **Find code**: `mcp__serena__find_symbol` with name_path (e.g., "ChatProvider/useEffect")
 - **Explore file**: `mcp__serena__get_symbols_overview` to see top-level symbols
 - **Find usage**: `mcp__serena__find_referencing_symbols` to see where code is called
@@ -128,6 +142,7 @@ Read `.cursor/rules/prisma.mdc` for schema patterns and migration workflows.
 - **Edit code**: Use `mcp__serena__replace_symbol_body`, `mcp__serena__insert_after_symbol`, or `mcp__serena__replace_regex`
 
 ### At Exit
+
 ```
 1. mcp__serena__write_memory - Save important decisions, patterns, or context
 2. mcp__serena__think_about_whether_you_are_done - Validate task completion
