@@ -28,7 +28,7 @@ export const watchRenew = inngest.createFunction(
       // Include users with:
       // - Active Lemon Squeezy subscription
       // - Active Stripe subscription
-      // - LIFETIME or BUSINESS_LIFETIME tier
+      // - LIFETIME tier
       const emailAccounts = await prisma.emailAccount.findMany({
         where: {
           user: {
@@ -36,7 +36,7 @@ export const watchRenew = inngest.createFunction(
               OR: [
                 { lemonSqueezyRenewsAt: { gt: new Date() } },
                 { stripeSubscriptionStatus: { in: ["active", "trialing"] } },
-                { tier: { in: ["LIFETIME", "BUSINESS_LIFETIME"] } },
+                { tier: "LIFETIME" },
               ],
             },
           },
