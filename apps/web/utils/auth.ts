@@ -343,6 +343,12 @@ async function handleSignIn({
   user: User;
   isNewUser: boolean;
 }) {
+  logger.info("handleSignIn called", {
+    userId: user.id,
+    email: user.email,
+    isNewUser,
+  });
+
   // CRITICAL: Check if email domain is allowed
   // This blocks unauthorized domains from accessing the application
   if (user.email && !isEmailDomainAllowed(user.email)) {
