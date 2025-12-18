@@ -265,6 +265,12 @@ export function SideNav({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SideNavMenu items={visibleBottomLinks} activeHref={path} />
 
         <NavUser />
+
+        {state.includes("left-sidebar") && (
+          <div className="px-3 py-1 text-[10px] text-muted-foreground/50 text-center">
+            v3.0.0
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
