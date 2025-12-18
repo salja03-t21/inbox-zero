@@ -9,6 +9,7 @@ import { env } from "@/env";
 import { Button } from "@/components/ui/button";
 import { WELCOME_PATH } from "@/utils/config";
 import { CrispChatLoggedOutVisible } from "@/components/CrispChat";
+import { getSafeRedirectUrl } from "@/utils/security/redirect";
 
 export const metadata: Metadata = {
   title: "Log in | Inbox Zero",
@@ -25,11 +26,7 @@ export default async function AuthenticationPage(props: {
   const searchParams = await props.searchParams;
   const session = await auth();
   if (session?.user && !searchParams?.error) {
-    if (searchParams?.next) {
-      redirect(searchParams?.next);
-    } else {
-      redirect(WELCOME_PATH);
-    }
+    redirect(getSafeRedirectUrl(searchParams?.next, WELCOME_PATH));
   }
 
   const enableGoogleAuth = false; // Disabled Google auth

@@ -2,6 +2,7 @@ import { createScopedLogger } from "@/utils/logger";
 import prisma from "@/utils/prisma";
 import { sleep } from "@/utils/sleep";
 import type { ExecutedRule } from "@prisma/client";
+import { isValidWebhookUrl } from "@/utils/security/url";
 
 const logger = createScopedLogger("webhook");
 
@@ -27,6 +28,10 @@ export const callWebhook = async (
   payload: WebhookPayload,
 ) => {
   if (!url) throw new Error("Webhook URL is required");
+  if (!isValidWebhookUrl(url))
+    throw new Error(
+      "Invalid webhook URL: must be HTTPS and not target internal services",
+    );
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

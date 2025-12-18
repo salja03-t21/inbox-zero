@@ -46,14 +46,13 @@ export async function isAdmin({
   }
 
   // Fallback to env variable for bootstrapping
-  logger.info("Env admin check", {
-    email,
-    envAdmins: env.ADMINS,
-    includes: env.ADMINS?.includes(email || ""),
-  });
-  if (email && env.ADMINS?.includes(email)) {
-    logger.info("User is admin via ADMINS env variable", { email });
-    return true;
+  if (email) {
+    const adminList =
+      env.ADMINS?.split(",").map((e) => e.trim().toLowerCase()) ?? [];
+    if (adminList.includes(email.toLowerCase())) {
+      logger.info("User is admin via ADMINS env variable", { email });
+      return true;
+    }
   }
 
   logger.info("isAdmin check failed", { email, userId });

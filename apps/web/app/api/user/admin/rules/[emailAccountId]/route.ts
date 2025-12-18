@@ -12,32 +12,28 @@ async function getAdminRules({
   userId: string;
   emailAccountId: string;
 }) {
-  // Get the requesting user with their organization memberships
-  const requestingUser = await prisma.user.findUnique({
-    where: { id: userId },
+  // Get the target email account with its organization
+  const targetEmailAccount = await prisma.emailAccount.findUnique({
+    where: { id: emailAccountId },
     include: {
-      emailAccounts: {
-        include: {
-          members: true,
-        },
-      },
+      members: true,
     },
   });
 
-  if (!requestingUser) {
-    throw new Error("User not found");
+  if (!targetEmailAccount) {
+    throw new Error("Email account not found");
   }
 
-  // Check if user is an admin in any organization
-  const isAdmin = requestingUser.emailAccounts.some((account) =>
-    isOrganizationAdmin(account.members),
+  // Check if the requesting user is an admin of the organization that owns this email account
+  const userMembership = targetEmailAccount.members.find(
+    (member) => member.userId === userId,
   );
 
-  if (!isAdmin) {
-    throw new Error("Unauthorized: Admin access required");
+  if (!userMembership || !isOrganizationAdmin([userMembership])) {
+    throw new Error("Unauthorized: You must be an admin of this organization");
   }
 
-  // Fetch rules for the specified email account
+  // Fetch rules for the verified email account
   const rules = await prisma.rule.findMany({
     where: { emailAccountId },
     include: {
