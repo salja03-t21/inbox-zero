@@ -467,6 +467,60 @@ async function handlePendingPremiumInvite({ email }: { email: string }) {
   logger.info("Added user to premium from invite", { email });
 }
 
+/**
+ * Creates a default digest schedule for a new email account.
+ * Schedule: Daily at 8am EST (13:00 UTC), weekdays only.
+ */
+async function createDefaultDigestSchedule({
+  emailAccountId,
+}: {
+  emailAccountId: string;
+}) {
+  try {
+    // Check if schedule already exists
+    const existingSchedule = await prisma.schedule.findUnique({
+      where: { emailAccountId },
+    });
+
+    if (existingSchedule) {
+      logger.info("Digest schedule already exists, skipping creation", {
+        emailAccountId,
+      });
+      return;
+    }
+
+    // Calculate next occurrence (tomorrow at 8am EST = 13:00 UTC)
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    tomorrow.setUTCHours(13, 0, 0, 0); // 8am EST = 13:00 UTC
+
+    await prisma.schedule.create({
+      data: {
+        emailAccountId,
+        intervalDays: 1, // Daily
+        timeOfDay: new Date("1970-01-01T13:00:00.000Z"), // 8am EST
+        daysOfWeek: 32, // Weekdays bitmask (Monday-Friday)
+        nextOccurrenceAt: tomorrow,
+      },
+    });
+
+    logger.info("Successfully created default digest schedule", {
+      emailAccountId,
+      nextOccurrenceAt: tomorrow.toISOString(),
+    });
+  } catch (error) {
+    logger.error("Error creating default digest schedule", {
+      emailAccountId,
+      error,
+    });
+    // Don't throw - schedule creation failure shouldn't prevent account linking
+    captureException(error, {
+      extra: { emailAccountId, location: "createDefaultDigestSchedule" },
+    });
+  }
+}
+
 async function createAutoPremiumForNewUser({ userId }: { userId: string }) {
   try {
     logger.info("Creating automatic premium for new user", { userId });
@@ -721,7 +775,18 @@ async function handleLinkAccount(account: Account) {
         image: primaryPhotoUrl,
       },
     };
-    await prisma.emailAccount.upsert(emailAccountData);
+    const emailAccount = await prisma.emailAccount.upsert(emailAccountData);
+
+    // Create default digest schedule for new email accounts
+    await createDefaultDigestSchedule({
+      emailAccountId: emailAccount.id,
+    }).catch((error) => {
+      logger.error("[linkAccount] Error creating digest schedule:", {
+        emailAccountId: emailAccount.id,
+        error,
+      });
+      captureException(error, { extra: { emailAccountId: emailAccount.id } });
+    });
 
     // Handle premium account seats
     await updateAccountSeats({ userId: account.userId }).catch((error) => {
