@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { isAdmin } from "@/utils/admin";
 
 // Mock dependencies
+// env.ADMINS is already transformed to an array by env.ts
 vi.mock("@/env", () => ({
   env: {
-    ADMINS: "admin@example.com,super@example.com",
+    ADMINS: ["admin@example.com", "super@example.com"],
   },
 }));
 

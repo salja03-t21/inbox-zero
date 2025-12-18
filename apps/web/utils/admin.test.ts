@@ -4,7 +4,8 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 const adminEmail = "admin@example.com";
 const nonAdminEmail = "user@example.com";
 const anotherAdmin = "another@admin.com";
-const defaultAdmins = `${adminEmail},${anotherAdmin}`;
+// env.ADMINS is already transformed to an array by env.ts
+const defaultAdmins = [adminEmail, anotherAdmin];
 
 // Mock the structure. The actual value will be set per test using vi.doMock.
 // The initial value here might be used if a test doesn't use vi.doMock,
@@ -116,7 +117,7 @@ describe("isAdmin", () => {
   it("should return true when ADMINS has different casing than email", async () => {
     await vi.doMock("@/env", () => ({
       env: {
-        ADMINS: `Admin@Example.com,${anotherAdmin}`,
+        ADMINS: ["Admin@Example.com", anotherAdmin],
         EMAIL_ENCRYPT_SECRET:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
@@ -143,7 +144,7 @@ describe("isAdmin", () => {
   it("should return false if ADMINS env var is empty", async () => {
     await vi.doMock("@/env", () => ({
       env: {
-        ADMINS: "",
+        ADMINS: [],
         EMAIL_ENCRYPT_SECRET:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
@@ -157,7 +158,7 @@ describe("isAdmin", () => {
     // Testing current behavior: String.includes finds substrings
     await vi.doMock("@/env", () => ({
       env: {
-        ADMINS: ` ${adminEmail} , ${anotherAdmin} `,
+        ADMINS: [" " + adminEmail + " ", " " + anotherAdmin + " "],
         EMAIL_ENCRYPT_SECRET:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
@@ -171,7 +172,7 @@ describe("isAdmin", () => {
   it("should handle email match when ADMINS list has extra spaces", async () => {
     await vi.doMock("@/env", () => ({
       env: {
-        ADMINS: `   ${adminEmail}    ,    ${anotherAdmin}   `,
+        ADMINS: ["   " + adminEmail + "    ", "    " + anotherAdmin + "   "],
         EMAIL_ENCRYPT_SECRET:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",

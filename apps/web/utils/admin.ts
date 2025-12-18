@@ -47,8 +47,8 @@ export async function isAdmin({
 
   // Fallback to env variable for bootstrapping
   if (email) {
-    const adminList =
-      env.ADMINS?.split(",").map((e) => e.trim().toLowerCase()) ?? [];
+    // env.ADMINS is already an array (transformed from comma-separated string in env.ts)
+    const adminList = env.ADMINS?.map((e) => e.trim().toLowerCase()) ?? [];
     if (adminList.includes(email.toLowerCase())) {
       logger.info("User is admin via ADMINS env variable", { email });
       return true;
