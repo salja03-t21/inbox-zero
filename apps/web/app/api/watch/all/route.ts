@@ -21,8 +21,8 @@ async function watchAllEmails() {
           OR: [
             { lemonSqueezyRenewsAt: { gt: new Date() } },
             { stripeSubscriptionStatus: { in: ["active", "trialing"] } },
-            // Include LIFETIME and BUSINESS_LIFETIME tier users (for enterprise deployments)
-            { tier: { in: ["LIFETIME", "BUSINESS_LIFETIME"] } },
+            // Include LIFETIME tier users (for enterprise deployments)
+            { tier: "LIFETIME" },
           ],
         },
       },
