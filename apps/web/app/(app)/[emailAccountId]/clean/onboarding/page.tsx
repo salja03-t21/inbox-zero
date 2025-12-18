@@ -40,11 +40,22 @@ export default async function CleanPage(props: {
     return <CardTitle>Email account not found</CardTitle>;
   }
 
-  const emailProvider = await createEmailProvider({
-    emailAccountId,
-    provider: emailAccount.account.provider,
-  });
-  const { unhandledCount } = await getUnhandledCount(emailProvider);
+  if (!emailAccount.account?.provider) {
+    return <CardTitle>Email provider not configured</CardTitle>;
+  }
+
+  let unhandledCount = 0;
+  try {
+    const emailProvider = await createEmailProvider({
+      emailAccountId,
+      provider: emailAccount.account.provider,
+    });
+    const result = await getUnhandledCount(emailProvider);
+    unhandledCount = result.unhandledCount;
+  } catch (error) {
+    console.error("Failed to create email provider:", error);
+    // Continue with 0 unhandled count rather than crashing
+  }
 
   const searchParams = await props.searchParams;
   const step = searchParams.step

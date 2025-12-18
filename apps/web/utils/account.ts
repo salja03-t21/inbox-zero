@@ -121,9 +121,9 @@ async function getTokens({ emailAccountId }: { emailAccountId: string }) {
   });
 
   return {
-    accessToken: emailAccount?.account.access_token,
-    refreshToken: emailAccount?.account.refresh_token,
-    expiresAt: emailAccount?.account.expires_at?.getTime() ?? null,
+    accessToken: emailAccount?.account?.access_token,
+    refreshToken: emailAccount?.account?.refresh_token,
+    expiresAt: emailAccount?.account?.expires_at?.getTime() ?? null,
     sharedMailboxEmail: emailAccount?.isSharedMailbox
       ? emailAccount.sharedMailboxOwner
       : null,
