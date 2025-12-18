@@ -11,7 +11,7 @@ import {
   fireEvent,
   cleanup,
 } from "@testing-library/react";
-import React from "react";
+import type React from "react";
 import { BulkRunRules } from "./BulkRunRules";
 
 // Mock dependencies

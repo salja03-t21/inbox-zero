@@ -41,8 +41,6 @@ function SSOLoginContent() {
   const triggerSSOLogin = useCallback(async (providerId: string) => {
     setIsSubmitting(true);
 
-    console.log("[SSO Login] Starting SSO signin flow...", { providerId });
-
     try {
       const response = await fetch("/api/auth/sign-in/sso", {
         method: "POST",
@@ -55,13 +53,9 @@ function SSOLoginContent() {
         }),
       });
 
-      console.log("[SSO Login] Response status:", response.status);
-
       const responseData = await response.json();
-      console.log("[SSO Login] Response data:", responseData);
 
       if (!response.ok) {
-        console.error("[SSO Login] SSO signin failed:", responseData);
         toastError({
           title: "SSO Sign-in Error",
           description: responseData.error || "Failed to initiate SSO sign-in",
@@ -72,14 +66,11 @@ function SSOLoginContent() {
 
       // Better Auth returns {url: string, redirect: boolean}
       if (responseData.url) {
-        console.log("[SSO Login] Redirecting to:", responseData.url);
         window.location.href = responseData.url;
       } else {
-        console.error("[SSO Login] No redirect URL in response");
         setIsAutoLogin(false);
       }
     } catch (error) {
-      console.error("[SSO Login] Exception during SSO signin:", error);
       toastError({
         title: "SSO Sign-in Error",
         description: "An unexpected error occurred. Please try again.",
@@ -95,7 +86,6 @@ function SSOLoginContent() {
     // Only auto-login once when coming from a known issuer
     if (issuer && KNOWN_ISSUERS[issuer] && !autoLoginAttempted.current) {
       autoLoginAttempted.current = true;
-      console.log("[SSO Login] IdP-initiated login detected", { issuer });
       setIsAutoLogin(true);
       triggerSSOLogin(KNOWN_ISSUERS[issuer]);
     }

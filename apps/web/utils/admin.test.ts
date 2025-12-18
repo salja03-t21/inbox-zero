@@ -98,7 +98,7 @@ describe("isAdmin", () => {
     expect(await isAdmin({ email: undefined })).toBe(false);
   });
 
-  it("should be case-sensitive and return false if casing differs", async () => {
+  it("should be case-insensitive and return true when casing differs", async () => {
     await vi.doMock("@/env", () => ({
       env: {
         ADMINS: defaultAdmins,
@@ -108,21 +108,23 @@ describe("isAdmin", () => {
       },
     }));
     const { isAdmin } = await import("./admin");
-    // String.includes is case-sensitive. "Admin@example.com" is not in "admin@example.com,..."
-    expect(await isAdmin({ email: "Admin@example.com" })).toBe(false);
+    // Email comparison is case-insensitive: "Admin@example.com" matches "admin@example.com"
+    expect(await isAdmin({ email: "Admin@example.com" })).toBe(true);
+    expect(await isAdmin({ email: "ADMIN@EXAMPLE.COM" })).toBe(true);
   });
 
-  it("should return true if casing matches exactly in ADMINS", async () => {
+  it("should return true when ADMINS has different casing than email", async () => {
     await vi.doMock("@/env", () => ({
       env: {
-        ADMINS: `Admin@example.com,${anotherAdmin}`,
+        ADMINS: `Admin@Example.com,${anotherAdmin}`,
         EMAIL_ENCRYPT_SECRET:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
       },
     }));
     const { isAdmin } = await import("./admin");
-    expect(await isAdmin({ email: "Admin@example.com" })).toBe(true);
+    // Case-insensitive matching works both ways
+    expect(await isAdmin({ email: "admin@example.com" })).toBe(true);
   });
 
   it("should return false if ADMINS env var is not set (undefined)", async () => {

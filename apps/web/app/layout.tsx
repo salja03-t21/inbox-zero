@@ -150,10 +150,14 @@ export default async function RootLayout({
             <Toaster closeButton richColors theme="light" visibleToasts={9} />
           </GlobalProviders>
         </PostHogProvider>
-        <Analytics />
+        {!env.NEXT_PUBLIC_VERCEL_ANALYTICS_DISABLED && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
         <AxiomWebVitals />
         <UTM />
-        <SpeedInsights />
         {env.NEXT_PUBLIC_DUB_REFER_DOMAIN && (
           <DubAnalytics
             apiHost="/_proxy/dub"

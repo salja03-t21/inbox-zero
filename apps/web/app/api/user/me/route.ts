@@ -6,6 +6,12 @@ import { auth } from "@/utils/auth";
 
 export type UserResponse = Awaited<ReturnType<typeof getUser>> | null;
 
+function maskSecret(secret: string | null): string | null {
+  if (!secret) return null;
+  if (secret.length <= 4) return "****";
+  return "***" + secret.slice(-4);
+}
+
 async function getUser({ userId }: { userId: string }) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -62,6 +68,10 @@ async function getUser({ userId }: { userId: string }) {
 
   return {
     ...user,
+    aiApiKey: maskSecret(user.aiApiKey),
+    webhookSecret: user.webhookSecret ? "********" : null,
+    hasAiApiKey: !!user.aiApiKey,
+    hasWebhookSecret: !!user.webhookSecret,
     members,
   };
 }

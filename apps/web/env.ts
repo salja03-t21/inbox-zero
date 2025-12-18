@@ -212,6 +212,10 @@ export const env = createEnv({
       .optional()
       .default(false),
     NEXT_PUBLIC_EMAIL_SEND_ENABLED: z.coerce.boolean().optional().default(true),
+    NEXT_PUBLIC_VERCEL_ANALYTICS_DISABLED: z.coerce
+      .boolean()
+      .optional()
+      .default(false),
   },
   // For Next.js >= 13.4.4, you only need to destructure client variables:
   experimental__runtimeEnv: {
@@ -269,5 +273,7 @@ export const env = createEnv({
     NEXT_PUBLIC_DISABLE_REFERRAL_SIGNATURE:
       process.env.NEXT_PUBLIC_DISABLE_REFERRAL_SIGNATURE,
     NEXT_PUBLIC_EMAIL_SEND_ENABLED: process.env.NEXT_PUBLIC_EMAIL_SEND_ENABLED,
+    NEXT_PUBLIC_VERCEL_ANALYTICS_DISABLED:
+      process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_DISABLED,
   },
 });

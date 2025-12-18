@@ -75,16 +75,7 @@ export const GET = withAuth(async (request) => {
     );
   }
 
-  // Log client secret info (first/last chars only for security)
-  logger.info("Client secret from env", {
-    length: clientSecret.length,
-    firstChar: clientSecret[0],
-    lastChar: clientSecret[clientSecret.length - 1],
-    hasQuotes:
-      clientSecret.startsWith('"') ||
-      clientSecret.startsWith("'") ||
-      clientSecret.startsWith("\\"),
-  });
+  logger.info("Client secret from env", { hasValue: !!clientSecret });
 
   // Build the correct OIDC config matching Better Auth's expected format
   // See: @better-auth/sso OIDCConfig interface
@@ -140,12 +131,14 @@ export const GET = withAuth(async (request) => {
   return NextResponse.json({
     success: true,
     old: {
-      raw: provider.oidcConfig,
+      raw: "[REDACTED]",
       type: typeof provider.oidcConfig,
     },
     new: {
-      raw: updated?.oidcConfig,
-      parsed: parsedConfig,
+      raw: "[REDACTED]",
+      parsed: parsedConfig
+        ? { ...parsedConfig, clientSecret: "[REDACTED]" }
+        : null,
       parseError,
     },
     message:
