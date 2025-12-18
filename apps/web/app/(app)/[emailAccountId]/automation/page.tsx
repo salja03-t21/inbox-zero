@@ -114,7 +114,7 @@ export default async function AutomationPage({
             storageKey="ai-assistant-onboarding-video"
           />
 
-          <Tabs value={tab ?? "rules"}>
+          <Tabs defaultValue="rules">
             <TabsContent value="rules" className="mb-10">
               <RulesTab />
             </TabsContent>
