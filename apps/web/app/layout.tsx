@@ -132,6 +132,7 @@ export default async function RootLayout({
       <body
         className={`h-full ${inter.variable} ${calFont.variable} font-sans antialiased`}
       >
+        {/* biome-ignore lint/correctness/useUniqueElementIds: JSON-LD script for SEO must have static id */}
         <Script
           id="json-ld"
           type="application/ld+json"

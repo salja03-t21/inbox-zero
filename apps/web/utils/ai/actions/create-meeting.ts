@@ -49,9 +49,9 @@ export async function createMeetingAction({
   email,
   args,
   userEmail,
-  userId,
+  userId: _userId,
   emailAccountId,
-  executedRule,
+  executedRule: _executedRule,
 }: {
   client: EmailProvider;
   email: EmailForAction;

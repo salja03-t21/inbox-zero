@@ -70,7 +70,7 @@ type NavItem = {
 export const useNavigation = () => {
   // When we have features in early access, we can filter the navigation items
   const showCleaner = useCleanerEnabled();
-  const { emailAccountId, emailAccount, provider } = useAccount();
+  const { emailAccountId, emailAccount } = useAccount();
   const currentEmailAccountId = emailAccount?.id || emailAccountId;
 
   // Assistant category items

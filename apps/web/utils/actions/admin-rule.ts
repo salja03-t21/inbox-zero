@@ -149,10 +149,10 @@ export const adminDeleteRuleAction = adminActionClient
 // Helper function to toggle rule (similar to the one in rule.ts)
 async function toggleRule({
   ruleId,
-  systemType,
+  systemType: _systemType,
   enabled,
   emailAccountId,
-  provider,
+  provider: _provider,
 }: {
   ruleId: string;
   systemType?: SystemType;

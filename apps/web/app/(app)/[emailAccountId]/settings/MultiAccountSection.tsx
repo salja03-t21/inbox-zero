@@ -41,7 +41,8 @@ export function MultiAccountSection() {
 
   const premiumTier = getUserTier(premium);
 
-  const { PremiumModal } = usePremiumModal();
+  // Premium modal removed - all users have access now
+  usePremiumModal();
 
   const { execute: claimPremiumAdmin } = useAction(claimPremiumAdminAction, {
     onSuccess: () => {

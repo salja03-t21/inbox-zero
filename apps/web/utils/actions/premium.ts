@@ -37,7 +37,7 @@ const TEN_YEARS = 10 * 365 * 24 * 60 * 60 * 1000;
 
 export const decrementUnsubscribeCreditAction = actionClientUser
   .metadata({ name: "decrementUnsubscribeCredit" })
-  .action(async ({ ctx: { userId } }) => {
+  .action(async ({ ctx: { userId: _userId } }) => {
     // Premium enabled for all users permanently - no credit management needed
     return;
   });

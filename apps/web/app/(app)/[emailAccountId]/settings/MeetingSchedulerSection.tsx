@@ -34,6 +34,9 @@ import {
 
 export function MeetingSchedulerSection() {
   const { emailAccountId, provider } = useAccount();
+  const enabledId = `meeting-scheduler-enabled-${emailAccountId}`;
+  const autoCreateId = `meeting-scheduler-auto-create-${emailAccountId}`;
+
   const { data, isLoading, error, mutate } =
     useSWR<GetMeetingSchedulerSettingsResponse>(
       "/api/user/meeting-scheduler-settings",
@@ -145,14 +148,11 @@ export function MeetingSchedulerSection() {
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  id="meetingSchedulerEnabled"
+                  id={enabledId}
                   {...register("meetingSchedulerEnabled")}
                   className="rounded border-gray-300"
                 />
-                <label
-                  htmlFor="meetingSchedulerEnabled"
-                  className="text-sm font-medium"
-                >
+                <label htmlFor={enabledId} className="text-sm font-medium">
                   Enable automatic meeting scheduling
                 </label>
               </div>
@@ -265,12 +265,12 @@ export function MeetingSchedulerSection() {
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
-                      id="meetingSchedulerAutoCreate"
+                      id={autoCreateId}
                       {...register("meetingSchedulerAutoCreate")}
                       className="rounded border-gray-300"
                     />
                     <label
-                      htmlFor="meetingSchedulerAutoCreate"
+                      htmlFor={autoCreateId}
                       className="text-sm font-medium"
                     >
                       Automatically create meetings without confirmation

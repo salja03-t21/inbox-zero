@@ -106,8 +106,8 @@ export const hasAiAccess = (
 };
 
 export const hasTierAccess = ({
-  tier,
-  minimumTier,
+  tier: _tier,
+  minimumTier: _minimumTier,
 }: {
   tier: PremiumTier | null;
   minimumTier: PremiumTier;

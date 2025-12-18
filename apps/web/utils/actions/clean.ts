@@ -26,7 +26,7 @@ export const cleanInboxAction = actionClient
   .schema(cleanInboxSchema)
   .action(
     async ({
-      ctx: { emailAccountId, provider, userId, logger },
+      ctx: { emailAccountId, provider, userId: _userId, logger },
       parsedInput: { action, instructions, daysOld, skips, maxEmails },
     }) => {
       // Temporarily disabled for testing

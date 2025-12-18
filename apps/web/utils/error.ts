@@ -8,7 +8,7 @@ import { createScopedLogger } from "@/utils/logger";
 
 const logger = createScopedLogger("error");
 
-export type ErrorMessage = { error: string; data?: any };
+export type ErrorMessage = { error: string; data?: unknown };
 export type ZodError = {
   error: { issues: { code: string; message: string }[] };
 };
@@ -18,12 +18,12 @@ export type ApiErrorType = {
   code: number;
 };
 
-export function isError(value: any): value is ErrorMessage | ZodError {
-  return value?.error;
+export function isError(value: unknown): value is ErrorMessage | ZodError {
+  return !!(value as ErrorMessage | ZodError)?.error;
 }
 
-export function isErrorMessage(value: any): value is ErrorMessage {
-  return typeof value?.error === "string";
+export function isErrorMessage(value: unknown): value is ErrorMessage {
+  return typeof (value as ErrorMessage)?.error === "string";
 }
 
 export function formatZodError(error: z.ZodError): string {
@@ -33,8 +33,12 @@ export function formatZodError(error: z.ZodError): string {
   return `Invalid data: ${formattedError}`;
 }
 
+interface GmailErrorResponse {
+  errors?: Array<{ message?: string; reason?: string }>;
+}
+
 export function formatGmailError(error: unknown): string {
-  return (error as any)?.errors?.[0]?.message ?? "Unknown error";
+  return (error as GmailErrorResponse)?.errors?.[0]?.message ?? "Unknown error";
 }
 
 export function isGmailError(
@@ -43,8 +47,8 @@ export function isGmailError(
   return (
     typeof error === "object" &&
     error !== null &&
-    Array.isArray((error as any).errors) &&
-    (error as any).errors.length > 0
+    Array.isArray((error as GmailErrorResponse).errors) &&
+    ((error as GmailErrorResponse).errors?.length ?? 0) > 0
   );
 }
 
@@ -62,7 +66,7 @@ export function formatError(error: unknown): string {
 
 export function captureException(
   error: unknown,
-  additionalInfo?: { extra?: Record<string, any> },
+  additionalInfo?: { extra?: Record<string, unknown> },
   userEmail?: string,
 ) {
   if (isKnownApiError(error)) {
@@ -96,15 +100,20 @@ export class SafeError extends Error {
 }
 
 export function isGmailInsufficientPermissionsError(error: unknown): boolean {
-  return (error as any)?.errors?.[0]?.reason === "insufficientPermissions";
+  return (
+    (error as GmailErrorResponse)?.errors?.[0]?.reason ===
+    "insufficientPermissions"
+  );
 }
 
 export function isGmailRateLimitExceededError(error: unknown): boolean {
-  return (error as any)?.errors?.[0]?.reason === "rateLimitExceeded";
+  return (
+    (error as GmailErrorResponse)?.errors?.[0]?.reason === "rateLimitExceeded"
+  );
 }
 
 export function isGmailQuotaExceededError(error: unknown): boolean {
-  return (error as any)?.errors?.[0]?.reason === "quotaExceeded";
+  return (error as GmailErrorResponse)?.errors?.[0]?.reason === "quotaExceeded";
 }
 
 export function isIncorrectOpenAIAPIKeyError(error: APICallError): boolean {
@@ -184,7 +193,7 @@ export function checkCommonErrors(
   if (isGmailRateLimitExceededError(error)) {
     logger.warn("Gmail rate limit exceeded for url", { url });
     const errorMessage =
-      (error as any)?.errors?.[0]?.message ?? "Unknown error";
+      (error as GmailErrorResponse)?.errors?.[0]?.message ?? "Unknown error";
     return {
       type: "Gmail Rate Limit Exceeded",
       message: `Gmail error: ${errorMessage}`,

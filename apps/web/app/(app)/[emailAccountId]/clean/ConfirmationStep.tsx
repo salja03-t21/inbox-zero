@@ -18,11 +18,11 @@ import { useStep } from "@/app/(app)/[emailAccountId]/clean/useStep";
 export function ConfirmationStep({
   showFooter,
   action,
-  timeRange,
-  instructions,
-  skips,
+  timeRange: _timeRange,
+  instructions: _instructions,
+  skips: _skips,
   reuseSettings,
-  showPreview,
+  showPreview: _showPreview,
 }: {
   showFooter: boolean;
   action: CleanAction;

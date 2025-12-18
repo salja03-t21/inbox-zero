@@ -169,6 +169,8 @@ function ConnectedMailboxesList({
 
 function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
   const { emailAccountId } = useAccount();
+  const emailInputId = `shared-mailbox-email-${emailAccountId}`;
+  const nameInputId = `shared-mailbox-name-${emailAccountId}`;
   const [manualEmail, setManualEmail] = useState("");
   const [manualName, setManualName] = useState("");
 
@@ -208,10 +210,14 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
     <div className="space-y-4">
       <form onSubmit={handleManualConnect} className="space-y-3">
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label
+            htmlFor={emailInputId}
+            className="block text-sm font-medium mb-1"
+          >
             Shared Mailbox Email
           </label>
           <input
+            id={emailInputId}
             type="email"
             placeholder="shared@company.com"
             value={manualEmail}
@@ -221,10 +227,14 @@ function AvailableMailboxesList({ onConnect }: { onConnect: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label
+            htmlFor={nameInputId}
+            className="block text-sm font-medium mb-1"
+          >
             Display Name (optional)
           </label>
           <input
+            id={nameInputId}
             type="text"
             placeholder="e.g., Support Team"
             value={manualName}

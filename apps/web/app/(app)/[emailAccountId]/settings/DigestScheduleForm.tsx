@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type SubmitHandler, useForm } from "react-hook-form";
-import { useCallback, useId } from "react";
+import { useCallback } from "react";
 import useSWR from "swr";
 import {
   Select,
@@ -100,6 +100,11 @@ function DigestScheduleFormInner({
   showSaveButton: boolean;
 }) {
   const { emailAccountId } = useAccount();
+  const frequencyId = `frequency-${emailAccountId}`;
+  const dayOfWeekId = `dayofweek-${emailAccountId}`;
+  const hourId = `hour-${emailAccountId}`;
+  const minuteId = `minute-${emailAccountId}`;
+  const ampmId = `ampm-${emailAccountId}`;
 
   const {
     handleSubmit,
@@ -182,12 +187,12 @@ function DigestScheduleFormInner({
 
       <div className="grid grid-cols-3 gap-2">
         <FormItem>
-          <Label htmlFor="frequency-select">Every</Label>
+          <Label htmlFor={frequencyId}>Every</Label>
           <Select
             value={watchedValues.schedule}
             onValueChange={(val) => setValue("schedule", val)}
           >
-            <SelectTrigger id="frequency-select">
+            <SelectTrigger id={frequencyId}>
               {watchedValues.schedule
                 ? frequencies.find((f) => f.value === watchedValues.schedule)
                     ?.label
@@ -210,7 +215,7 @@ function DigestScheduleFormInner({
 
         {watchedValues.schedule !== "daily" && (
           <FormItem>
-            <Label htmlFor="dayofweek-select">
+            <Label htmlFor={dayOfWeekId}>
               {watchedValues.schedule === "monthly" ||
               watchedValues.schedule === "biweekly"
                 ? "on the first"
@@ -220,7 +225,7 @@ function DigestScheduleFormInner({
               value={watchedValues.dayOfWeek}
               onValueChange={(val) => setValue("dayOfWeek", val)}
             >
-              <SelectTrigger id="dayofweek-select">
+              <SelectTrigger id={dayOfWeekId}>
                 {watchedValues.dayOfWeek
                   ? daysOfWeek.find((d) => d.value === watchedValues.dayOfWeek)
                       ?.label
@@ -250,9 +255,7 @@ function DigestScheduleFormInner({
                 value={watchedValues.hour}
                 onValueChange={(val) => setValue("hour", val)}
               >
-                <SelectTrigger id="hour-select">
-                  {watchedValues.hour}
-                </SelectTrigger>
+                <SelectTrigger id={hourId}>{watchedValues.hour}</SelectTrigger>
                 <SelectContent>
                   {hours.map((h) => (
                     <SelectItem key={h.value} value={h.value}>
@@ -268,7 +271,7 @@ function DigestScheduleFormInner({
                 value={watchedValues.minute}
                 onValueChange={(val) => setValue("minute", val)}
               >
-                <SelectTrigger id="minute-select">
+                <SelectTrigger id={minuteId}>
                   {watchedValues.minute}
                 </SelectTrigger>
                 <SelectContent>
@@ -285,9 +288,7 @@ function DigestScheduleFormInner({
                 value={watchedValues.ampm}
                 onValueChange={(val) => setValue("ampm", val as "AM" | "PM")}
               >
-                <SelectTrigger id="ampm-select">
-                  {watchedValues.ampm}
-                </SelectTrigger>
+                <SelectTrigger id={ampmId}>{watchedValues.ampm}</SelectTrigger>
                 <SelectContent>
                   {ampmOptions.map((a) => (
                     <SelectItem key={a.value} value={a.value}>

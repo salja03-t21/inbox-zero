@@ -60,6 +60,10 @@ const daysOfWeek = [
 
 export function DigestSettingsForm() {
   const { emailAccountId } = useAccount();
+  const frequencyId = `frequency-${emailAccountId}`;
+  const dayOfWeekId = `dayofweek-${emailAccountId}`;
+  const timePickerId = `time-picker-${emailAccountId}`;
+
   const {
     data: rules,
     isLoading: rulesLoading,
@@ -273,12 +277,12 @@ export function DigestSettingsForm() {
 
               <div className="grid lg:grid-cols-3 gap-3 mt-3">
                 <FormItem>
-                  <Label htmlFor="frequency-select">Every</Label>
+                  <Label htmlFor={frequencyId}>Every</Label>
                   <Select
                     value={watchedValues.schedule}
                     onValueChange={(val) => setValue("schedule", val)}
                   >
-                    <SelectTrigger id="frequency-select">
+                    <SelectTrigger id={frequencyId}>
                       {watchedValues.schedule
                         ? frequencies.find(
                             (f) => f.value === watchedValues.schedule,
@@ -297,12 +301,12 @@ export function DigestSettingsForm() {
 
                 {watchedValues.schedule !== "daily" && (
                   <FormItem>
-                    <Label htmlFor="dayofweek-select">on</Label>
+                    <Label htmlFor={dayOfWeekId}>on</Label>
                     <Select
                       value={watchedValues.dayOfWeek}
                       onValueChange={(val) => setValue("dayOfWeek", val)}
                     >
-                      <SelectTrigger id="dayofweek-select">
+                      <SelectTrigger id={dayOfWeekId}>
                         {watchedValues.dayOfWeek
                           ? daysOfWeek.find(
                               (d) => d.value === watchedValues.dayOfWeek,
@@ -321,7 +325,7 @@ export function DigestSettingsForm() {
                 )}
 
                 <TimePicker
-                  id="time-picker"
+                  id={timePickerId}
                   label="at"
                   value={watchedValues.time}
                   onChange={(value) => setValue("time", value)}

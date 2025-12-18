@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Label, Radio, RadioGroup } from "@headlessui/react";
@@ -45,6 +45,7 @@ export type PricingProps = {
 };
 
 export default function Pricing(props: PricingProps) {
+  const pricingId = useId();
   const { premium, isLoading, error, data } = usePremium();
 
   const isLoggedIn = !!data?.id;
@@ -72,7 +73,7 @@ export default function Pricing(props: PricingProps) {
   return (
     <LoadingContent loading={isLoading} error={error}>
       <div
-        id="pricing"
+        id={pricingId}
         className={cn(
           "relative isolate mx-auto max-w-7xl bg-white px-6 pt-10 lg:px-8",
           props.className,
