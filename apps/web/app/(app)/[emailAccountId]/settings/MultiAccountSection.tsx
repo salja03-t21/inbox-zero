@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useId } from "react";
 import { type SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useSWR from "swr";
@@ -29,6 +29,7 @@ import { useAction } from "next-safe-action/hooks";
 import { toastError, toastSuccess } from "@/components/Toast";
 
 export function MultiAccountSection() {
+  const sectionId = useId();
   const { data, isLoading, error, mutate } = useSWR<MultiAccountEmailsResponse>(
     "/api/user/settings/multi-account",
   );
@@ -40,7 +41,7 @@ export function MultiAccountSection() {
 
   const premiumTier = getUserTier(premium);
 
-  const { openModal, PremiumModal } = usePremiumModal();
+  const { PremiumModal } = usePremiumModal();
 
   const { execute: claimPremiumAdmin } = useAction(claimPremiumAdminAction, {
     onSuccess: () => {
@@ -63,7 +64,7 @@ export function MultiAccountSection() {
   //   return null;
 
   return (
-    <FormSection id="manage-users">
+    <FormSection id={sectionId}>
       <FormSectionLeft
         title="Manage Team Access"
         description="Grant premium access to additional email accounts. Additional members are billed to your subscription. Each account maintains separate email privacy."

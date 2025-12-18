@@ -1,6 +1,6 @@
 // This script fixes the SSO email issue in auth.ts
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const authPath = path.join(__dirname, "apps/web/utils/auth.ts");
 let content = fs.readFileSync(authPath, "utf8");
@@ -79,7 +79,7 @@ content =
   content.slice(tryBlockContent);
 
 // Close the else block
-const primaryEmailCheck = content.indexOf("if (!primaryEmail) {");
+const _primaryEmailCheck = content.indexOf("if (!primaryEmail) {");
 const throwErrorEnd = content.indexOf(
   "}\n",
   content.indexOf(
@@ -92,4 +92,3 @@ content =
   content.slice(throwErrorEnd + 1);
 
 fs.writeFileSync(authPath, content);
-console.log("SSO fix applied successfully!");

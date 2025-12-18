@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { auth } from "@/utils/auth";
 import {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useId, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { FormSection, FormSectionLeft } from "@/components/Form";
@@ -26,6 +26,7 @@ import {
 import { PlusIcon, TrashIcon } from "lucide-react";
 
 export function SharedMailboxSection() {
+  const sectionId = useId();
   const { emailAccount } = useAccount();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -41,7 +42,7 @@ export function SharedMailboxSection() {
   };
 
   return (
-    <FormSection id="shared-mailboxes">
+    <FormSection id={sectionId}>
       <FormSectionLeft
         title="Shared Mailboxes"
         description="Connect to shared mailboxes you have access to. This allows you to manage emails from shared inboxes like support@company.com."

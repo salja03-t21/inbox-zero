@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
+import { useId } from "react";
 
 export function Privacy() {
+  const featuresId = useId();
   return (
-    <div className="bg-white py-24" id="features">
+    <div className="bg-white py-24" id={featuresId}>
       <div className="mb-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
         <div className="flex items-center gap-8">
           <Image

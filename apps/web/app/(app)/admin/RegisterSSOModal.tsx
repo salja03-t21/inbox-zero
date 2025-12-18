@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAction } from "next-safe-action/hooks";
-import { useCallback } from "react";
+import { useCallback, useId } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { ErrorMessage, Input, Label } from "@/components/Input";
 import { toastError, toastSuccess } from "@/components/Toast";
@@ -36,6 +36,7 @@ export function RegisterSSOModal() {
   });
 
   const { isOpen, onToggle, onClose } = useDialogState();
+  const idpMetadataId = useId();
 
   const { executeAsync: executeRegisterSSO, isExecuting } = useAction(
     registerSSOProviderAction,
@@ -108,7 +109,7 @@ export function RegisterSSOModal() {
             <div className="space-y-2">
               <Label name="idpMetadata" label="IDP Metadata (XML)" />
               <TextareaAutosize
-                id="idpMetadata"
+                id={idpMetadataId}
                 className="block w-full flex-1 whitespace-pre-wrap rounded-md border border-border bg-background shadow-sm focus:border-black focus:ring-black sm:text-sm"
                 minRows={3}
                 rows={3}

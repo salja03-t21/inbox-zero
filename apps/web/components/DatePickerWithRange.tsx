@@ -1,6 +1,7 @@
 "use client";
 
 import type * as React from "react";
+import { useId } from "react";
 import format from "date-fns/format";
 import { CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
@@ -21,11 +22,12 @@ export function DatePickerWithRange({
   dateRange?: DateRange;
   onSetDateRange: (dateRange?: DateRange) => void;
 }) {
+  const dateId = useId();
   return (
     <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
-          id="date"
+          id={dateId}
           variant="outline"
           className={cn(
             "justify-start whitespace-nowrap text-left font-normal",

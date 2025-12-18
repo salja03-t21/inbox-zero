@@ -2,7 +2,7 @@
 
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback } from "react";
+import { useCallback, useId } from "react";
 import {
   Dialog,
   DialogClose,
@@ -52,6 +52,7 @@ export function InviteMemberModal({
   });
 
   const { isOpen, onToggle, onClose } = useDialogState();
+  const roleId = useId();
 
   const selectedRole = watch("role");
 
@@ -102,7 +103,7 @@ export function InviteMemberModal({
 
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <label htmlFor="role" className="text-sm font-medium">
+              <label htmlFor={roleId} className="text-sm font-medium">
                 Role
               </label>
               <TooltipExplanation
@@ -116,7 +117,7 @@ export function InviteMemberModal({
                 setValue("role", value as "admin" | "member")
               }
             >
-              <SelectTrigger id="role">
+              <SelectTrigger id={roleId}>
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>

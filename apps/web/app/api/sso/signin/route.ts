@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { env } from "@/env";
 import { SafeError } from "@/utils/error";
 import { createScopedLogger } from "@/utils/logger";
 import { withError } from "@/utils/middleware";
@@ -54,7 +53,7 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 /**
  * Sign a value using HMAC-SHA256 (matches Better Auth's signing)
  */
-async function signValue(value: string, secret: string): Promise<string> {
+async function _signValue(value: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",

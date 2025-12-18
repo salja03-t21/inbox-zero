@@ -9,7 +9,7 @@ export type UserResponse = Awaited<ReturnType<typeof getUser>> | null;
 function maskSecret(secret: string | null): string | null {
   if (!secret) return null;
   if (secret.length <= 4) return "****";
-  return "***" + secret.slice(-4);
+  return `***${secret.slice(-4)}`;
 }
 
 async function getUser({ userId }: { userId: string }) {

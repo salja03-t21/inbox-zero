@@ -158,7 +158,7 @@ describe("isAdmin", () => {
     // Testing current behavior: String.includes finds substrings
     await vi.doMock("@/env", () => ({
       env: {
-        ADMINS: [" " + adminEmail + " ", " " + anotherAdmin + " "],
+        ADMINS: [` ${adminEmail} `, ` ${anotherAdmin} `],
         EMAIL_ENCRYPT_SECRET:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",
@@ -172,7 +172,7 @@ describe("isAdmin", () => {
   it("should handle email match when ADMINS list has extra spaces", async () => {
     await vi.doMock("@/env", () => ({
       env: {
-        ADMINS: ["   " + adminEmail + "    ", "    " + anotherAdmin + "   "],
+        ADMINS: [`   ${adminEmail}    `, `    ${anotherAdmin}   `],
         EMAIL_ENCRYPT_SECRET:
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         EMAIL_ENCRYPT_SALT: "0123456789abcdef0123456789abcdef",

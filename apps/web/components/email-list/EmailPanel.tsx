@@ -1,3 +1,6 @@
+"use client";
+
+import { useId } from "react";
 import { XIcon } from "lucide-react";
 import { ActionButtons } from "@/components/ActionButtons";
 import { Tooltip } from "@/components/Tooltip";
@@ -25,6 +28,7 @@ export function EmailPanel({
 }) {
   const { provider } = useAccount();
   const isPlanning = useIsInAiQueue(row.id);
+  const messageHeadingId = useId();
 
   const lastMessage = row.messages?.[row.messages.length - 1];
 
@@ -35,7 +39,7 @@ export function EmailPanel({
       <div className="sticky border-b border-border p-4 md:flex md:items-center md:justify-between">
         <div className="md:w-0 md:flex-1">
           <h1
-            id="message-heading"
+            id={messageHeadingId}
             className="text-lg font-medium text-foreground"
           >
             {lastMessage.headers.subject}

@@ -70,7 +70,7 @@ function SSOLoginContent() {
       } else {
         setIsAutoLogin(false);
       }
-    } catch (error) {
+    } catch (_error) {
       toastError({
         title: "SSO Sign-in Error",
         description: "An unexpected error occurred. Please try again.",

@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useId } from "react";
 
 interface TabsProps {
   tabs: Tab[];
@@ -21,6 +22,7 @@ interface Tab {
 export function Tabs(props: TabsProps) {
   const { tabs, selected, breakpoint = "sm", onClickTab } = props;
   const router = useRouter();
+  const tabsId = useId();
 
   return (
     <div className="w-full">
@@ -33,11 +35,11 @@ export function Tabs(props: TabsProps) {
           "xl:hidden": breakpoint === "xl",
         })}
       >
-        <label htmlFor="tabs" className="sr-only">
+        <label htmlFor={tabsId} className="sr-only">
           Select a tab
         </label>
         <select
-          id="tabs"
+          id={tabsId}
           name="tabs"
           className="block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
           defaultValue={selected}

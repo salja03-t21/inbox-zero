@@ -1,3 +1,7 @@
+"use client";
+
+import { useId } from "react";
+
 const faqs = [
   {
     question: "Which email providers does Inbox Zero support?",
@@ -72,10 +76,11 @@ const faqs = [
 ];
 
 export function FAQs() {
+  const faqId = useId();
   return (
     <div
       className="mx-auto max-w-2xl divide-y divide-gray-900/10 px-6 pb-8 sm:pb-24 sm:pt-12 lg:max-w-7xl lg:px-8 lg:pb-32"
-      id="faq"
+      id={faqId}
     >
       <h2 className="font-cal text-2xl leading-10 text-gray-900">
         Frequently asked questions

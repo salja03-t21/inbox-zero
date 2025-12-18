@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { FormSection, FormSectionLeft } from "@/components/Form";
@@ -22,8 +22,9 @@ export function EmailUpdatesSection({
   summaryEmailFrequency: Frequency;
   mutate: () => void;
 }) {
+  const sectionId = useId();
   return (
-    <FormSection id="email-updates">
+    <FormSection id={sectionId}>
       <FormSectionLeft
         title="Email Updates"
         description="Get a weekly digest of items that need your attention."
