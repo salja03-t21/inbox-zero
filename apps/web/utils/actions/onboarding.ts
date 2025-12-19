@@ -79,12 +79,20 @@ export const saveOnboardingAnswersAction = actionClientUser
 
         // Extract other single choice/text answers - only set if not undefined/null/empty
         const roleAnswer = getAnswerByKey("role");
-        if (roleAnswer && roleAnswer !== "undefined") {
+        if (
+          roleAnswer &&
+          typeof roleAnswer === "string" &&
+          roleAnswer !== "undefined"
+        ) {
           result.surveyRole = roleAnswer;
         }
 
         const goalAnswer = getAnswerByKey("goal");
-        if (goalAnswer && goalAnswer !== "undefined") {
+        if (
+          goalAnswer &&
+          typeof goalAnswer === "string" &&
+          goalAnswer !== "undefined"
+        ) {
           result.surveyGoal = goalAnswer;
         }
 
@@ -97,12 +105,20 @@ export const saveOnboardingAnswersAction = actionClientUser
         }
 
         const sourceAnswer = getAnswerByKey("source");
-        if (sourceAnswer && sourceAnswer !== "undefined") {
+        if (
+          sourceAnswer &&
+          typeof sourceAnswer === "string" &&
+          sourceAnswer !== "undefined"
+        ) {
           result.surveySource = sourceAnswer;
         }
 
         const improvementsAnswer = getAnswerByKey("improvements");
-        if (improvementsAnswer && improvementsAnswer !== "undefined") {
+        if (
+          improvementsAnswer &&
+          typeof improvementsAnswer === "string" &&
+          improvementsAnswer !== "undefined"
+        ) {
           result.surveyImprovements = improvementsAnswer;
         }
 
