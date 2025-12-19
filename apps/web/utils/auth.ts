@@ -428,13 +428,16 @@ async function handleSignIn({
   }
 
   if (isNewUser && user.email && user.id) {
+    // Handle pending invite first (might connect user to existing premium)
+    await handlePendingPremiumInvite({ email: user.email });
+
+    // Then create premium if user still doesn't have one, and handle referral
     await Promise.all([
-      handlePendingPremiumInvite({ email: user.email }),
       handleReferralOnSignUp({
         userId: user.id,
         email: user.email,
       }),
-      // Automatically create premium for all new users
+      // Automatically create premium for all new users (checks if already has premium)
       createAutoPremiumForNewUser({ userId: user.id }),
     ]);
   }
