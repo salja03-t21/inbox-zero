@@ -51,13 +51,18 @@ export function useQueueState() {
   return useAtomValue(queueAtom);
 }
 
+type ActionResult = {
+  serverError?: string;
+  error?: string;
+} | void;
+
 type ActionFunction = ({
   threadId,
   labelId,
 }: {
   threadId: string;
   labelId?: string;
-}) => Promise<unknown>;
+}) => Promise<ActionResult>;
 
 const addThreadsToQueue = ({
   actionType,
