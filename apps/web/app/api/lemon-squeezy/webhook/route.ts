@@ -150,10 +150,14 @@ async function subscriptionCreated({
   const email = getEmailFromPremium(updatedPremium);
   if (email) {
     try {
+      const attributes = payload.data.attributes as unknown as Record<
+        string,
+        unknown
+      >;
       await Promise.allSettled([
         payload.data.attributes.status === "on_trial"
-          ? trackTrialStarted(email, payload.data.attributes)
-          : trackUpgradedToPremium(email, payload.data.attributes),
+          ? trackTrialStarted(email, attributes)
+          : trackUpgradedToPremium(email, attributes),
         startedTrial(email, tier),
       ]);
     } catch (error) {
@@ -190,11 +194,15 @@ async function subscriptionPlanChanged({
   const email = getEmailFromPremium(updatedPremium);
   if (email) {
     try {
+      const attributes = payload.data.attributes as unknown as Record<
+        string,
+        unknown
+      >;
       await Promise.allSettled([
         trackSwitchedPremiumPlan(
           email,
           payload.data.attributes.status,
-          payload.data.attributes,
+          attributes,
         ),
         switchedPremiumPlan(email, tier),
       ]);
@@ -271,13 +279,17 @@ async function subscriptionUpdated({
   const email = getEmailFromPremium(updatedPremium);
 
   if (email) {
+    const attributes = payload.data.attributes as unknown as Record<
+      string,
+      unknown
+    >;
     if (payload.data.attributes.status === "on_trial") {
-      await trackSubscriptionTrialStarted(email, payload.data.attributes);
+      await trackSubscriptionTrialStarted(email, attributes);
     } else {
       await trackSubscriptionCustom(
         email,
         payload.data.attributes.status,
-        payload.data.attributes,
+        attributes,
       );
     }
   }
