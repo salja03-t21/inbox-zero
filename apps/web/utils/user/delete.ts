@@ -30,7 +30,7 @@ export async function deleteUser({ userId }: { userId: string }) {
     },
   });
 
-  const resourcesPromise: Promise<void>[] = [];
+  const resourcesPromise: Promise<unknown>[] = [];
   for (const account of accounts) {
     for (const emailAccount of account.emailAccounts) {
       // Create email provider for unwatching
