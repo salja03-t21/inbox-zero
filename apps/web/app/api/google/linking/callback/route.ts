@@ -73,7 +73,9 @@ export const GET = withError(async (request) => {
       }
       payload = verifiedPayload;
     } catch (err: unknown) {
-      logger.error("ID token verification failed using googleAuth:", err);
+      logger.error("ID token verification failed using googleAuth:", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       const message = err instanceof Error ? err.message : String(err);
       throw new Error(`ID token verification failed: ${message}`);
     }
