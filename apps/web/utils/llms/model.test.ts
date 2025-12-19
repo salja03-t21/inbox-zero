@@ -86,6 +86,7 @@ describe("Models", () => {
         aiApiKey: null,
         aiProvider: null,
         aiModel: null,
+        aiBaseUrl: null,
       };
 
       const result = getModel(userAi);
@@ -98,6 +99,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: Provider.GOOGLE,
         aiModel: Model.GEMINI_1_5_PRO,
+        aiBaseUrl: null,
       };
 
       const result = getModel(userAi);
@@ -110,6 +112,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: null,
         aiModel: null,
+        aiBaseUrl: null,
       };
 
       const result = getModel(userAi);
@@ -122,6 +125,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: Provider.GOOGLE,
         aiModel: Model.GEMINI_1_5_PRO,
+        aiBaseUrl: null,
       };
 
       const result = getModel(userAi);
@@ -135,6 +139,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: Provider.GROQ,
         aiModel: Model.GROQ_LLAMA_3_3_70B,
+        aiBaseUrl: null,
       };
 
       const result = getModel(userAi);
@@ -148,6 +153,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: Provider.OPENROUTER,
         aiModel: Model.GROQ_LLAMA_3_3_70B,
+        aiBaseUrl: null,
       };
 
       const result = getModel(userAi);
@@ -174,6 +180,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: Provider.ANTHROPIC,
         aiModel: Model.CLAUDE_3_7_SONNET_ANTHROPIC,
+        aiBaseUrl: null,
       };
 
       vi.mocked(env).BEDROCK_ACCESS_KEY = "";
@@ -190,6 +197,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: Provider.ANTHROPIC,
         aiModel: Model.CLAUDE_3_7_SONNET_BEDROCK,
+        aiBaseUrl: null,
       };
 
       vi.mocked(env).BEDROCK_ACCESS_KEY = "test-bedrock-key";
@@ -206,6 +214,7 @@ describe("Models", () => {
         aiApiKey: "user-api-key",
         aiProvider: "unsupported" as any,
         aiModel: "some-model",
+        aiBaseUrl: null,
       };
 
       expect(() => getModel(userAi)).toThrow("LLM provider not supported");
@@ -253,6 +262,7 @@ describe("Models", () => {
         aiApiKey: null,
         aiProvider: null,
         aiModel: null,
+        aiBaseUrl: null,
       };
 
       vi.mocked(env).ECONOMY_LLM_PROVIDER = "openrouter";
@@ -270,6 +280,7 @@ describe("Models", () => {
         aiApiKey: null,
         aiProvider: null,
         aiModel: null,
+        aiBaseUrl: null,
       };
 
       vi.mocked(env).ECONOMY_LLM_PROVIDER = "openrouter";
@@ -292,6 +303,7 @@ describe("Models", () => {
         aiApiKey: null,
         aiProvider: null,
         aiModel: null,
+        aiBaseUrl: null,
       };
 
       const result = getModel(userAi, "default");
@@ -304,6 +316,7 @@ describe("Models", () => {
         aiApiKey: null,
         aiProvider: null,
         aiModel: null,
+        aiBaseUrl: null,
       };
 
       vi.mocked(env).DEFAULT_LLM_PROVIDER = "openrouter";

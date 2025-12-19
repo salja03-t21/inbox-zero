@@ -31,7 +31,12 @@ describe.runIf(isAiTest)(
           aiModel: null,
           aiProvider: null,
           aiApiKey: null,
+          aiBaseUrl: null,
         },
+        account: {
+          provider: "google",
+        },
+        multiRuleSelectionEnabled: false,
         ...overrides,
       };
     }

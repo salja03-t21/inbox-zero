@@ -186,6 +186,7 @@ function getAction(action: Partial<Action> = {}): Action {
     delayInMinutes: null,
     folderName: null,
     folderId: null,
+    labelId: null,
     ...action,
   };
 }

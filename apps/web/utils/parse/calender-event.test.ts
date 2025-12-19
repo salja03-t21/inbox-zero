@@ -168,6 +168,8 @@ const createTestEmail = (
   threadId: "test-thread-id",
   historyId: "test-history-id",
   snippet: "",
+  subject: "",
+  date: "",
   headers: {
     subject: "",
     from: "",

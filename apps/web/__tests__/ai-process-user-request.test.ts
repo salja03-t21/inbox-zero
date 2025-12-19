@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import stripIndent from "strip-indent";
 import { processUserRequest } from "@/utils/ai/assistant/process-user-request";
 import type { ParsedMessage, ParsedMessageHeaders } from "@/utils/types";
-import type { RuleWithRelations } from "@/utils/ai/rule/create-prompt-from-rule";
+import type { RuleWithRelations } from "@/utils/rule/types";
 import type { Category, GroupItem, Prisma } from "@prisma/client";
 import { GroupItemType, LogicalOperator } from "@prisma/client";
 import { getEmailAccount } from "@/__tests__/helpers";
@@ -13,6 +13,14 @@ const isAiTest = process.env.RUN_AI_TESTS === "true";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/utils/gmail/mail", () => ({ replyToEmail: vi.fn() }));
+
+// Helper to safely get tool input from tool calls
+// biome-ignore lint/suspicious/noExplicitAny: test helper
+function getToolInput(toolCall: unknown): any {
+  if (!toolCall || typeof toolCall !== "object") return undefined;
+  const tc = toolCall as { input?: unknown; args?: unknown };
+  return tc.input ?? tc.args;
+}
 
 describe(
   "processUserRequest",
@@ -56,19 +64,19 @@ describe(
         ],
         originalEmail,
         matchedRule: rule,
-        categories: null,
-        senderCategory: null,
       });
 
       expect(result).toBeDefined();
 
-      const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolCalls = result.steps
+        .flatMap((step) => step.toolCalls ?? [])
+        .filter(Boolean);
       const updateInstructionsToolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "update_ai_instructions",
+        (toolCall) => toolCall!.toolName === "update_ai_instructions",
       );
 
       expect(updateInstructionsToolCall).toBeDefined();
-      expect(updateInstructionsToolCall?.args.ruleName).toBe(
+      expect(getToolInput(updateInstructionsToolCall)?.ruleName).toBe(
         "Partnership Rule",
       );
     });
@@ -109,16 +117,16 @@ describe(
         ],
         originalEmail,
         matchedRule: ruleUrgent,
-        categories: null,
-        senderCategory: null,
       });
 
       expect(result).toBeDefined();
 
-      const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolCalls = result.steps
+        .flatMap((step) => step.toolCalls ?? [])
+        .filter(Boolean);
 
       const toolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "update_ai_instructions",
+        (toolCall) => toolCall!.toolName === "update_ai_instructions",
       );
 
       expect(toolCall).toBeDefined();
@@ -154,26 +162,26 @@ describe(
         ],
         originalEmail,
         matchedRule: rule,
-        categories: null,
-        senderCategory: null,
       });
 
-      const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolCalls = result.steps
+        .flatMap((step) => step.toolCalls ?? [])
+        .filter(Boolean);
       const updateStaticConditionsToolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "update_static_conditions",
+        (toolCall) => toolCall!.toolName === "update_static_conditions",
       );
 
       expect(updateStaticConditionsToolCall).toBeDefined();
-      expect(updateStaticConditionsToolCall?.args.ruleName).toBe(
+      expect(getToolInput(updateStaticConditionsToolCall)?.ruleName).toBe(
         "Receipt Rule",
       );
       expect(
-        updateStaticConditionsToolCall?.args.staticConditions?.subject?.includes(
-          "shipping",
-        ) ||
-          updateStaticConditionsToolCall?.args.staticConditions?.subject?.includes(
-            "Shipped",
-          ),
+        getToolInput(
+          updateStaticConditionsToolCall,
+        )?.staticConditions?.subject?.includes("shipping") ||
+          getToolInput(
+            updateStaticConditionsToolCall,
+          )?.staticConditions?.subject?.includes("Shipped"),
       ).toBe(true);
     });
 
@@ -229,17 +237,19 @@ describe(
         ],
         originalEmail,
         matchedRule: rule,
-        categories: null,
-        senderCategory: null,
       });
 
-      const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolCalls = result.steps
+        .flatMap((step) => step.toolCalls ?? [])
+        .filter(Boolean);
       const removeFromGroupToolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "remove_from_group",
+        (toolCall) => toolCall!.toolName === "remove_from_group",
       );
 
       expect(removeFromGroupToolCall).toBeDefined();
-      expect(removeFromGroupToolCall?.args.value).toBe("david@hello.com");
+      expect(getToolInput(removeFromGroupToolCall)?.value).toBe(
+        "david@hello.com",
+      );
     });
 
     test("should suggest adding sender to group when identified as missing", async () => {
@@ -291,18 +301,20 @@ describe(
         ],
         originalEmail,
         matchedRule: null, // Important: rule didn't match initially
-        categories: null,
-        senderCategory: null,
       });
 
-      const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolCalls = result.steps
+        .flatMap((step) => step.toolCalls ?? [])
+        .filter(Boolean);
       const addToGroupToolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "add_to_group",
+        (toolCall) => toolCall!.toolName === "add_to_group",
       );
 
       expect(addToGroupToolCall).toBeDefined();
-      expect(addToGroupToolCall?.args.type).toBe("from");
-      expect(addToGroupToolCall?.args.value).toContain("convertkit.com");
+      expect(getToolInput(addToGroupToolCall)?.type).toBe("from");
+      expect(getToolInput(addToGroupToolCall)?.value).toContain(
+        "convertkit.com",
+      );
     });
 
     test("should fix category filters when user indicates wrong categorization", async () => {
@@ -314,7 +326,6 @@ describe(
       const rule = getRule({
         name: "Marketing Rule",
         categoryFilterType: "INCLUDE",
-        categoryFilters: [marketingCategory],
       });
 
       const originalEmail = getParsedMessage({
@@ -336,21 +347,19 @@ describe(
         ],
         originalEmail,
         matchedRule: rule,
-        categories: [
-          { id: "1", name: "Marketing" },
-          { id: "2", name: "Sales" },
-          { id: "3", name: "Newsletter" },
-        ],
-        senderCategory: "Marketing",
       });
 
-      const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolCalls = result.steps
+        .flatMap((step) => step.toolCalls ?? [])
+        .filter(Boolean);
       const updateSenderCategoryToolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "update_sender_category",
+        (toolCall) => toolCall!.toolName === "update_sender_category",
       );
 
       expect(updateSenderCategoryToolCall).toBeDefined();
-      expect(updateSenderCategoryToolCall?.args.category).toBe("Sales");
+      expect(getToolInput(updateSenderCategoryToolCall)?.category).toBe(
+        "Sales",
+      );
     });
 
     test("should handle complex rule fixes with multiple condition types", async () => {
@@ -364,7 +373,6 @@ describe(
         instructions: "Match sales opportunities",
         from: "@enterprise.com",
         subject: "Business opportunity",
-        categoryFilters: [salesCategory],
         categoryFilterType: "INCLUDE",
       });
 
@@ -388,31 +396,31 @@ describe(
         ],
         originalEmail,
         matchedRule: rule,
-        categories: [
-          { id: "1", name: "Marketing" },
-          { id: "2", name: "Sales" },
-          { id: "3", name: "Newsletter" },
-        ],
-        senderCategory: "Marketing",
       });
 
-      const toolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolCalls = result.steps
+        .flatMap((step) => step.toolCalls ?? [])
+        .filter(Boolean);
 
       const updateStaticConditionsToolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "update_static_conditions",
+        (toolCall) => toolCall!.toolName === "update_static_conditions",
       );
       const updateAiInstructionsToolCall = toolCalls.find(
-        (toolCall) => toolCall.toolName === "update_ai_instructions",
+        (toolCall) => toolCall!.toolName === "update_ai_instructions",
       );
 
       expect(
         updateStaticConditionsToolCall || updateAiInstructionsToolCall,
       ).toBeDefined();
       if (updateStaticConditionsToolCall) {
-        expect(updateStaticConditionsToolCall.args.ruleName).toBe("Sales Rule");
+        expect(getToolInput(updateStaticConditionsToolCall)?.ruleName).toBe(
+          "Sales Rule",
+        );
       }
       if (updateAiInstructionsToolCall) {
-        expect(updateAiInstructionsToolCall.args.ruleName).toBe("Sales Rule");
+        expect(getToolInput(updateAiInstructionsToolCall)?.ruleName).toBe(
+          "Sales Rule",
+        );
       }
     });
   },
@@ -436,7 +444,6 @@ function getRule(rule: Partial<RuleWithRelations>): RuleWithRelations {
     group: null,
     groupId: null,
     // category conditions
-    categoryFilters: [],
     categoryFilterType: null,
 
     // other
@@ -447,6 +454,7 @@ function getRule(rule: Partial<RuleWithRelations>): RuleWithRelations {
     createdAt: new Date(),
     updatedAt: new Date(),
     systemType: null,
+    promptText: null,
     ...rule,
   };
 }
@@ -462,10 +470,11 @@ function getParsedMessage(
     snippet: "",
     attachments: [],
     historyId: "history-id",
-    sizeEstimate: 100,
     internalDate: new Date().toISOString(),
     inline: [],
     textPlain: "",
+    subject: message.headers?.subject ?? "",
+    date: message.headers?.date ?? new Date().toISOString(),
     ...message,
     headers: {
       from: "test@example.com",
@@ -501,6 +510,7 @@ function getGroupItem(item: Partial<GroupItem>): GroupItem {
     id: "id",
     value: "",
     type: GroupItemType.FROM,
+    exclude: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     groupId: "group1",

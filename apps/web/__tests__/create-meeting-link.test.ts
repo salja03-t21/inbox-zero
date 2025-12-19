@@ -39,7 +39,7 @@ describe("Create Meeting Link", () => {
   describe("Google accounts", () => {
     beforeEach(async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: {
           provider: "google",
@@ -51,7 +51,7 @@ describe("Create Meeting Link", () => {
       const { createGoogleMeetConferenceData } = await import(
         "@/utils/meetings/providers/google-meet"
       );
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/abc-defg-hij",
         conferenceData: {
@@ -85,10 +85,10 @@ describe("Create Meeting Link", () => {
       const { createGoogleMeetConferenceData } = await import(
         "@/utils/meetings/providers/google-meet"
       );
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/xyz-uvw-rst",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -107,10 +107,10 @@ describe("Create Meeting Link", () => {
       const { createGoogleMeetConferenceData } = await import(
         "@/utils/meetings/providers/google-meet"
       );
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/fallback",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -129,10 +129,10 @@ describe("Create Meeting Link", () => {
       const { createGoogleMeetConferenceData } = await import(
         "@/utils/meetings/providers/google-meet"
       );
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/zoom-fallback",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -165,7 +165,7 @@ describe("Create Meeting Link", () => {
   describe("Microsoft accounts", () => {
     beforeEach(async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: {
           provider: "microsoft",
@@ -177,7 +177,7 @@ describe("Create Meeting Link", () => {
       const { createTeamsMeeting } = await import(
         "@/utils/meetings/providers/teams"
       );
-      createTeamsMeeting.mockResolvedValue({
+      vi.mocked(createTeamsMeeting).mockResolvedValue({
         provider: "teams",
         joinUrl: "https://teams.microsoft.com/l/meetup/abc123",
         conferenceData: {
@@ -208,10 +208,10 @@ describe("Create Meeting Link", () => {
       const { createTeamsMeeting } = await import(
         "@/utils/meetings/providers/teams"
       );
-      createTeamsMeeting.mockResolvedValue({
+      vi.mocked(createTeamsMeeting).mockResolvedValue({
         provider: "teams",
         joinUrl: "https://teams.microsoft.com/l/meetup/default",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -230,10 +230,10 @@ describe("Create Meeting Link", () => {
       const { createTeamsMeeting } = await import(
         "@/utils/meetings/providers/teams"
       );
-      createTeamsMeeting.mockResolvedValue({
+      vi.mocked(createTeamsMeeting).mockResolvedValue({
         provider: "teams",
         joinUrl: "https://teams.microsoft.com/l/meetup/fallback",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -252,10 +252,10 @@ describe("Create Meeting Link", () => {
       const { createTeamsMeeting } = await import(
         "@/utils/meetings/providers/teams"
       );
-      createTeamsMeeting.mockResolvedValue({
+      vi.mocked(createTeamsMeeting).mockResolvedValue({
         provider: "teams",
         joinUrl: "https://teams.microsoft.com/l/meetup/zoom-fallback",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -288,7 +288,7 @@ describe("Create Meeting Link", () => {
   describe("Error handling", () => {
     test("throws error when email account not found", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue(null);
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue(null);
 
       await expect(
         createMeetingLink({
@@ -303,7 +303,7 @@ describe("Create Meeting Link", () => {
 
     test("falls back to Teams for unknown provider types", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: {
           provider: "unknown-provider", // Will be treated as Microsoft
@@ -316,7 +316,7 @@ describe("Create Meeting Link", () => {
       vi.mocked(createTeamsMeeting).mockResolvedValue({
         provider: "teams",
         joinUrl: "https://teams.microsoft.com/l/meetup/test-meeting-id",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -336,7 +336,7 @@ describe("Create Meeting Link", () => {
   describe("Provider compatibility", () => {
     test("Google account: Google Meet is compatible", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "google" },
       } as any);
@@ -344,10 +344,10 @@ describe("Create Meeting Link", () => {
       const { createGoogleMeetConferenceData } = await import(
         "@/utils/meetings/providers/google-meet"
       );
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/compatible",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -364,7 +364,7 @@ describe("Create Meeting Link", () => {
 
     test("Microsoft account: Teams is compatible", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "microsoft" },
       } as any);
@@ -372,10 +372,10 @@ describe("Create Meeting Link", () => {
       const { createTeamsMeeting } = await import(
         "@/utils/meetings/providers/teams"
       );
-      createTeamsMeeting.mockResolvedValue({
+      vi.mocked(createTeamsMeeting).mockResolvedValue({
         provider: "teams",
         joinUrl: "https://teams.microsoft.com/compatible",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -392,7 +392,7 @@ describe("Create Meeting Link", () => {
 
     test("Google account: Teams is not compatible, falls back", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "google" },
       } as any);
@@ -404,10 +404,10 @@ describe("Create Meeting Link", () => {
         "@/utils/meetings/providers/teams"
       );
 
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/fallback",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -425,7 +425,7 @@ describe("Create Meeting Link", () => {
 
     test("Microsoft account: Google Meet is not compatible, falls back", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "microsoft" },
       } as any);
@@ -437,10 +437,10 @@ describe("Create Meeting Link", () => {
         "@/utils/meetings/providers/google-meet"
       );
 
-      createTeamsMeeting.mockResolvedValue({
+      vi.mocked(createTeamsMeeting).mockResolvedValue({
         provider: "teams",
         joinUrl: "https://teams.microsoft.com/fallback",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const result = await createMeetingLink({
@@ -460,7 +460,7 @@ describe("Create Meeting Link", () => {
   describe("Meeting details", () => {
     test("passes subject correctly", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "google" },
       } as any);
@@ -468,10 +468,10 @@ describe("Create Meeting Link", () => {
       const { createGoogleMeetConferenceData } = await import(
         "@/utils/meetings/providers/google-meet"
       );
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/test",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       await createMeetingLink({
@@ -491,7 +491,7 @@ describe("Create Meeting Link", () => {
 
     test("passes datetime correctly", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "google" },
       } as any);
@@ -499,10 +499,10 @@ describe("Create Meeting Link", () => {
       const { createGoogleMeetConferenceData } = await import(
         "@/utils/meetings/providers/google-meet"
       );
-      createGoogleMeetConferenceData.mockResolvedValue({
+      vi.mocked(createGoogleMeetConferenceData).mockResolvedValue({
         provider: "google-meet",
         joinUrl: "https://meet.google.com/test",
-        conferenceData: null,
+        conferenceData: undefined,
       });
 
       const startTime = new Date("2024-03-20T10:00:00Z");

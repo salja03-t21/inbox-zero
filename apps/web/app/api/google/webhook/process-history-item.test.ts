@@ -153,6 +153,7 @@ describe("processHistoryItem", () => {
     return {
       ...getEmailAccount(),
       autoCategorizeSenders: false,
+      meetingSchedulerEnabled: false,
     };
   }
 

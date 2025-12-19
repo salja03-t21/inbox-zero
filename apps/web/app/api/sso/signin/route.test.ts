@@ -96,8 +96,11 @@ describe.skip("SSO Signin Route", () => {
 
   describe("Organization-based provider lookup", () => {
     test("should find provider by organization slug", async () => {
-      const mockSignInSSOResponse = { url: "https://sso.example.com/signin" };
-      mockBetterAuthConfig.api.signInSSO.mockResolvedValue(
+      const mockSignInSSOResponse = {
+        url: "https://sso.example.com/signin",
+        redirect: true,
+      };
+      vi.mocked(mockBetterAuthConfig.api.signInSSO).mockResolvedValue(
         mockSignInSSOResponse,
       );
 
@@ -185,7 +188,7 @@ describe.skip("SSO Signin Route", () => {
       } as any);
 
       // Mock betterAuth to throw an error
-      mockBetterAuthConfig.api.signInSSO.mockRejectedValue(
+      vi.mocked(mockBetterAuthConfig.api.signInSSO).mockRejectedValue(
         new Error("SSO service unavailable"),
       );
 
@@ -203,8 +206,9 @@ describe.skip("SSO Signin Route", () => {
     test("should return correct response structure on success", async () => {
       const mockSignInSSOResponse = {
         url: "https://sso.example.com/signin?token=abc123",
+        redirect: true,
       };
-      mockBetterAuthConfig.api.signInSSO.mockResolvedValue(
+      vi.mocked(mockBetterAuthConfig.api.signInSSO).mockResolvedValue(
         mockSignInSSOResponse,
       );
 
@@ -229,8 +233,11 @@ describe.skip("SSO Signin Route", () => {
     });
 
     test("should log SSO sign-in request", async () => {
-      const mockSignInSSOResponse = { url: "https://sso.example.com/signin" };
-      mockBetterAuthConfig.api.signInSSO.mockResolvedValue(
+      const mockSignInSSOResponse = {
+        url: "https://sso.example.com/signin",
+        redirect: true,
+      };
+      vi.mocked(mockBetterAuthConfig.api.signInSSO).mockResolvedValue(
         mockSignInSSOResponse,
       );
 
@@ -278,8 +285,11 @@ describe.skip("SSO Signin Route", () => {
 
   describe("betterAuthConfig integration", () => {
     test("should call betterAuthConfig.api.signInSSO with correct parameters", async () => {
-      const mockSignInSSOResponse = { url: "https://sso.example.com/signin" };
-      mockBetterAuthConfig.api.signInSSO.mockResolvedValue(
+      const mockSignInSSOResponse = {
+        url: "https://sso.example.com/signin",
+        redirect: true,
+      };
+      vi.mocked(mockBetterAuthConfig.api.signInSSO).mockResolvedValue(
         mockSignInSSOResponse,
       );
 
@@ -315,7 +325,7 @@ describe.skip("SSO Signin Route", () => {
       } as any);
 
       // Mock betterAuth to throw an error
-      mockBetterAuthConfig.api.signInSSO.mockRejectedValue(
+      vi.mocked(mockBetterAuthConfig.api.signInSSO).mockRejectedValue(
         new Error("SSO service unavailable"),
       );
 

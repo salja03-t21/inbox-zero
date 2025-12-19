@@ -250,7 +250,13 @@ describe("Clean Functions", () => {
         id: "msg-1",
         threadId: "thread-456",
         attachments: [
-          { filename: "document.pdf", mimeType: "application/pdf" },
+          {
+            filename: "document.pdf",
+            mimeType: "application/pdf",
+            size: 1024,
+            attachmentId: "att-1",
+            headers: {} as any,
+          },
         ],
         headers: {
           from: "sender@example.com",
@@ -311,7 +317,6 @@ describe("Clean Functions", () => {
     it("should run AI clean when static rules don't match", async () => {
       vi.mocked(aiClean).mockResolvedValue({
         archive: true,
-        reason: "Promotional email",
       });
 
       const mockEmailAccount = { id: "account-123" };
@@ -427,7 +432,7 @@ describe("Clean Functions", () => {
       const client = await getGmailClientWithRefresh({
         accessToken: "token",
         refreshToken: "refresh",
-        expiresAt: new Date(),
+        expiresAt: Date.now() + 3600000,
         emailAccountId: "account-123",
       });
 
@@ -470,7 +475,7 @@ describe("Clean Functions", () => {
       const client = await getOutlookClientWithRefresh({
         accessToken: "token",
         refreshToken: "refresh",
-        expiresAt: new Date(),
+        expiresAt: Date.now() + 3600000,
         emailAccountId: "account-123",
       });
 

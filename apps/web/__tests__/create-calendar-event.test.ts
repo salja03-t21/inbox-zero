@@ -70,7 +70,7 @@ describe("Create Calendar Event", () => {
       const prisma = (await import("@/utils/prisma")).default;
 
       // Mock email account
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: {
           provider: "google",
@@ -78,7 +78,7 @@ describe("Create Calendar Event", () => {
       } as any);
 
       // Mock calendar connection
-      prisma.calendarConnection.findFirst.mockResolvedValue({
+      vi.mocked(prisma.calendarConnection.findFirst).mockResolvedValue({
         id: "calendar-connection-id",
         accessToken: "google-access-token",
         refreshToken: "google-refresh-token",
@@ -105,7 +105,9 @@ describe("Create Calendar Event", () => {
           }),
         },
       };
-      getCalendarClientWithRefresh.mockResolvedValue(mockCalendarClient as any);
+      vi.mocked(getCalendarClientWithRefresh).mockResolvedValue(
+        mockCalendarClient as any,
+      );
     });
 
     test("creates event with basic details", async () => {
@@ -202,7 +204,10 @@ describe("Create Calendar Event", () => {
       vi.mocked(getCalendarClientWithRefresh);
       const mockClient = await getCalendarClientWithRefresh(null as any);
 
-      const insertCall = mockClient.events.insert.mock.calls[0][0];
+      const insertCall = vi.mocked(mockClient.events.insert).mock
+        .calls[0][0] as unknown as {
+        requestBody: { description: string };
+      };
       const description = insertCall.requestBody.description;
 
       expect(description).toContain("Review Q1 goals");
@@ -299,7 +304,7 @@ describe("Create Calendar Event", () => {
       const prisma = (await import("@/utils/prisma")).default;
 
       // Mock email account
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: {
           provider: "microsoft",
@@ -307,7 +312,7 @@ describe("Create Calendar Event", () => {
       } as any);
 
       // Mock calendar connection
-      prisma.calendarConnection.findFirst.mockResolvedValue({
+      vi.mocked(prisma.calendarConnection.findFirst).mockResolvedValue({
         id: "calendar-connection-id",
         accessToken: "microsoft-access-token",
         refreshToken: "microsoft-refresh-token",
@@ -332,7 +337,9 @@ describe("Create Calendar Event", () => {
           }),
         }),
       };
-      getCalendarClientWithRefresh.mockResolvedValue(mockCalendarClient as any);
+      vi.mocked(getCalendarClientWithRefresh).mockResolvedValue(
+        mockCalendarClient as any,
+      );
     });
 
     const teamsMeetingLink: MeetingLinkResult = {
@@ -444,7 +451,7 @@ describe("Create Calendar Event", () => {
       const mockClient = await getCalendarClientWithRefresh(null as any);
       const mockApi = mockClient.api("/me/events");
 
-      const postCall = mockApi.post.mock.calls[0][0];
+      const postCall = vi.mocked(mockApi.post).mock.calls[0][0];
       const bodyContent = postCall.body.content;
 
       expect(bodyContent).toContain("Review Q1 goals");
@@ -485,7 +492,7 @@ describe("Create Calendar Event", () => {
 
     test("uses correct endpoint for non-primary calendar", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.calendarConnection.findFirst.mockResolvedValue({
+      vi.mocked(prisma.calendarConnection.findFirst).mockResolvedValue({
         id: "calendar-connection-id",
         accessToken: "microsoft-access-token",
         refreshToken: "microsoft-refresh-token",
@@ -521,7 +528,7 @@ describe("Create Calendar Event", () => {
   describe("Error handling", () => {
     test("throws error when email account not found", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue(null);
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue(null);
 
       await expect(
         createCalendarEvent({
@@ -537,11 +544,11 @@ describe("Create Calendar Event", () => {
 
     test("throws error when calendar connection not found", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "google" },
       } as any);
-      prisma.calendarConnection.findFirst.mockResolvedValue(null);
+      vi.mocked(prisma.calendarConnection.findFirst).mockResolvedValue(null);
 
       await expect(
         createCalendarEvent({
@@ -557,11 +564,11 @@ describe("Create Calendar Event", () => {
 
     test("throws error when tokens are missing", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "google" },
       } as any);
-      prisma.calendarConnection.findFirst.mockResolvedValue({
+      vi.mocked(prisma.calendarConnection.findFirst).mockResolvedValue({
         id: "calendar-connection-id",
         accessToken: null,
         refreshToken: null,
@@ -583,11 +590,11 @@ describe("Create Calendar Event", () => {
 
     test("handles Google Calendar API errors", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "google" },
       } as any);
-      prisma.calendarConnection.findFirst.mockResolvedValue({
+      vi.mocked(prisma.calendarConnection.findFirst).mockResolvedValue({
         id: "calendar-connection-id",
         accessToken: "token",
         refreshToken: "refresh",
@@ -604,7 +611,9 @@ describe("Create Calendar Event", () => {
           insert: vi.fn().mockRejectedValue(new Error("Calendar API error")),
         },
       };
-      getCalendarClientWithRefresh.mockResolvedValue(mockClient as any);
+      vi.mocked(getCalendarClientWithRefresh).mockResolvedValue(
+        mockClient as any,
+      );
 
       await expect(
         createCalendarEvent({
@@ -620,11 +629,11 @@ describe("Create Calendar Event", () => {
 
     test("handles Microsoft Calendar API errors", async () => {
       const prisma = (await import("@/utils/prisma")).default;
-      prisma.emailAccount.findUnique.mockResolvedValue({
+      vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
         id: "email-account-id",
         account: { provider: "microsoft" },
       } as any);
-      prisma.calendarConnection.findFirst.mockResolvedValue({
+      vi.mocked(prisma.calendarConnection.findFirst).mockResolvedValue({
         id: "calendar-connection-id",
         accessToken: "token",
         refreshToken: "refresh",
@@ -641,7 +650,9 @@ describe("Create Calendar Event", () => {
           post: vi.fn().mockRejectedValue(new Error("Outlook API error")),
         }),
       };
-      getCalendarClientWithRefresh.mockResolvedValue(mockClient as any);
+      vi.mocked(getCalendarClientWithRefresh).mockResolvedValue(
+        mockClient as any,
+      );
 
       await expect(
         createCalendarEvent({
@@ -652,7 +663,7 @@ describe("Create Calendar Event", () => {
           meetingLink: {
             provider: "teams",
             joinUrl: "https://teams.microsoft.com/abc",
-            conferenceData: null,
+            conferenceData: undefined,
           },
           timezone: "UTC",
         }),

@@ -109,6 +109,7 @@ describe("executor", () => {
         automated: true,
         reason: null,
         ruleId: null,
+        matchMetadata: null,
       });
 
       const { runActionFunction } = await import("@/utils/ai/actions");

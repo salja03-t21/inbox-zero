@@ -43,6 +43,8 @@ describe("validateWebhookAccount", () => {
       lastSyncedHistoryId: null,
       autoCategorizeSenders: false,
       watchEmailsSubscriptionId: "subscription-id",
+      multiRuleSelectionEnabled: false,
+      meetingSchedulerEnabled: false,
       account: {
         provider: "google",
         access_token: "access-token",
@@ -55,7 +57,6 @@ describe("validateWebhookAccount", () => {
           name: "Test Rule",
           instructions: "Test instructions",
           actions: [],
-          categoryFilters: [],
           createdAt: new Date(),
           updatedAt: new Date(),
           enabled: true,
@@ -77,6 +78,7 @@ describe("validateWebhookAccount", () => {
         aiProvider: null,
         aiModel: null,
         aiApiKey: null,
+        aiBaseUrl: null,
         premium: {
           lemonSqueezyRenewsAt: new Date(Date.now() + 86_400_000), // Tomorrow
           stripeSubscriptionStatus: "active",
@@ -105,6 +107,7 @@ describe("validateWebhookAccount", () => {
           aiProvider: null,
           aiModel: null,
           aiApiKey: null,
+          aiBaseUrl: null,
           premium: null,
         },
       });

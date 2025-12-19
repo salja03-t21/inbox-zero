@@ -160,6 +160,7 @@ describe("Inngest Integration Tests", () => {
       vi.mocked(processEmail).mockResolvedValue({
         success: true,
         skipped: false,
+        rulesMatched: 1,
       });
 
       const { ctx } = await t.execute({
@@ -196,7 +197,7 @@ describe("Inngest Integration Tests", () => {
       });
 
       expect(error).toBeDefined();
-      expect(error?.message).toBe("Invalid payload structure");
+      expect((error as Error)?.message).toBe("Invalid payload structure");
     });
 
     // Test individual step execution using executeStep
@@ -414,7 +415,7 @@ describe("Inngest Integration Tests", () => {
       });
 
       expect(error).toBeDefined();
-      expect(error?.message).toContain("Email processing failed");
+      expect((error as Error)?.message).toContain("Email processing failed");
     });
   });
 
@@ -439,13 +440,14 @@ describe("Inngest Integration Tests", () => {
       });
 
       expect(error).toBeDefined();
-      expect(error?.message).toBe("Invalid payload structure");
+      expect((error as Error)?.message).toBe("Invalid payload structure");
     });
 
     it("should handle extra fields gracefully", async () => {
       vi.mocked(processEmail).mockResolvedValue({
         success: true,
         skipped: false,
+        rulesMatched: 1,
       });
 
       const { result } = await t.execute({

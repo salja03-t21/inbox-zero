@@ -169,7 +169,7 @@ import { ScheduledActionStatus, DigestStatus } from "@prisma/client";
 
 // Helper to create mock step object for Inngest functions
 const createMockStep = () => ({
-  run: vi.fn(<T>(_name: string, fn: () => T): T => fn()),
+  run: <T>(_name: string, fn: () => T): T => fn(),
   sleepUntil: vi.fn(),
 });
 
@@ -568,7 +568,7 @@ describe("Inngest Functions", () => {
         { sender: "sender2@example.com", category: "Marketing" },
       ]);
       vi.mocked(updateSenderCategory).mockResolvedValue({} as any);
-      vi.mocked(saveCategorizationProgress).mockResolvedValue();
+      vi.mocked(saveCategorizationProgress).mockResolvedValue(null);
     });
 
     it("should validate payload structure", () => {
@@ -1489,20 +1489,20 @@ describe("Inngest Functions", () => {
         };
 
         // Simulate optimistic locking with version check
-        vi.mocked(prisma.scheduledAction.update).mockImplementation(
-          async (args) => {
-            if (
-              args.where?.id === mockAction.id &&
-              args.where?.status === ScheduledActionStatus.PENDING
-            ) {
-              return {
-                ...mockAction,
-                status: ScheduledActionStatus.EXECUTING,
-              };
-            }
-            throw new Error("Concurrent modification detected");
-          },
-        );
+        vi.mocked(prisma.scheduledAction.update).mockImplementation((async (
+          args: any,
+        ) => {
+          if (
+            args.where?.id === mockAction.id &&
+            args.where?.status === ScheduledActionStatus.PENDING
+          ) {
+            return {
+              ...mockAction,
+              status: ScheduledActionStatus.EXECUTING,
+            };
+          }
+          throw new Error("Concurrent modification detected");
+        }) as any);
 
         const result = await prisma.scheduledAction.update({
           where: {
@@ -1522,13 +1522,15 @@ describe("Inngest Functions", () => {
         const processedDigests = new Set<string>();
 
         // Simulate atomic status update
-        vi.mocked(prisma.digest.updateMany).mockImplementation(async (args) => {
+        vi.mocked(prisma.digest.updateMany).mockImplementation((async (
+          args: any,
+        ) => {
           if (args.where?.id === digestId && !processedDigests.has(digestId)) {
             processedDigests.add(digestId);
             return { count: 1 };
           }
           return { count: 0 }; // Already processed by another worker
-        });
+        }) as any);
 
         const result1 = await prisma.digest.updateMany({
           where: { id: digestId, status: DigestStatus.PENDING },
@@ -1549,39 +1551,38 @@ describe("Inngest Functions", () => {
       const _mockStep = createMockStep();
 
       it("should mark action as failed on permanent error", async () => {
-        const permanentError = new Error("Invalid email address");
-
         vi.mocked(prisma.scheduledAction.update).mockResolvedValue({
           id: "action-123",
           status: ScheduledActionStatus.FAILED,
-          error: permanentError.message,
         } as never);
 
         const result = await prisma.scheduledAction.update({
           where: { id: "action-123" },
           data: {
             status: ScheduledActionStatus.FAILED,
-            error: permanentError.message,
           },
         });
 
         expect(result.status).toBe(ScheduledActionStatus.FAILED);
-        expect(result.error).toBe("Invalid email address");
       });
 
       it("should handle missing OAuth token gracefully", async () => {
+        // EmailAccount includes account relation for OAuth tokens
         vi.mocked(prisma.emailAccount.findUnique).mockResolvedValue({
           id: "account-123",
           email: "user@example.com",
-          accessToken: null,
-          refreshToken: null,
+          account: {
+            accessToken: null,
+            refreshToken: null,
+          },
         } as never);
 
-        const emailAccount = await prisma.emailAccount.findUnique({
+        const emailAccount = (await prisma.emailAccount.findUnique({
           where: { id: "account-123" },
-        });
+          include: { account: true },
+        })) as { account?: { accessToken: string | null } } | null;
 
-        expect(emailAccount?.accessToken).toBeNull();
+        expect(emailAccount?.account?.accessToken).toBeNull();
         // Function should throw or return early when tokens are missing
       });
 

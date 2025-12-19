@@ -184,7 +184,7 @@ describe.skip("BulkRunRules Component", () => {
 
   describe("Initialization and State", () => {
     it("should initialize progress tracking states correctly", () => {
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       // Component should render without progress display initially
       expect(screen.queryByText(/Discovered:/)).not.toBeTruthy();
@@ -193,7 +193,7 @@ describe.skip("BulkRunRules Component", () => {
     });
 
     it("should initialize with onlyUnread checkbox checked by default", () => {
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -203,7 +203,7 @@ describe.skip("BulkRunRules Component", () => {
     });
 
     it("should initialize with no start or end date selected", () => {
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -229,7 +229,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       // Open dialog
       const dialogTrigger = screen.getByTestId("dialog-trigger");
@@ -261,7 +261,7 @@ describe.skip("BulkRunRules Component", () => {
     });
 
     it("should show progress only when running is true", async () => {
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       // Open dialog
       const dialogTrigger = screen.getByTestId("dialog-trigger");
@@ -302,7 +302,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -350,7 +350,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -383,7 +383,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -427,7 +427,7 @@ describe.skip("BulkRunRules Component", () => {
           }),
         });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -460,7 +460,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -494,7 +494,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -539,7 +539,7 @@ describe.skip("BulkRunRules Component", () => {
           }),
       );
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -588,7 +588,7 @@ describe.skip("BulkRunRules Component", () => {
           }),
         });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -621,7 +621,7 @@ describe.skip("BulkRunRules Component", () => {
         json: async () => ({ error: "Internal server error" }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -653,7 +653,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
@@ -690,7 +690,7 @@ describe.skip("BulkRunRules Component", () => {
         }),
       });
 
-      render(<BulkRunRules />);
+      render(<BulkRunRules emailAccountId="test-email-account-id" />);
 
       const dialogTrigger = screen.getByTestId("dialog-trigger");
       fireEvent.click(dialogTrigger);
