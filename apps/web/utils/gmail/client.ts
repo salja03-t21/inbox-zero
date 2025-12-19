@@ -94,7 +94,9 @@ export const getGmailClientWithRefresh = async ({
       logger.warn("Error refreshing Gmail access token", {
         emailAccountId,
         error: error.message,
-        errorDescription: (error as any).response?.data?.error_description,
+        errorDescription: (
+          error as { response?: { data?: { error_description?: string } } }
+        ).response?.data?.error_description,
       });
     }
 
@@ -115,8 +117,9 @@ export const getContactsClient = ({
 };
 
 export const getAccessTokenFromClient = (client: gmail_v1.Gmail): string => {
-  const accessToken = (client.context._options.auth as any).credentials
-    .access_token;
+  const accessToken = (
+    client.context._options.auth as { credentials: { access_token?: string } }
+  ).credentials.access_token;
   if (!accessToken) throw new Error("No access token");
   return accessToken;
 };

@@ -44,15 +44,15 @@ export async function getThread(
       return dateB - dateA; // desc order (newest first)
     });
   } catch (error) {
-    const err = error as any;
+    const err = error as { code?: string; statusCode?: number };
 
     logger.error("getThread failed", {
       threadId,
       filter,
-      error: error instanceof Error ? error.message : err,
+      error: error instanceof Error ? error.message : String(error),
       errorCode: err?.code,
       errorStatusCode: err?.statusCode,
-      errorDetails: JSON.stringify(err),
+      errorDetails: JSON.stringify(error),
     });
     throw error;
   }

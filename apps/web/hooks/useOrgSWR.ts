@@ -7,7 +7,7 @@ import { EMAIL_ACCOUNT_HEADER } from "@/utils/config";
 // Simple implementation that handles the two patterns we use:
 // 1. useOrgSWR(key, options)
 // 2. useOrgSWR(key, fetcher, options)
-export function useOrgSWR<Data = any, Error = any>(
+export function useOrgSWR<Data = unknown, Error = unknown>(
   key: string | null,
   fetcherOrOptions?:
     | ((url: string) => Promise<Data>)

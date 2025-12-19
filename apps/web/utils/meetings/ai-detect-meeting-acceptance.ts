@@ -137,7 +137,9 @@ Analyze this thread and determine if the most recent message accepts/confirms a 
       schema: meetingAcceptanceSchema,
     });
 
-    const result = (await Promise.race([aiPromise, timeoutPromise])) as any;
+    const result = (await Promise.race([aiPromise, timeoutPromise])) as {
+      object: MeetingAcceptanceResult;
+    };
 
     logger.info("Meeting acceptance detection result", {
       isMeetingAcceptance: result.object.isMeetingAcceptance,

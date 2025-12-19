@@ -17,7 +17,11 @@ export const GET = withAuth(async (req) => {
     });
 
     // Build query to fetch shared mailboxes
-    const whereClause: any = {
+    const whereClause: {
+      userId: string;
+      isSharedMailbox: boolean;
+      accountId?: string;
+    } = {
       userId,
       isSharedMailbox: true,
     };

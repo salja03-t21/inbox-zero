@@ -37,7 +37,7 @@ const TEN_YEARS = 10 * 365 * 24 * 60 * 60 * 1000;
 
 export const decrementUnsubscribeCreditAction = actionClientUser
   .metadata({ name: "decrementUnsubscribeCredit" })
-  .action(async ({ ctx: { userId: _userId } }) => {
+  .action(async ({ ctx: { userId: _userId } }): Promise<void> => {
     // Premium enabled for all users permanently - no credit management needed
     return;
   });
@@ -282,12 +282,22 @@ export const adminChangePremiumStatusAction = adminActionClient
           );
           if (!subscription) throw new SafeError("Subscription not found");
           lemonSqueezySubscriptionId = Number.parseInt(subscription.id);
-          const attributes = subscription.attributes as any;
-          lemonSqueezyOrderId = Number.parseInt(attributes.order_id);
-          lemonSqueezyProductId = Number.parseInt(attributes.product_id);
-          lemonSqueezyVariantId = Number.parseInt(attributes.variant_id);
-          lemonSqueezySubscriptionItemId = attributes.first_subscription_item.id
-            ? Number.parseInt(attributes.first_subscription_item.id)
+          const attributes = subscription.attributes as {
+            order_id: string | number;
+            product_id: string | number;
+            variant_id: string | number;
+            first_subscription_item?: { id?: string | number };
+          };
+          lemonSqueezyOrderId = Number.parseInt(String(attributes.order_id));
+          lemonSqueezyProductId = Number.parseInt(
+            String(attributes.product_id),
+          );
+          lemonSqueezyVariantId = Number.parseInt(
+            String(attributes.variant_id),
+          );
+          lemonSqueezySubscriptionItemId = attributes.first_subscription_item
+            ?.id
+            ? Number.parseInt(String(attributes.first_subscription_item.id))
             : null;
         }
 

@@ -102,7 +102,9 @@ async function getLabelCount(client: EmailProvider) {
 
 async function getFiltersCount(client: EmailProvider) {
   if (client instanceof GmailProvider) {
-    const gmail = (client as any).client; // Access the internal Gmail client
+    const gmail = (
+      client as unknown as { client: Parameters<typeof getFilters>[0] }
+    ).client;
     const filters = await getFilters(gmail);
     return filters.length;
   }
@@ -113,7 +115,11 @@ async function getFiltersCount(client: EmailProvider) {
 async function getForwardingAddressesCount(client: EmailProvider) {
   if (client instanceof GmailProvider) {
     try {
-      const gmail = (client as any).client; // Access the internal Gmail client
+      const gmail = (
+        client as unknown as {
+          client: Parameters<typeof getForwardingAddresses>[0];
+        }
+      ).client;
       const forwardingAddresses = await getForwardingAddresses(gmail);
       return forwardingAddresses.length;
     } catch (error) {

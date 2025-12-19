@@ -33,7 +33,6 @@ export async function processHistoryForUser(
 
   const emailAccount = await getWebhookEmailAccount({ email }, logger);
 
-  // biome-ignore lint/style/noParameterAssign: logger reassignment for adding context is intentional
   logger = logger.with({
     email,
     emailAccountId: emailAccount?.id,

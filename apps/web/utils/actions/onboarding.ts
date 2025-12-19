@@ -26,7 +26,10 @@ export const saveOnboardingAnswersAction = actionClientUser
       parsedInput: { surveyId, questions, answers },
       ctx: { userId, userEmail, logger },
     }) => {
-      function extractSurveyAnswers(questions: any[], answers: any) {
+      function extractSurveyAnswers(
+        questions: { key: string }[],
+        answers: Record<string, unknown>,
+      ) {
         const result: {
           surveyFeatures?: string[];
           surveyRole?: string;

@@ -30,7 +30,7 @@ type EnsureObject<T> = T extends object ? T : never;
  * NOTE: future updates: we can do more when errors are thrown like we do with `withError` middleware for API routes.
  */
 export function withActionInstrumentation<
-  Args extends any[],
+  Args extends unknown[],
   Result extends object | undefined = undefined,
   Err extends object = Record<string, unknown>,
 >(
@@ -100,12 +100,12 @@ export function withActionInstrumentation<
 
               logger.error("AI call error", {
                 action: name,
-                error: (error.data as any)?.message,
+                error: (error.data as { message?: string })?.message,
               });
               return {
                 error:
-                  (error.data as any)?.error?.message ??
-                  "An error occurred while calling the AI",
+                  (error.data as { error?: { message?: string } })?.error
+                    ?.message ?? "An error occurred while calling the AI",
                 success: false,
               } as unknown as ActionError<Err>;
             }

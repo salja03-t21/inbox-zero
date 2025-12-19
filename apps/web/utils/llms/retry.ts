@@ -41,8 +41,9 @@ export function extractLLMErrorInfo(error: unknown): LLMErrorInfo {
     errorMessage = error.message;
   } else if (error instanceof Error) {
     errorMessage = error.message;
-    // @ts-ignore - Try to extract status code if it exists
-    statusCode = error.statusCode || error.status;
+    statusCode =
+      (error as { statusCode?: number; status?: number }).statusCode ||
+      (error as { statusCode?: number; status?: number }).status;
   }
 
   // Detect rate limit errors
@@ -113,7 +114,8 @@ export async function withLLMRetry<T>(
     retries: maxRetries,
     onFailedAttempt: async (failedAttempt) => {
       // p-retry wraps errors - extract the original error
-      const originalError = (failedAttempt as any).error || failedAttempt;
+      const originalError =
+        (failedAttempt as { error?: unknown }).error || failedAttempt;
       const errorInfo = extractLLMErrorInfo(originalError);
       const retryable = isRetryableLLMError(errorInfo);
 

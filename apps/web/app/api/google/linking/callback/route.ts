@@ -61,7 +61,7 @@ export const GET = withError(async (request) => {
       throw new Error("Missing id_token from Google response");
     }
 
-    let payload: any;
+    let payload: { sub?: string; email?: string };
     try {
       const ticket = await googleAuth.verifyIdToken({
         idToken: id_token,
@@ -72,9 +72,10 @@ export const GET = withError(async (request) => {
         throw new Error("Could not get payload from verified ID token ticket.");
       }
       payload = verifiedPayload;
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("ID token verification failed using googleAuth:", err);
-      throw new Error(`ID token verification failed: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`ID token verification failed: ${message}`);
     }
 
     const providerAccountId = payload.sub;
@@ -181,22 +182,23 @@ export const GET = withError(async (request) => {
     return NextResponse.redirect(redirectUrl, {
       headers: response.headers,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Error in Google linking callback:", { error });
     let errorCode = "link_failed";
-    if (error.message?.includes("ID token verification failed")) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage?.includes("ID token verification failed")) {
       errorCode = "invalid_id_token";
-    } else if (error.message?.includes("Missing id_token")) {
+    } else if (errorMessage?.includes("Missing id_token")) {
       errorCode = "missing_id_token";
-    } else if (error.message?.includes("ID token missing required")) {
+    } else if (errorMessage?.includes("ID token missing required")) {
       errorCode = "incomplete_id_token";
-    } else if (error.message?.includes("Missing access_token")) {
+    } else if (errorMessage?.includes("Missing access_token")) {
       errorCode = "token_exchange_failed";
     }
     redirectUrl.searchParams.set("error", errorCode);
     redirectUrl.searchParams.set(
       "error_description",
-      error.message || "Unknown error",
+      errorMessage || "Unknown error",
     );
     response.cookies.delete(GOOGLE_LINKING_STATE_COOKIE_NAME);
     return NextResponse.redirect(redirectUrl, { headers: response.headers });

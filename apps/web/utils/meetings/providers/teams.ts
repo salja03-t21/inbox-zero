@@ -82,7 +82,7 @@ export async function createTeamsMeeting(
     };
   } catch (error) {
     // Extract detailed error information
-    const errorDetails: Record<string, any> = {
+    const errorDetails: Record<string, unknown> = {
       errorType: error?.constructor?.name || typeof error,
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
@@ -90,7 +90,11 @@ export async function createTeamsMeeting(
 
     // Try to extract Microsoft Graph API error details
     if (error && typeof error === "object") {
-      const graphError = error as any;
+      const graphError = error as {
+        statusCode?: number;
+        code?: string;
+        body?: unknown;
+      };
       if (graphError.statusCode)
         errorDetails.statusCode = graphError.statusCode;
       if (graphError.code) errorDetails.code = graphError.code;

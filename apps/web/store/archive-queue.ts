@@ -57,7 +57,7 @@ type ActionFunction = ({
 }: {
   threadId: string;
   labelId?: string;
-}) => Promise<any>;
+}) => Promise<unknown>;
 
 const addThreadsToQueue = ({
   actionType,

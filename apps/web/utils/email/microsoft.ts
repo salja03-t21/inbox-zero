@@ -111,7 +111,7 @@ export class OutlookProvider implements EmailProvider {
       logger.error("getThread failed", {
         threadId,
         error: error instanceof Error ? error.message : error,
-        errorCode: (error as any)?.code,
+        errorCode: (error as { code?: string })?.code,
       });
       throw error;
     }
@@ -146,7 +146,7 @@ export class OutlookProvider implements EmailProvider {
       const message = await getMessage(messageId, this.client);
       return message;
     } catch (error) {
-      const err = error as any;
+      const err = error as { code?: string };
       logger.error("getMessage failed", {
         messageId,
         error: error instanceof Error ? error.message : error,
@@ -507,7 +507,7 @@ export class OutlookProvider implements EmailProvider {
       const messages = await getThreadMessages(threadId, this.client);
       return messages;
     } catch (error) {
-      const err = error as any;
+      const err = error as { code?: string };
       logger.error("getThreadMessages failed", {
         threadId,
         error: error instanceof Error ? error.message : error,
@@ -1301,8 +1301,8 @@ export class OutlookProvider implements EmailProvider {
       logger.error("getThreadsWithQuery failed", {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        errorCode: (error as any)?.code,
-        errorStatusCode: (error as any)?.statusCode,
+        errorCode: (error as { code?: string })?.code,
+        errorStatusCode: (error as { statusCode?: number })?.statusCode,
         query: options.query,
       });
       // Return empty result instead of throwing to prevent cascading failures

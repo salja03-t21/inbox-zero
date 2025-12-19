@@ -358,6 +358,8 @@ function isErrorWithConfigAndHeaders(
     typeof error === "object" &&
     error !== null &&
     "config" in error &&
-    "headers" in (error as { config: any }).config
+    typeof (error as { config: unknown }).config === "object" &&
+    (error as { config: unknown }).config !== null &&
+    "headers" in (error as { config: Record<string, unknown> }).config
   );
 }

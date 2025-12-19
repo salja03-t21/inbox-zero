@@ -293,7 +293,6 @@ function sanitizeForJson(text: string): string {
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally matching control characters to sanitize text
   const controlCharsRegex = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally matching non-printable characters
   const nonPrintableRegex = /[^\x20-\x7E\xA0-\uFFFC\n\t]/g;
 
   return (

@@ -17,7 +17,9 @@ const baseClient = createSafeActionClient({
     return z.object({ name: z.string() });
   },
   handleServerError(error, { metadata, ctx, bindArgsClientInputs }) {
-    const context = ctx as any;
+    const context = ctx as
+      | { userId?: string; userEmail?: string; emailAccountId?: string }
+      | undefined;
     logger.error("Server action error:", {
       metadata,
       userId: context?.userId,

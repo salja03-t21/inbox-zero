@@ -6,7 +6,7 @@ export interface MeetingLinkResult {
   provider: MeetingProvider;
   joinUrl: string;
   conferenceId?: string;
-  conferenceData?: any; // Provider-specific data to attach to calendar event
+  conferenceData?: Record<string, unknown>; // Provider-specific data to attach to calendar event
 }
 
 /**

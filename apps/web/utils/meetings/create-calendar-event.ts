@@ -193,7 +193,7 @@ async function createGoogleCalendarEvent({
   }));
 
   // Create the event with optional conferenceData
-  const eventData: any = {
+  const eventData: Record<string, unknown> = {
     summary: meetingDetails.title,
     description: description.trim() || undefined,
     start: {
@@ -293,7 +293,7 @@ async function createMicrosoftCalendarEvent({
   }));
 
   // Create the event
-  const eventData: any = {
+  const eventData: Record<string, unknown> = {
     subject: meetingDetails.title,
     body: {
       contentType: "text",

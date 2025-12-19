@@ -20,7 +20,10 @@ export async function handleLoopsEvents({
     users: { email: string; name: string | null }[];
     admins: { email: string; name: string | null }[];
   } | null;
-  newSubscription: any;
+  newSubscription: {
+    trial_end: number | null;
+    status: string;
+  };
   newTier: string | null;
 }) {
   try {
