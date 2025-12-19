@@ -5,7 +5,7 @@ import { ErrorDisplay } from "./ErrorDisplay";
 interface LoadingContentProps {
   loading: boolean;
   loadingComponent?: React.ReactNode;
-  error?: { info?: { error: string }; error?: string };
+  error?: unknown;
   errorComponent?: React.ReactNode;
   children: React.ReactNode;
 }

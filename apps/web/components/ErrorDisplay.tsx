@@ -13,13 +13,9 @@ import {
 import { logOut } from "@/utils/user";
 import { env } from "@/env";
 
-// TODO would be better to have a consistent definition here. didn't want to break things.
-export function ErrorDisplay(props: {
-  error: { info?: { error: string | object }; error?: string | object };
-}) {
-  const errorMessage =
-    safeErrorToString(props.error?.info?.error) ||
-    safeErrorToString(props.error?.error);
+// Accepts unknown error types and safely extracts error messages
+export function ErrorDisplay(props: { error: unknown }) {
+  const errorMessage = extractErrorMessage(props.error);
 
   if (errorMessage) {
     return (
@@ -104,3 +100,47 @@ const safeErrorToString = (
   }
   return String(error);
 };
+
+// Extracts error message from unknown error types
+// Handles various error shapes: Error instances, SWR errors, API errors, etc.
+function extractErrorMessage(error: unknown): string | null {
+  if (!error) return null;
+
+  // Handle Error instances
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  // Handle string errors
+  if (typeof error === "string") {
+    return error;
+  }
+
+  // Handle object errors with various shapes
+  if (typeof error === "object") {
+    const err = error as Record<string, unknown>;
+
+    // Handle { info: { error: string } } shape (SWR errors)
+    if (err.info && typeof err.info === "object") {
+      const info = err.info as Record<string, unknown>;
+      if (typeof info.error === "string") return info.error;
+      if (typeof info.error === "object") {
+        return safeErrorToString(info.error as object);
+      }
+    }
+
+    // Handle { error: string } shape (API errors)
+    if (typeof err.error === "string") return err.error;
+    if (typeof err.error === "object") {
+      return safeErrorToString(err.error as object);
+    }
+
+    // Handle { message: string } shape
+    if (typeof err.message === "string") return err.message;
+
+    // Try to stringify the whole object
+    return safeErrorToString(error as object);
+  }
+
+  return String(error);
+}
