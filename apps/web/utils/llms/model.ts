@@ -20,7 +20,7 @@ type SelectModel = {
   provider: string;
   modelName: string;
   model: LanguageModelV2;
-  providerOptions?: Record<string, unknown>;
+  providerOptions?: OpenRouterOptions;
   backupModel: LanguageModelV2 | null;
 };
 
@@ -65,7 +65,7 @@ function selectModel(
     aiApiKey: string | null;
     aiBaseUrl?: string | null;
   },
-  providerOptions?: Record<string, unknown>,
+  providerOptions?: OpenRouterOptions,
 ): SelectModel {
   switch (aiProvider) {
     case Provider.OPEN_AI: {
@@ -199,9 +199,14 @@ function selectModel(
 /**
  * Creates OpenRouter provider options from a comma-separated string
  */
-function createOpenRouterProviderOptions(
-  providers: string,
-): Record<string, unknown> {
+type OpenRouterOptions = {
+  openrouter: {
+    provider?: { order: string[] };
+    reasoning: { max_tokens: number };
+  };
+};
+
+function createOpenRouterProviderOptions(providers: string): OpenRouterOptions {
   const order = providers
     .split(",")
     .map((p: string) => p.trim())
@@ -236,7 +241,7 @@ function selectEconomyModel(userAi: UserAIFields): SelectModel {
     }
 
     // Configure OpenRouter provider options if using OpenRouter for economy
-    let providerOptions: Record<string, unknown> | undefined;
+    let providerOptions: OpenRouterOptions | undefined;
     if (
       env.ECONOMY_LLM_PROVIDER === Provider.OPENROUTER &&
       env.ECONOMY_OPENROUTER_PROVIDERS
@@ -274,7 +279,7 @@ function selectChatModel(userAi: UserAIFields): SelectModel {
     }
 
     // Configure OpenRouter provider options if using OpenRouter for chat
-    let providerOptions: Record<string, unknown> | undefined;
+    let providerOptions: OpenRouterOptions | undefined;
     if (
       env.CHAT_LLM_PROVIDER === Provider.OPENROUTER &&
       env.CHAT_OPENROUTER_PROVIDERS
@@ -304,7 +309,9 @@ function selectDefaultModel(userAi: UserAIFields): SelectModel {
   const aiApiKey = userAi.aiApiKey;
   const aiBaseUrl = userAi.aiBaseUrl || null;
 
-  const providerOptions: Record<string, unknown> = {};
+  const providerOptions: OpenRouterOptions = {
+    openrouter: { reasoning: { max_tokens: 20 } },
+  };
 
   // If user has not api key set, then use default model
   // If they do they can use the model of their choice
@@ -322,13 +329,12 @@ function selectDefaultModel(userAi: UserAIFields): SelectModel {
     );
 
     // Preserve any custom options set earlier; always ensure reasoning exists.
-    const existingOpenRouterOptions = providerOptions.openrouter || {};
     providerOptions.openrouter = {
       ...openRouterOptions.openrouter,
-      ...existingOpenRouterOptions,
+      ...providerOptions.openrouter,
       reasoning: {
         ...openRouterOptions.openrouter.reasoning,
-        ...(existingOpenRouterOptions.reasoning ?? {}),
+        ...providerOptions.openrouter.reasoning,
       },
     };
   }
