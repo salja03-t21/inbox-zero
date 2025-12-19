@@ -52,7 +52,7 @@ export async function executeAct({
         contentLength: action.content?.length,
       });
 
-      const actionResult = await runActionFunction({
+      const actionResult = (await runActionFunction({
         client,
         email: message,
         action,
@@ -60,7 +60,7 @@ export async function executeAct({
         userId,
         emailAccountId,
         executedRule,
-      });
+      })) as { draftId?: string } | undefined;
 
       logger.info("Action executed successfully", {
         actionId: action.id,
