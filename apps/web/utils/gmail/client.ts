@@ -63,7 +63,8 @@ export const getGmailClientWithRefresh = async ({
   const auth = getAuth({ accessToken, refreshToken });
   const g = gmail({ version: "v1", auth });
 
-  const expiryDate = expiresAt ? expiresAt : null;
+  // expiresAt is stored in seconds (Unix timestamp), Date.now() returns milliseconds
+  const expiryDate = expiresAt ? expiresAt * 1000 : null;
   if (expiryDate && expiryDate > Date.now()) return g;
 
   // may throw `invalid_grant` error
