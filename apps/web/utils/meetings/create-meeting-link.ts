@@ -102,7 +102,7 @@ export async function createMeetingLink(
     return {
       provider: "none",
       joinUrl: "",
-      conferenceData: null,
+      conferenceData: undefined,
     };
   }
 
