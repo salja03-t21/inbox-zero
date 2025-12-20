@@ -90,8 +90,12 @@ export const scheduledActionExecute = inngest.createFunction(
         });
 
         if (!action) {
-          logger.warn("Scheduled action not found", { scheduledActionId });
-          throw new Error("Scheduled action not found");
+          // Action may have been deleted or completed by another process
+          // Return null to indicate it should be skipped (not an error)
+          logger.info("Scheduled action not found, may have been deleted", {
+            scheduledActionId,
+          });
+          return null;
         }
 
         logger.info("Fetched scheduled action", {
@@ -104,7 +108,16 @@ export const scheduledActionExecute = inngest.createFunction(
       },
     );
 
-    // Step 3: Check if action is still pending
+    // Step 3: Handle action not found (deleted or completed by another process)
+    if (!scheduledAction) {
+      return {
+        success: true,
+        skipped: true,
+        reason: "Action not found (may have been deleted)",
+      };
+    }
+
+    // Step 4: Check if action is still pending
     if (scheduledAction.status === ScheduledActionStatus.CANCELLED) {
       logger.info("Scheduled action was cancelled, skipping execution", {
         scheduledActionId,
@@ -128,7 +141,7 @@ export const scheduledActionExecute = inngest.createFunction(
       };
     }
 
-    // Step 4: Mark as executing to prevent duplicate processing
+    // Step 5: Mark as executing to prevent duplicate processing
     const markedAction = await step.run("mark-as-executing", async () => {
       try {
         const updated = await prisma.scheduledAction.update({
@@ -162,7 +175,7 @@ export const scheduledActionExecute = inngest.createFunction(
       };
     }
 
-    // Step 5: Execute the action
+    // Step 6: Execute the action
     // Note: We re-fetch the action here to get proper Date types (step.run serializes Dates to strings)
     const result = await step.run("execute-action", async () => {
       // Re-fetch the action with fresh Date types for executeScheduledAction
