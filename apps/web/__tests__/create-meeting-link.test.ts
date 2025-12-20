@@ -158,7 +158,7 @@ describe("Create Meeting Link", () => {
 
       expect(result.provider).toBe("none");
       expect(result.joinUrl).toBe("");
-      expect(result.conferenceData).toBeNull();
+      expect(result.conferenceData).toBeUndefined();
     });
   });
 
@@ -281,7 +281,7 @@ describe("Create Meeting Link", () => {
 
       expect(result.provider).toBe("none");
       expect(result.joinUrl).toBe("");
-      expect(result.conferenceData).toBeNull();
+      expect(result.conferenceData).toBeUndefined();
     });
   });
 

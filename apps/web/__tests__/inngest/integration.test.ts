@@ -468,6 +468,7 @@ describe("Inngest Integration Tests", () => {
       expect(result).toEqual({
         success: true,
         skipped: false,
+        rulesMatched: 1,
       });
     });
   });
