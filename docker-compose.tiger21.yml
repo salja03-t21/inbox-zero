@@ -170,7 +170,9 @@ services:
       - inbox-zero-network
 
   inngest:
-    image: inngest/inngest:latest
+    # Pin to v1.15.2 for compatibility with SDK v3.47.0
+    # Using :latest caused "mismatched param and argument count" warnings
+    image: inngest/inngest:v1.15.2
     deploy:
       replicas: 1
       restart_policy:
@@ -187,18 +189,18 @@ services:
         reservations:
           cpus: "0.5"
           memory: 1G
-    command:
-      - sh
-      - -c
-      - |
-        inngest start --queue-workers 50 --signing-key "${INNGEST_SIGNING_KEY}"
+    # Use inngest start command with all config via environment variables
+    command: ["inngest", "start", "--queue-workers", "50"]
     environment:
+      # Event and signing keys for secure communication
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
+      # External Postgres for persistence (required for production)
       INNGEST_POSTGRES_URI: ${DIRECT_URL}
+      # External Redis for queue and state store
       INNGEST_REDIS_URI: redis://redis:6379
+      # Poll interval for app syncing (seconds) - 0 disables polling
       INNGEST_POLL_INTERVAL: 60
-      INNGEST_DEV: "1"
     networks:
       - inbox-zero-network
     healthcheck:
