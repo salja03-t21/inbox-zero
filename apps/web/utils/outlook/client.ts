@@ -8,9 +8,11 @@ import { SafeError } from "@/utils/error";
 
 const logger = createScopedLogger("outlook/client");
 
-// Tiger21 tenant ID - using tenant-specific endpoint since the Azure AD app
-// is registered as single-tenant (not multi-tenant)
-const TIGER21_TENANT_ID = "89f2f6c3-aa52-4af9-953e-02a633d0da4d";
+// Microsoft tenant ID for OAuth token endpoints
+// - For single-tenant apps (e.g., TIGER21): use the specific tenant ID
+// - For multi-tenant apps: use "common" to support any Microsoft account
+// Set via MICROSOFT_TENANT_ID env var, defaults to "common" for flexibility
+const MICROSOFT_TENANT_ID = env.MICROSOFT_TENANT_ID || "common";
 
 type AuthOptions = {
   accessToken?: string | null;
@@ -141,7 +143,7 @@ export const getOutlookClientWithRefresh = async ({
 
     // Use tenant-specific endpoint instead of /common for single-tenant app
     const response = await fetch(
-      `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/token`,
+      `https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {
@@ -200,7 +202,7 @@ export function getLinkingOAuth2Url() {
   }
 
   // Use tenant-specific endpoint instead of /common for single-tenant app
-  const baseUrl = `https://login.microsoftonline.com/${TIGER21_TENANT_ID}/oauth2/v2.0/authorize`;
+  const baseUrl = `https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/authorize`;
   const redirectUri = `${env.NEXT_PUBLIC_BASE_URL}/api/outlook/linking/callback`;
 
   const params = new URLSearchParams({
