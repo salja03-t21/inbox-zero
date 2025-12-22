@@ -129,9 +129,9 @@ export const getOutlookClientWithRefresh = async ({
   if (!refreshToken) throw new SafeError("No refresh token");
 
   // Check if token needs refresh
-  // expiresAt is stored in seconds (Unix timestamp), Date.now() returns milliseconds
-  const expiryDate = expiresAt ? expiresAt * 1000 : null;
-  if (accessToken && expiryDate && expiryDate > Date.now()) {
+  // expiresAt comes from Date.getTime() and is already in milliseconds
+  // Compare directly with Date.now() which also returns milliseconds
+  if (accessToken && expiresAt && expiresAt > Date.now()) {
     return createOutlookClient(accessToken, sharedMailboxEmail);
   }
 
