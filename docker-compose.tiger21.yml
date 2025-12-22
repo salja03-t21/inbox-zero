@@ -189,8 +189,13 @@ services:
         reservations:
           cpus: "0.5"
           memory: 1G
-    # Use inngest start command with all config via environment variables
-    command: ["inngest", "start", "--queue-workers", "50"]
+    # Use inngest start command - signing key passed via command line since
+    # Docker Swarm requires explicit environment variable substitution
+    command:
+      - sh
+      - -c
+      - |
+        inngest start --queue-workers 50 --signing-key "${INNGEST_SIGNING_KEY}" --event-key "${INNGEST_EVENT_KEY}"
     environment:
       # Event and signing keys for secure communication
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
