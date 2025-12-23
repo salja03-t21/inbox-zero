@@ -61,6 +61,7 @@ async function handleRequest(request: NextRequest) {
       emailAccountId: payload.emailAccountId,
       messageId: payload.messageId,
       threadId: payload.threadId,
+      forceReprocess: payload.forceReprocess,
     });
 
     if (result.success) {

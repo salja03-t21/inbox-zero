@@ -52,6 +52,7 @@ export const bulkProcessWorker = inngest.createFunction(
         emailAccountId: payload.emailAccountId,
         messageId: payload.messageId,
         threadId: payload.threadId,
+        forceReprocess: payload.forceReprocess,
       });
     });
 

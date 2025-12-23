@@ -19,5 +19,6 @@ export const bulkProcessWorkerSchema = z.object({
   emailAccountId: z.string().min(1),
   messageId: z.string().min(1),
   threadId: z.string().min(1),
+  forceReprocess: z.boolean().default(false),
 });
 export type BulkProcessWorkerBody = z.infer<typeof bulkProcessWorkerSchema>;

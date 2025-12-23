@@ -17,6 +17,7 @@ export interface ProcessEmailParams {
   emailAccountId: string;
   messageId: string;
   threadId: string;
+  forceReprocess?: boolean;
 }
 
 /**
@@ -24,7 +25,7 @@ export interface ProcessEmailParams {
  * This is called by the QStash worker endpoint
  */
 export async function processEmail(params: ProcessEmailParams) {
-  const { jobId, emailAccountId, messageId, threadId } = params;
+  const { jobId, emailAccountId, messageId, threadId, forceReprocess } = params;
 
   logger.info("Processing email", {
     jobId,
@@ -63,24 +64,31 @@ export async function processEmail(params: ProcessEmailParams) {
       throw new Error(`Message not found: ${messageId}`);
     }
 
-    // Check if rules already executed for this message
-    const existingRules = await prisma.executedRule.findMany({
-      where: {
-        emailAccountId,
-        threadId,
-        messageId,
-      },
-    });
+    // Check if rules already executed for this message (skip check if forceReprocess is true)
+    if (!forceReprocess) {
+      const existingRules = await prisma.executedRule.findMany({
+        where: {
+          emailAccountId,
+          threadId,
+          messageId,
+        },
+      });
 
-    if (existingRules.length > 0) {
-      logger.info("Rules already executed, skipping", { messageId });
-      await incrementProcessedEmails(jobId);
-      await checkAndMarkJobComplete(jobId);
-      return {
-        success: true,
-        skipped: true,
-        reason: "Already processed",
-      };
+      if (existingRules.length > 0) {
+        logger.info("Rules already executed, skipping", { messageId });
+        await incrementProcessedEmails(jobId);
+        await checkAndMarkJobComplete(jobId);
+        return {
+          success: true,
+          skipped: true,
+          reason: "Already processed",
+        };
+      }
+    } else {
+      logger.info(
+        "Force reprocess enabled, running rules regardless of previous execution",
+        { messageId },
+      );
     }
 
     // Get enabled rules for this account

@@ -172,6 +172,7 @@ export const bulkProcessFetcher = inngest.createFunction(
               emailAccountId,
               messageId: email.messageId,
               threadId: email.threadId,
+              forceReprocess,
             },
           })),
         );
