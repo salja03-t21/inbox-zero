@@ -104,10 +104,17 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
   const processedThreadIds = new Set(processedThreads.map((t) => t.threadId));
 
   // Filter out already processed threads and ignored senders
+  // Track filtering reasons for debugging
+  let skippedAlreadyProcessed = 0;
+  let skippedIgnoredSender = 0;
+  let skippedNoMessages = 0;
+  let skippedNoMessageId = 0;
+
   const threadsToProcess = threads
     .filter((thread) => {
       // Skip if already processed
       if (processedThreadIds.has(thread.id)) {
+        skippedAlreadyProcessed++;
         return false;
       }
 
@@ -117,6 +124,17 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
         latestMessage?.headers?.from &&
         isIgnoredSender(latestMessage.headers.from)
       ) {
+        skippedIgnoredSender++;
+        return false;
+      }
+
+      // Log threads that pass filter for debugging
+      if (!latestMessage) {
+        logger.warn("Thread has no messages", {
+          threadId: thread.id,
+          messagesLength: thread.messages?.length,
+        });
+        skippedNoMessages++;
         return false;
       }
 
@@ -124,10 +142,22 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
     })
     .map((thread) => {
       const latestMessage = thread.messages?.[thread.messages.length - 1];
+      const messageId = latestMessage?.id || "";
+
+      if (!messageId) {
+        logger.warn("Thread message has no ID", {
+          threadId: thread.id,
+          messageExists: !!latestMessage,
+          from: latestMessage?.headers?.from,
+          subject: latestMessage?.headers?.subject,
+        });
+        skippedNoMessageId++;
+      }
+
       return {
         id: thread.id,
         threadId: thread.id,
-        messageId: latestMessage?.id || "",
+        messageId,
       };
     })
     .filter(isDefined)
@@ -136,6 +166,10 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
   logger.info("Email batch fetched", {
     totalThreads: threads.length,
     threadsToProcess: threadsToProcess.length,
+    skippedAlreadyProcessed,
+    skippedIgnoredSender,
+    skippedNoMessages,
+    skippedNoMessageId,
     hasNextPageToken: !!nextPageToken,
   });
 
