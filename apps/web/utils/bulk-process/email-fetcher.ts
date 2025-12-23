@@ -112,14 +112,25 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
 
   const threadsToProcess = threads
     .filter((thread) => {
+      const latestMessage = thread.messages?.[thread.messages.length - 1];
+      const from = latestMessage?.headers?.from || "unknown";
+      const subject = latestMessage?.headers?.subject || "no subject";
+
       // Skip if already processed
       if (processedThreadIds.has(thread.id)) {
         skippedAlreadyProcessed++;
+        // Log skipped emails for debugging (only log a sample to avoid spam)
+        if (skippedAlreadyProcessed <= 5) {
+          logger.info("Skipping already processed thread", {
+            threadId: thread.id,
+            from,
+            subject: subject.substring(0, 50),
+          });
+        }
         return false;
       }
 
       // Skip if from ignored sender
-      const latestMessage = thread.messages?.[thread.messages.length - 1];
       if (
         latestMessage?.headers?.from &&
         isIgnoredSender(latestMessage.headers.from)
@@ -137,6 +148,13 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
         skippedNoMessages++;
         return false;
       }
+
+      // Log threads that WILL be processed
+      logger.info("Thread will be processed", {
+        threadId: thread.id,
+        from,
+        subject: subject.substring(0, 50),
+      });
 
       return true;
     })
