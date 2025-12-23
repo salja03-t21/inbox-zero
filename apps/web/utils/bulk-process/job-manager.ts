@@ -10,6 +10,7 @@ export interface CreateJobParams {
   startDate: Date;
   endDate?: Date;
   onlyUnread: boolean;
+  forceReprocess?: boolean;
 }
 
 export interface UpdateJobProgressParams {
@@ -24,7 +25,14 @@ export interface UpdateJobProgressParams {
  * Create a new bulk processing job
  */
 export async function createBulkProcessJob(params: CreateJobParams) {
-  const { emailAccountId, userId, startDate, endDate, onlyUnread } = params;
+  const {
+    emailAccountId,
+    userId,
+    startDate,
+    endDate,
+    onlyUnread,
+    forceReprocess = false,
+  } = params;
 
   // Check if there's already an active job for this account
   const existingJob = await prisma.bulkProcessJob.findFirst({
@@ -49,6 +57,7 @@ export async function createBulkProcessJob(params: CreateJobParams) {
       startDate,
       endDate,
       onlyUnread,
+      forceReprocess,
       status: BulkProcessJobStatus.PENDING,
     },
   });

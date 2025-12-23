@@ -20,6 +20,7 @@ const bulkProcessFetcherSchema = z.object({
   startDate: z.string(), // ISO date string
   endDate: z.string().optional(),
   onlyUnread: z.boolean(),
+  forceReprocess: z.boolean().default(false),
   pageToken: z.string().optional(),
   pageCount: z.number().default(0),
 });
@@ -68,6 +69,7 @@ export const bulkProcessFetcher = inngest.createFunction(
       startDate,
       endDate,
       onlyUnread,
+      forceReprocess,
       pageToken,
       pageCount,
     } = payload;
@@ -134,6 +136,7 @@ export const bulkProcessFetcher = inngest.createFunction(
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : undefined,
         onlyUnread,
+        forceReprocess,
         pageToken,
         limit: BATCH_SIZE,
       });
@@ -191,6 +194,7 @@ export const bulkProcessFetcher = inngest.createFunction(
             startDate,
             endDate,
             onlyUnread,
+            forceReprocess,
             pageToken: batchResult.nextPageToken,
             pageCount: pageCount + 1,
           },

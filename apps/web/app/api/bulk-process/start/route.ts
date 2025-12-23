@@ -37,6 +37,7 @@ export const POST = withEmailProvider(async (request) => {
       startDate: validatedData.startDate,
       endDate: validatedData.endDate,
       onlyUnread: validatedData.onlyUnread,
+      forceReprocess: validatedData.forceReprocess,
     });
 
     logger.info("Created bulk process job", {
@@ -59,6 +60,7 @@ export const POST = withEmailProvider(async (request) => {
         startDate: validatedData.startDate.toISOString(),
         endDate: validatedData.endDate?.toISOString(),
         onlyUnread: validatedData.onlyUnread,
+        forceReprocess: validatedData.forceReprocess,
         pageToken: undefined,
         pageCount: 0,
       },

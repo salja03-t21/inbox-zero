@@ -5,6 +5,7 @@ export const startBulkProcessSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date().optional(),
   onlyUnread: z.coerce.boolean().default(true),
+  forceReprocess: z.coerce.boolean().default(false),
 });
 export type StartBulkProcessBody = z.infer<typeof startBulkProcessSchema>;
 

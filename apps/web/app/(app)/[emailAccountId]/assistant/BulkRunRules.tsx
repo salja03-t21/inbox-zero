@@ -36,6 +36,7 @@ export function BulkRunRules({
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [onlyUnread, setOnlyUnread] = useState(true);
+  const [forceReprocess, setForceReprocess] = useState(false);
 
   const startBulkProcess = useCallback(async () => {
     if (!startDate) {
@@ -59,6 +60,7 @@ export function BulkRunRules({
             startDate: startDate.toISOString(),
             endDate: endDate?.toISOString(),
             onlyUnread,
+            forceReprocess,
           }),
         },
       });
@@ -89,7 +91,14 @@ export function BulkRunRules({
     } finally {
       setIsStarting(false);
     }
-  }, [startDate, endDate, onlyUnread, emailAccountId, onJobCreated]);
+  }, [
+    startDate,
+    endDate,
+    onlyUnread,
+    forceReprocess,
+    emailAccountId,
+    onJobCreated,
+  ]);
 
   return (
     <div>
@@ -107,9 +116,10 @@ export function BulkRunRules({
             {data && (
               <>
                 <SectionDescription>
-                  This runs your rules on emails in your inbox that have not
-                  been successfully processed (excludes emails with SKIPPED or
-                  ERROR status).
+                  This runs your rules on emails in your inbox. By default, it
+                  skips emails that were already successfully processed. Use
+                  &quot;Reprocess all emails&quot; to apply rules to all emails
+                  including previously processed ones.
                 </SectionDescription>
 
                 <LoadingContent loading={isLoadingPremium}>
@@ -136,6 +146,17 @@ export function BulkRunRules({
                         />
                         <span className="text-sm">
                           Only process unread emails
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={forceReprocess}
+                          onChange={(e) => setForceReprocess(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <span className="text-sm">
+                          Reprocess all emails (include previously processed)
                         </span>
                       </label>
 

@@ -13,6 +13,7 @@ export interface FetchEmailsParams {
   startDate: Date;
   endDate?: Date;
   onlyUnread: boolean;
+  forceReprocess?: boolean;
   pageToken?: string;
   limit?: number;
 }
@@ -34,6 +35,7 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
     startDate,
     endDate,
     onlyUnread,
+    forceReprocess = false,
     pageToken,
     limit = 25,
   } = params;
@@ -43,6 +45,7 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
     startDate,
     endDate,
     onlyUnread,
+    forceReprocess,
     hasPageToken: !!pageToken,
   });
 
@@ -85,23 +88,28 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
 
   // Get already processed threads (with APPLIED/APPLYING status)
   // SKIPPED and ERROR should be reprocessed
-  const PLAN_STATUSES: ExecutedRuleStatus[] = [
-    ExecutedRuleStatus.APPLIED,
-    ExecutedRuleStatus.APPLYING,
-  ];
+  // When forceReprocess is true, we skip this check entirely
+  let processedThreadIds = new Set<string>();
 
-  const processedThreads = await prisma.executedRule.findMany({
-    where: {
-      emailAccountId,
-      threadId: { in: threadIds },
-      status: { in: PLAN_STATUSES },
-    },
-    select: {
-      threadId: true,
-    },
-  });
+  if (!forceReprocess) {
+    const PLAN_STATUSES: ExecutedRuleStatus[] = [
+      ExecutedRuleStatus.APPLIED,
+      ExecutedRuleStatus.APPLYING,
+    ];
 
-  const processedThreadIds = new Set(processedThreads.map((t) => t.threadId));
+    const processedThreads = await prisma.executedRule.findMany({
+      where: {
+        emailAccountId,
+        threadId: { in: threadIds },
+        status: { in: PLAN_STATUSES },
+      },
+      select: {
+        threadId: true,
+      },
+    });
+
+    processedThreadIds = new Set(processedThreads.map((t) => t.threadId));
+  }
 
   // Filter out already processed threads and ignored senders
   // Track filtering reasons for debugging
