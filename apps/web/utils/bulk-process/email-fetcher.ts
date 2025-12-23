@@ -55,11 +55,31 @@ export async function fetchEmailBatch(params: FetchEmailsParams) {
   };
 
   // Fetch threads from email provider
+  // Note: getThreadsWithQuery may return empty on error - we detect this
+  // by checking if we have a pageToken but get 0 results (unexpected for pagination)
   const { threads, nextPageToken } = await emailProvider.getThreadsWithQuery({
     query,
     maxResults: limit,
     pageToken,
   });
+
+  // If we had a pageToken (indicating more pages expected) but got 0 results,
+  // this likely indicates an API error that was silently handled
+  if (pageToken && threads.length === 0 && !nextPageToken) {
+    logger.warn(
+      "Unexpected empty result during pagination - possible API error",
+      {
+        emailAccountId,
+        hadPageToken: true,
+        receivedThreads: 0,
+        hasNextToken: false,
+      },
+    );
+    // Throw to trigger retry at the Inngest level
+    throw new Error(
+      "Unexpected empty result during pagination - possible API error",
+    );
+  }
 
   const threadIds = threads.map((t) => t.id);
 

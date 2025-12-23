@@ -2,6 +2,7 @@
 // Import individual functions as they are created
 
 import { bulkProcessWorker } from "./bulk-process-worker";
+import { bulkProcessFetcher } from "./bulk-process-fetcher";
 import { scheduledActionExecute } from "./scheduled-action-execute";
 import { scheduledActionCleanup } from "./scheduled-action-cleanup";
 import { cleanProcess } from "./clean-process";
@@ -16,6 +17,7 @@ import { watchRenew, createMissingOutlookSubscriptions } from "./watch-renew";
 export const allFunctions = [
   // Phase 3.1: Bulk processing
   bulkProcessWorker,
+  bulkProcessFetcher,
   // Phase 3.7: Scheduled actions
   scheduledActionExecute,
   scheduledActionCleanup,

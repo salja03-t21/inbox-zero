@@ -4,20 +4,15 @@ import { startBulkProcessSchema } from "@/utils/bulk-process/validation";
 import {
   createBulkProcessJob,
   markJobAsRunning,
-  incrementTotalEmails,
-  incrementEmailsQueued,
 } from "@/utils/bulk-process/job-manager";
-import { fetchEmailBatch } from "@/utils/bulk-process/email-fetcher";
-import { enqueueJob } from "@/utils/queue";
+import { inngest } from "@/utils/inngest/client";
 import { createScopedLogger } from "@/utils/logger";
-import type { EmailProvider } from "@/utils/email/types";
 
 const logger = createScopedLogger("api/bulk-process/start");
 
-export const maxDuration = 300; // 5 minutes
+export const maxDuration = 30; // Reduced - we just trigger Inngest now
 
 export const POST = withEmailProvider(async (request) => {
-  const { emailProvider } = request;
   const { userId, emailAccountId } = request.auth;
 
   try {
@@ -54,20 +49,24 @@ export const POST = withEmailProvider(async (request) => {
     // Mark job as running
     await markJobAsRunning(job.id);
 
-    // Start fetching and queueing emails in the background
-    // We don't await this - it runs asynchronously
-    startFetchingAndQueueing({
+    // Trigger the durable Inngest fetcher function
+    // This will handle pagination, token refresh, and resilient queuing
+    await inngest.send({
+      name: "inbox-zero/bulk-process.fetcher",
+      data: {
+        jobId: job.id,
+        emailAccountId,
+        startDate: validatedData.startDate.toISOString(),
+        endDate: validatedData.endDate?.toISOString(),
+        onlyUnread: validatedData.onlyUnread,
+        pageToken: undefined,
+        pageCount: 0,
+      },
+    });
+
+    logger.info("Triggered bulk process fetcher", {
       jobId: job.id,
       emailAccountId,
-      emailProvider,
-      startDate: validatedData.startDate,
-      endDate: validatedData.endDate,
-      onlyUnread: validatedData.onlyUnread,
-    }).catch((error) => {
-      logger.error("Error in background fetching and queueing", {
-        error,
-        jobId: job.id,
-      });
     });
 
     // Return job ID immediately
@@ -91,111 +90,3 @@ export const POST = withEmailProvider(async (request) => {
     );
   }
 });
-
-/**
- * Fetch emails in batches and queue them to QStash
- * This runs in the background after the initial response is sent
- */
-async function startFetchingAndQueueing(params: {
-  jobId: string;
-  emailAccountId: string;
-  emailProvider: EmailProvider;
-  startDate: Date;
-  endDate?: Date;
-  onlyUnread: boolean;
-}) {
-  const {
-    jobId,
-    emailAccountId,
-    emailProvider,
-    startDate,
-    endDate,
-    onlyUnread,
-  } = params;
-
-  let pageToken: string | undefined;
-  let pageCount = 0;
-  const BATCH_SIZE = 25;
-
-  logger.info("Starting email fetching and queueing", { jobId });
-
-  try {
-    while (true) {
-      pageCount++;
-
-      // Fetch a batch of emails
-      const batch = await fetchEmailBatch({
-        emailProvider,
-        emailAccountId,
-        startDate,
-        endDate,
-        onlyUnread,
-        pageToken,
-        limit: BATCH_SIZE,
-      });
-
-      logger.info("Fetched email batch", {
-        jobId,
-        pageCount,
-        emailsToProcess: batch.emails.length,
-        totalFetched: batch.totalFetched,
-      });
-
-      // Update counters: totalEmails = all emails found, emailsQueued = emails actually needing processing
-      await incrementTotalEmails(jobId, batch.totalFetched);
-      if (batch.emails.length > 0) {
-        await incrementEmailsQueued(jobId, batch.emails.length);
-      }
-
-      // Enqueue each email for processing
-      for (const email of batch.emails) {
-        try {
-          await enqueueJob({
-            name: "inbox-zero/bulk-process.worker",
-            data: {
-              jobId,
-              emailAccountId,
-              messageId: email.messageId,
-              threadId: email.threadId,
-            },
-            queueName: "bulk-email-processing",
-            concurrency: 3, // Process 3 emails concurrently
-          });
-
-          logger.info("Queued email for processing", {
-            jobId,
-            messageId: email.messageId,
-          });
-        } catch (error) {
-          logger.error("Failed to queue email", {
-            error,
-            jobId,
-            messageId: email.messageId,
-          });
-        }
-      }
-
-      // Check if there are more pages
-      if (!batch.nextPageToken) {
-        logger.info("No more emails to fetch", {
-          jobId,
-          totalPages: pageCount,
-        });
-        break;
-      }
-
-      pageToken = batch.nextPageToken;
-
-      // Add a small delay to avoid rate limits
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
-    logger.info("Finished fetching and queueing emails", {
-      jobId,
-      totalPages: pageCount,
-    });
-  } catch (error) {
-    logger.error("Error in fetching and queueing loop", { error, jobId });
-    throw error;
-  }
-}
