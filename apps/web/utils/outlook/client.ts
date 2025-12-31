@@ -8,6 +8,9 @@ import { SafeError } from "@/utils/error";
 
 const logger = createScopedLogger("outlook/client");
 
+// Buffer time before token expiry to trigger proactive refresh (5 minutes in milliseconds)
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+
 // Microsoft tenant ID for OAuth token endpoints
 // - For single-tenant apps (e.g., TIGER21): use the specific tenant ID
 // - For multi-tenant apps: use "common" to support any Microsoft account
@@ -112,6 +115,37 @@ export const getContactsClient = ({ accessToken }: AuthOptions) => {
   return createOutlookClient(accessToken);
 };
 
+/**
+ * Extract Microsoft error code from error message (e.g., AADSTS50173)
+ * Returns null if no error code found
+ */
+function extractMicrosoftErrorCode(message: string): string | null {
+  const match = message.match(/AADSTS\d+/);
+  return match ? match[0] : null;
+}
+
+/**
+ * Check if error indicates the refresh token is invalid and user needs to re-authenticate.
+ * Common Microsoft error codes:
+ * - AADSTS50173: Refresh token expired due to inactivity
+ * - AADSTS50076: Refresh token revoked
+ * - AADSTS700082: Refresh token expired
+ * - AADSTS65001: User hasn't consented to the app
+ * - AADSTS70000: Invalid grant (generic)
+ * - invalid_grant: OAuth2 standard error for invalid/expired refresh tokens
+ */
+function isRefreshTokenInvalidError(error: Error): boolean {
+  const message = error.message;
+  return (
+    message.includes("invalid_grant") ||
+    message.includes("AADSTS50173") ||
+    message.includes("AADSTS50076") ||
+    message.includes("AADSTS700082") ||
+    message.includes("AADSTS65001") ||
+    message.includes("AADSTS70000")
+  );
+}
+
 // Similar to Gmail's getGmailClientWithRefresh
 export const getOutlookClientWithRefresh = async ({
   accessToken,
@@ -126,14 +160,36 @@ export const getOutlookClientWithRefresh = async ({
   emailAccountId: string;
   sharedMailboxEmail?: string | null;
 }): Promise<OutlookClient> => {
-  if (!refreshToken) throw new SafeError("No refresh token");
+  if (!refreshToken) {
+    logger.error("No refresh token available - user needs to re-authenticate", {
+      emailAccountId,
+    });
+    throw new SafeError(
+      "No refresh token - please reconnect your Microsoft account",
+    );
+  }
 
   // Check if token needs refresh
   // expiresAt comes from Date.getTime() and is already in milliseconds
-  // Compare directly with Date.now() which also returns milliseconds
-  if (accessToken && expiresAt && expiresAt > Date.now()) {
+  // Proactively refresh if token expires within TOKEN_REFRESH_BUFFER_MS (5 minutes)
+  // This prevents race conditions where token expires during API call
+  const tokenExpiryWithBuffer = expiresAt
+    ? expiresAt - TOKEN_REFRESH_BUFFER_MS
+    : 0;
+  const needsRefresh =
+    !accessToken || !expiresAt || tokenExpiryWithBuffer <= Date.now();
+
+  if (!needsRefresh) {
     return createOutlookClient(accessToken, sharedMailboxEmail);
   }
+
+  // Log that we're attempting a refresh (no sensitive data)
+  const isExpired = expiresAt ? expiresAt <= Date.now() : true;
+  logger.info("Refreshing Microsoft access token", {
+    emailAccountId,
+    reason: isExpired ? "token_expired" : "proactive_refresh",
+    expiresInMs: expiresAt ? expiresAt - Date.now() : null,
+  });
 
   // Refresh token
   try {
@@ -162,7 +218,21 @@ export const getOutlookClientWithRefresh = async ({
     const tokens = await response.json();
 
     if (!response.ok) {
-      throw new Error(tokens.error_description || "Failed to refresh token");
+      // Extract error details for logging (safe - these are error codes, not tokens)
+      const errorCode = tokens.error || "unknown";
+      const errorDescription = tokens.error_description || "No description";
+      const microsoftErrorCode = extractMicrosoftErrorCode(errorDescription);
+
+      logger.error("Microsoft token refresh failed", {
+        emailAccountId,
+        errorCode,
+        microsoftErrorCode,
+        // Only log first 100 chars of description to avoid leaking sensitive context
+        errorDescription: errorDescription.substring(0, 100),
+        httpStatus: response.status,
+      });
+
+      throw new Error(errorDescription);
     }
 
     // Save new tokens
@@ -176,16 +246,41 @@ export const getOutlookClientWithRefresh = async ({
       provider: "microsoft",
     });
 
+    logger.info("Microsoft access token refreshed successfully", {
+      emailAccountId,
+      expiresInSeconds: tokens.expires_in,
+    });
+
     return createOutlookClient(tokens.access_token, sharedMailboxEmail);
   } catch (error) {
-    const isInvalidGrantError =
-      error instanceof Error &&
-      (error.message.includes("invalid_grant") ||
-        error.message.includes("AADSTS50173"));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const microsoftErrorCode = extractMicrosoftErrorCode(errorMessage);
 
-    if (isInvalidGrantError) {
-      logger.warn("Error refreshing Outlook access token", { error });
+    // Check if this is a "needs re-authentication" error
+    if (error instanceof Error && isRefreshTokenInvalidError(error)) {
+      logger.error(
+        "Microsoft refresh token is invalid - user must re-authenticate",
+        {
+          emailAccountId,
+          microsoftErrorCode,
+          // Log a sanitized version of the error (first 100 chars, no tokens)
+          errorHint: errorMessage.substring(0, 100),
+        },
+      );
+
+      // Throw a user-friendly error
+      throw new SafeError(
+        "Your Microsoft account connection has expired. Please reconnect your account in Settings.",
+      );
     }
+
+    // Log other errors
+    logger.error("Unexpected error refreshing Microsoft access token", {
+      emailAccountId,
+      microsoftErrorCode,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorHint: errorMessage.substring(0, 100),
+    });
 
     throw error;
   }
