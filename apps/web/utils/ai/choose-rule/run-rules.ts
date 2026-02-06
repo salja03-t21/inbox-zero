@@ -385,6 +385,8 @@ async function executeMatchedRule(
       type: a.type,
       id: a.id,
       label: a.label,
+      folderName: a.folderName,
+      folderId: a.folderId,
     })),
   });
 

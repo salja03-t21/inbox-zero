@@ -286,7 +286,16 @@ const move_folder: ActionFunction<{
   folderId?: string | null;
   folderName?: string | null;
 }> = async ({ client, email, userEmail, args }) => {
-  if (!args.folderId && !args.folderName) return;
+  if (!args.folderId && !args.folderName) {
+    logger.warn(
+      "MOVE_FOLDER action skipped: both folderId and folderName are missing",
+      {
+        threadId: email.threadId,
+        userEmail,
+      },
+    );
+    return;
+  }
 
   // For Outlook/Microsoft, resolve folder ID from folder name at execution time
   // because folder IDs are mailbox-specific and cannot be shared between mailboxes

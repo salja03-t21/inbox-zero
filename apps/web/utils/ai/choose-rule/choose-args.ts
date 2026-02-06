@@ -67,9 +67,31 @@ export async function getActionItemsWithAiArgs({
     }
   }
 
-  const parameters = extractActionsNeedingAiGeneration(selectedRule.actions);
+  // Backfill folderName from rule name for MOVE_FOLDER actions that are missing it.
+  // This can happen when a rule was created during onboarding with proper folder data
+  // but later modified through the UI, losing the folderName/folderId fields.
+  const actions = selectedRule.actions.map((action) => {
+    if (
+      action.type === ActionType.MOVE_FOLDER &&
+      !action.folderName &&
+      !action.folderId
+    ) {
+      logger.warn(
+        "MOVE_FOLDER action missing folderName and folderId, backfilling from rule name",
+        {
+          actionId: action.id,
+          ruleId: selectedRule.id,
+          ruleName: selectedRule.name,
+        },
+      );
+      return { ...action, folderName: selectedRule.name };
+    }
+    return action;
+  });
 
-  if (parameters.length === 0 && !draft) return selectedRule.actions;
+  const parameters = extractActionsNeedingAiGeneration(actions);
+
+  if (parameters.length === 0 && !draft) return actions;
 
   const result = await aiGenerateArgs({
     email: getEmailForLLM(message),
@@ -79,7 +101,7 @@ export async function getActionItemsWithAiArgs({
     modelType,
   });
 
-  return combineActionsWithAiArgs(selectedRule.actions, result, draft);
+  return combineActionsWithAiArgs(actions, result, draft);
 }
 
 export function combineActionsWithAiArgs(
