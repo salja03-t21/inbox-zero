@@ -137,6 +137,15 @@ export async function scheduleDelayedActions({
   for (const actionItem of delayedActions) {
     const scheduledFor = addMinutes(new Date(), actionItem.delayInMinutes!);
 
+    logger.info("Scheduling delayed action", {
+      actionType: actionItem.type,
+      delayInMinutes: actionItem.delayInMinutes,
+      scheduledFor: scheduledFor.toISOString(),
+      now: new Date().toISOString(),
+      executedRuleId,
+      messageId,
+    });
+
     const scheduledAction = await createScheduledAction({
       executedRuleId,
       actionItem,

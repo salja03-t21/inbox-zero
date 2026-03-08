@@ -23,15 +23,6 @@ async function sendDigestAllUpdate() {
       digestSchedule: {
         nextOccurrenceAt: { lte: now },
       },
-      // Only send to premium users
-      user: {
-        premium: {
-          OR: [
-            { lemonSqueezyRenewsAt: { gt: now } },
-            { stripeSubscriptionStatus: { in: ["active", "trialing"] } },
-          ],
-        },
-      },
       createdAt: {
         lt: subDays(now, 1),
       },
@@ -49,7 +40,7 @@ async function sendDigestAllUpdate() {
   for (const emailAccount of emailAccounts) {
     try {
       await enqueueJob({
-        name: "/api/resend/digest",
+        name: "inbox-zero/resend.digest",
         data: { emailAccountId: emailAccount.id },
         queueName: "email-digest-all",
         concurrency: 3, // Allow up to 3 concurrent jobs from this queue

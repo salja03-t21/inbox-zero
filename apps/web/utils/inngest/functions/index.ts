@@ -11,6 +11,7 @@ import { cleanOutlook } from "./clean-outlook";
 import { categorizeSendersBatch } from "./categorize-senders-batch";
 import { aiDigest } from "./ai-digest";
 import { resendDigest } from "./resend-digest";
+import { resendDigestAll } from "./resend-digest-all";
 import { watchRenew, createMissingOutlookSubscriptions } from "./watch-renew";
 
 // Export all Inngest functions
@@ -29,6 +30,7 @@ export const allFunctions = [
   categorizeSendersBatch,
   aiDigest,
   resendDigest,
+  resendDigestAll,
   // Webhook subscription renewal (runs every 12 hours)
   watchRenew,
   // Create missing Outlook subscriptions (runs every 15 minutes)

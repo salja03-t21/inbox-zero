@@ -387,6 +387,7 @@ async function executeMatchedRule(
       label: a.label,
       folderName: a.folderName,
       folderId: a.folderId,
+      delayInMinutes: a.delayInMinutes,
     })),
   });
 
@@ -402,6 +403,11 @@ async function executeMatchedRule(
     ruleId: rule.id,
     actionCount: actionItems.length,
     actionTypes: actionItems.map((a) => a.type),
+    actionDelays: actionItems.map((a) => ({
+      type: a.type,
+      delayInMinutes: a.delayInMinutes,
+      hasDelay: a.delayInMinutes != null && a.delayInMinutes > 0,
+    })),
   });
 
   const { immediateActions, delayedActions } = groupBy(actionItems, (item) =>
@@ -409,6 +415,18 @@ async function executeMatchedRule(
       ? "delayedActions"
       : "immediateActions",
   );
+
+  logger.info("Action split result", {
+    ruleId: rule.id,
+    ruleName: rule.name,
+    immediateCount: immediateActions?.length ?? 0,
+    delayedCount: delayedActions?.length ?? 0,
+    immediateTypes: immediateActions?.map((a) => a.type),
+    delayedTypes: delayedActions?.map((a) => ({
+      type: a.type,
+      delayInMinutes: a.delayInMinutes,
+    })),
+  });
 
   if (isTest) {
     return {
