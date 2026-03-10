@@ -314,6 +314,7 @@ async function sendEmail({
 
     // Only update database if email sending succeeded
     // Use a transaction to ensure atomicity - all updates succeed or none are applied
+    const now = new Date();
     await prisma.$transaction([
       ...(digestScheduleData
         ? [
@@ -323,8 +324,11 @@ async function sendEmail({
                 emailAccountId,
               },
               data: {
-                lastOccurrenceAt: new Date(),
-                nextOccurrenceAt: calculateNextScheduleDate(digestScheduleData),
+                lastOccurrenceAt: now,
+                nextOccurrenceAt: calculateNextScheduleDate({
+                  ...digestScheduleData,
+                  lastOccurrenceAt: now,
+                }),
               },
             }),
           ]
