@@ -235,10 +235,11 @@ export const getOutlookClientWithRefresh = async ({
       throw new Error(errorDescription);
     }
 
-    // Save new tokens
+    // Save new tokens (including new refresh token if Microsoft issued one)
     await saveTokens({
       tokens: {
         access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
         expires_at: Math.floor(Date.now() / 1000 + tokens.expires_in),
       },
       accountRefreshToken: refreshToken,
