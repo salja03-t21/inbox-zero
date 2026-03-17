@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FormSection, FormSectionLeft } from "@/components/Form";
 import { LoadingContent } from "@/components/LoadingContent";
+import { toastSuccess, toastError } from "@/components/Toast";
 import { useAccount } from "@/providers/EmailAccountProvider";
 import {
   isGoogleProvider,
@@ -24,10 +26,52 @@ type AccountStatusResponse = {
 export function AccountConnectionSection() {
   const { emailAccount } = useAccount();
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const searchParams = useSearchParams();
 
-  const { data, isLoading, error } = useSWR<AccountStatusResponse>(
+  const { data, isLoading, error, mutate } = useSWR<AccountStatusResponse>(
     emailAccount?.id ? `/api/user/account-status` : null,
   );
+
+  // Show toast notifications after returning from the reconnect flow
+  useEffect(() => {
+    const reconnectResult = searchParams.get("reconnect");
+    if (!reconnectResult) return;
+
+    if (reconnectResult === "success") {
+      toastSuccess({
+        description:
+          "Microsoft account reconnected successfully. Your tokens have been refreshed.",
+      });
+      // Refresh the account status data
+      mutate();
+    } else if (reconnectResult === "error") {
+      const errorCode = searchParams.get("reconnect_error") || "unknown";
+      const errorMessages: Record<string, string> = {
+        invalid_state: "Security validation failed. Please try again.",
+        invalid_state_format: "Security validation failed. Please try again.",
+        missing_code:
+          "Microsoft did not return an authorization code. Please try again.",
+        account_not_found:
+          "Email account not found. Please refresh the page and try again.",
+        reconnect_failed:
+          "Failed to reconnect your Microsoft account. Please try again.",
+        access_denied:
+          "You denied the permission request. Please try again and grant access.",
+      };
+      toastError({
+        title: "Reconnection failed",
+        description:
+          errorMessages[errorCode] ||
+          `An unexpected error occurred (${errorCode}). Please try again.`,
+      });
+    }
+
+    // Clean up the query params from the URL without triggering a navigation
+    const url = new URL(window.location.href);
+    url.searchParams.delete("reconnect");
+    url.searchParams.delete("reconnect_error");
+    window.history.replaceState({}, "", url.toString());
+  }, [searchParams, mutate]);
 
   if (!emailAccount) return null;
 
@@ -41,17 +85,16 @@ export function AccountConnectionSection() {
   const handleReconnect = async () => {
     setIsReconnecting(true);
     try {
-      // Trigger OAuth flow for the current provider
       if (isGoogleProvider(provider)) {
+        // Google: use Better Auth's signIn.social (works for Google)
         await signIn.social({
           provider: "google",
           callbackURL: window.location.href,
         });
       } else if (isMicrosoftProvider(provider)) {
-        await signIn.social({
-          provider: "microsoft",
-          callbackURL: window.location.href,
-        });
+        // Microsoft: use custom reconnect flow that properly updates tokens
+        // Better Auth's signIn.social does NOT update tokens for existing accounts
+        window.location.href = `/api/user/reconnect-microsoft?emailAccountId=${emailAccount.id}`;
       }
     } catch (error) {
       console.error("Failed to reconnect:", error);
