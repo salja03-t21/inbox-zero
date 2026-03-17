@@ -272,8 +272,9 @@ export const betterAuthConfig = betterAuth({
       clientSecret: env.MICROSOFT_CLIENT_SECRET || "",
       scope: [...OUTLOOK_SCOPES, "offline_access"],
       tenantId: "common",
-      // Only prompt for consent on first login, not every time
-      prompt: "select_account",
+      // Force consent to ensure Microsoft issues a new refresh token
+      // Without this, re-login may reuse the old (possibly expired) refresh token
+      prompt: "consent",
       disableIdTokenSignIn: true,
     },
   },
