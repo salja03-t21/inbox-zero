@@ -8,7 +8,7 @@
 services:
   app:
     # Using latest tag to always pull newest image
-    image: ghcr.io/tiger21-llc/inbox-zero:latest
+    image: registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
     build:
       context: .
       dockerfile: docker/Dockerfile.tiger21.prod
@@ -76,7 +76,6 @@ services:
       INNGEST_BASE_URL: http://inngest:8288
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
-      INNGEST_DEV: "1"
 
       # Database - Using DigitalOcean Managed PostgreSQL
       DATABASE_URL: ${DATABASE_URL}
@@ -176,9 +175,10 @@ services:
     deploy:
       replicas: 1
       restart_policy:
+        # Unlimited retries: a transient DB blip once exhausted max_attempts
+        # and left this service down (0/1) for ~2 months until manually restarted.
         condition: on-failure
-        delay: 5s
-        max_attempts: 3
+        delay: 10s
       placement:
         constraints:
           - node.role == manager

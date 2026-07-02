@@ -240,7 +240,9 @@ UPSTASH_REDIS_URL=http://serverless-redis-http:80
 INNGEST_EVENT_KEY=<secure key>
 INNGEST_SIGNING_KEY=<secure key>
 INNGEST_BASE_URL=http://inngest:8288
-INNGEST_DEV=1
+# INNGEST_DEV must NOT be set in production - it disables Inngest
+# request-signature verification on the public /api/inngest endpoint.
+# Signature enforcement requires it unset with INNGEST_SIGNING_KEY configured.
 ```
 
 ### Configuration Files

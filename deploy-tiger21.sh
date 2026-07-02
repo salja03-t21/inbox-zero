@@ -40,6 +40,7 @@ DEPLOY_PATH="~/IT-Configs/docker_swarm/inbox-zero"
 VOLUMES_PATH="/mnt/inbox-zero-tiger21"
 STACK_NAME="inbox-zero-tiger21"
 REGISTRY="ghcr.io/tiger21-llc"
+DO_REGISTRY="registry.digitalocean.com/t21-docker-registry"
 IMAGE_NAME="inbox-zero"
 BRANCH="main"
 
@@ -91,6 +92,8 @@ docker buildx build \
     --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
     -t $REGISTRY/$IMAGE_NAME:latest \
     -t $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT \
+    -t $DO_REGISTRY/$IMAGE_NAME:latest \
+    -t $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT \
     .
 
 if [ $? -ne 0 ]; then
@@ -100,7 +103,7 @@ fi
 echo "✓ Docker image built successfully"
 echo ""
 
-# Step 5: Push to GitHub Container Registry
+# Step 5: Push to GitHub Container Registry and DigitalOcean Registry
 echo "📤 Pushing image to GitHub Container Registry..."
 echo "   Image: $REGISTRY/$IMAGE_NAME:latest"
 echo "   Tag: $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT"
@@ -112,12 +115,26 @@ if ! docker info 2>/dev/null | grep -q "ghcr.io"; then
     echo "   Or use: docker login ghcr.io"
 fi
 
+# Check if user is logged in to DigitalOcean registry
+if ! docker info 2>/dev/null | grep -q "registry.digitalocean.com"; then
+    echo "⚠️  You may need to authenticate to DigitalOcean Container Registry."
+    echo "   Run: doctl registry login"
+    echo "   Or use: docker login registry.digitalocean.com"
+fi
+
 docker push $REGISTRY/$IMAGE_NAME:latest
 docker push $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT
 
+echo "📤 Pushing image to DigitalOcean Container Registry..."
+echo "   Image: $DO_REGISTRY/$IMAGE_NAME:latest"
+echo "   Tag: $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT"
+
+docker push $DO_REGISTRY/$IMAGE_NAME:latest
+docker push $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT
+
 if [ $? -ne 0 ]; then
     echo "❌ Error: Failed to push image to registry"
-    echo "   Make sure you're authenticated to ghcr.io"
+    echo "   Make sure you're authenticated to ghcr.io and registry.digitalocean.com"
     exit 1
 fi
 echo "✓ Images pushed to registry"
@@ -228,7 +245,7 @@ echo ""
 echo "✨ Deployment complete!"
 echo "🌐 Application: https://iz.tiger21.com"
 echo "📌 Deployed commit: $LATEST_COMMIT (branch: $BRANCH)"
-echo "🏷️  Docker image: $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT"
+echo "🏷️  Docker image: $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT"
 echo "🏷️  Stack: $STACK_NAME"
 echo ""
 
