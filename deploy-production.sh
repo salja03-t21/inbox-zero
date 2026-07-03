@@ -88,8 +88,10 @@ echo "⏳ Waiting for services to start..."
 sleep 10
 
 # Step 8: Run database migrations
+# Pinned to prisma@6.6.0: the runtime image has no dev deps, so a bare `npx prisma`
+# fetches the latest Prisma (7.x) from npm, which rejects this project's v6 schema.
 echo "🗄️  Running database migrations..."
-ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose exec -T app sh -c 'cd /app/apps/web && npx prisma migrate deploy'"
+ssh $SERVER_USER@$SERVER "cd $DEPLOY_PATH && docker compose exec -T app sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'"
 
 # Step 9: Check service status
 echo "✅ Checking service status..."

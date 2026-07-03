@@ -221,6 +221,8 @@ ssh $SERVER_USER@$SERVER "docker stack services $STACK_NAME"
 echo ""
 
 # Step 12: Run database migrations
+# Pinned to prisma@6.6.0: the runtime image has no dev deps, so a bare `npx prisma`
+# fetches the latest Prisma (7.x) from npm, which rejects this project's v6 schema.
 echo "🗄️  Running database migrations..."
 echo "⚠️  Waiting 30 seconds for app container to be ready..."
 sleep 30
@@ -232,10 +234,10 @@ if [ -z "$APP_CONTAINER" ]; then
     echo "⚠️  Warning: Could not find running app container. Skipping migrations."
     echo "   You may need to run migrations manually:"
     echo "   ssh $SERVER_USER@$SERVER"
-    echo "   docker exec -it \$(docker ps --filter label=com.docker.swarm.service.name=${STACK_NAME}_app --format '{{.ID}}' | head -n 1) sh -c 'cd /app/apps/web && npx prisma migrate deploy'"
+    echo "   docker exec -it \$(docker ps --filter label=com.docker.swarm.service.name=${STACK_NAME}_app --format '{{.ID}}' | head -n 1) sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'"
 else
     echo "Running migrations in container: $APP_CONTAINER"
-    ssh $SERVER_USER@$SERVER "docker exec $APP_CONTAINER sh -c 'cd /app/apps/web && npx prisma migrate deploy'" || {
+    ssh $SERVER_USER@$SERVER "docker exec $APP_CONTAINER sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'" || {
         echo "⚠️  Warning: Migration command failed. Container may still be starting."
         echo "   Check logs: ssh $SERVER_USER@$SERVER 'docker service logs ${STACK_NAME}_app'"
     }
