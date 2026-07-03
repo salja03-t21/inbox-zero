@@ -10,7 +10,11 @@ set -euo pipefail
 
 # Configuration
 SERVER="167.99.116.99"
+# Production pulls from the DO registry; ghcr is a secondary push target.
+# Both are cleaned up so stale images don't accumulate on either.
+DO_REGISTRY="registry.digitalocean.com/t21-docker-registry/inbox-zero"
 REGISTRY="ghcr.io/tiger21-llc/inbox-zero"
+REGISTRIES=("$DO_REGISTRY" "$REGISTRY")
 KEEP_IMAGES=5  # Number of recent images to keep
 
 # Colors for output
@@ -132,18 +136,20 @@ cleanup_local() {
         log "No dangling images to remove"
     fi
     
-    # 3. Clean up old inbox-zero images (keep last N)
-    log "Checking for old inbox-zero images..."
-    if docker images "$REGISTRY" --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}" | tail -n +2 | wc -l | grep -q -v "^0$"; then
-        local old_images=$(docker images "$REGISTRY" --format "{{.ID}}" | tail -n +$((KEEP_IMAGES + 1)))
-        if [[ -n "$old_images" ]]; then
-            execute_command "echo '$old_images' | xargs docker rmi" "Remove old inbox-zero images (keeping $KEEP_IMAGES most recent)"
+    # 3. Clean up old inbox-zero images (keep last N, both registries)
+    for registry in "${REGISTRIES[@]}"; do
+        log "Checking for old inbox-zero images ($registry)..."
+        if docker images "$registry" --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedAt}}" | tail -n +2 | wc -l | grep -q -v "^0$"; then
+            local old_images=$(docker images "$registry" --format "{{.ID}}" | tail -n +$((KEEP_IMAGES + 1)))
+            if [[ -n "$old_images" ]]; then
+                execute_command "echo '$old_images' | xargs docker rmi" "Remove old inbox-zero images from $registry (keeping $KEEP_IMAGES most recent)"
+            else
+                log "No old inbox-zero images to remove from $registry (have $(docker images "$registry" --format "{{.ID}}" | wc -l) images, keeping $KEEP_IMAGES)"
+            fi
         else
-            log "No old inbox-zero images to remove (have $(docker images "$REGISTRY" --format "{{.ID}}" | wc -l) images, keeping $KEEP_IMAGES)"
+            log "No inbox-zero images found locally for $registry"
         fi
-    else
-        log "No inbox-zero images found locally"
-    fi
+    done
     
     # 4. Remove unused networks
     if docker network ls --filter "driver=bridge" --filter "name!=bridge" --filter "name!=host" --filter "name!=none" -q | grep -q .; then
@@ -213,14 +219,16 @@ cleanup_remote() {
         log "No dangling images to remove on server"
     fi
     
-    # 3. Clean up old inbox-zero images (keep last N)
-    log "Checking for old inbox-zero images on server..."
-    local image_count=$(ssh "root@$SERVER" "docker images '$REGISTRY' --format '{{.ID}}' | wc -l" 2>/dev/null || echo "0")
-    if [[ "$image_count" -gt "$KEEP_IMAGES" ]]; then
-        execute_command "ssh 'root@$SERVER' 'docker images \"$REGISTRY\" --format \"{{.ID}}\" | tail -n +$((KEEP_IMAGES + 1)) | xargs -r docker rmi'" "Remove old inbox-zero images on server (keeping $KEEP_IMAGES most recent)"
-    else
-        log "No old inbox-zero images to remove on server (have $image_count images, keeping $KEEP_IMAGES)"
-    fi
+    # 3. Clean up old inbox-zero images (keep last N, both registries)
+    for registry in "${REGISTRIES[@]}"; do
+        log "Checking for old inbox-zero images on server ($registry)..."
+        local image_count=$(ssh "root@$SERVER" "docker images '$registry' --format '{{.ID}}' | wc -l" 2>/dev/null || echo "0")
+        if [[ "$image_count" -gt "$KEEP_IMAGES" ]]; then
+            execute_command "ssh 'root@$SERVER' 'docker images \"$registry\" --format \"{{.ID}}\" | tail -n +$((KEEP_IMAGES + 1)) | xargs -r docker rmi'" "Remove old inbox-zero images on server from $registry (keeping $KEEP_IMAGES most recent)"
+        else
+            log "No old inbox-zero images to remove on server from $registry (have $image_count images, keeping $KEEP_IMAGES)"
+        fi
+    done
     
     # 4. Remove unused networks (be careful not to remove swarm networks)
     execute_command "ssh 'root@$SERVER' 'docker network prune -f'" "Remove unused networks on server"

@@ -66,6 +66,8 @@ pnpm tsc --noEmit  # Type check before building
 docker build \
   -f docker/Dockerfile.tiger21.prod \
   --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
+  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
+  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:$(git rev-parse --short HEAD) \
   -t ghcr.io/tiger21-llc/inbox-zero:latest \
   -t ghcr.io/tiger21-llc/inbox-zero:$(git rev-parse --short HEAD) \
   .
@@ -73,11 +75,18 @@ docker build \
 
 ### Step 2: Push to Registry
 
+DigitalOcean Container Registry is the production pull source; GitHub Container Registry is a secondary push target.
+
 ```bash
+# Authenticate to DigitalOcean Container Registry (one time)
+doctl registry login
+
 # Authenticate to GitHub Container Registry (one time)
 echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 
 # Push the images
+docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
+docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:abc1234
 docker push ghcr.io/tiger21-llc/inbox-zero:latest
 docker push ghcr.io/tiger21-llc/inbox-zero:abc1234
 ```
@@ -100,7 +109,7 @@ ssh root@167.99.116.99 "cd ~/IT-Configs/docker_swarm/inbox-zero && \
 # Execute migrations in a running container
 ssh root@167.99.116.99
 docker exec $(docker ps -qf name=inbox-zero-tiger21_app | head -1) \
-  sh -c 'cd /app/apps/web && npx prisma migrate deploy'
+  sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'
 ```
 
 ## Automated Deployment Script
@@ -189,8 +198,9 @@ ssh root@167.99.116.99 "cd ~/src/inbox-zero && pnpm install && pnpm build"
 
 ### ✅ DO: Build locally, push to registry, deploy
 ```bash
-# CORRECT - This is the way!
-docker build -t ghcr.io/tiger21-llc/inbox-zero:latest .
+# CORRECT - This is the way! (DO registry is the production pull source; ghcr is a secondary push target)
+docker build -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest -t ghcr.io/tiger21-llc/inbox-zero:latest .
+docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
 docker push ghcr.io/tiger21-llc/inbox-zero:latest
 ssh root@167.99.116.99 "cd ~/IT-Configs/docker_swarm/inbox-zero && \
   docker stack deploy --compose-file docker-compose.tiger21.yml inbox-zero-tiger21"
@@ -207,17 +217,16 @@ For development/staging environments, you might use different patterns, but prod
 If something goes wrong, rollback is trivial because images are tagged:
 
 ```bash
-# List available tags
-curl -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://ghcr.io/v2/tiger21-llc/inbox-zero/tags/list
+# List available tags (production pulls from the DO registry)
+doctl registry repository list-tags t21-docker-registry/inbox-zero
 
 # Deploy a specific version
 ssh root@167.99.116.99
 cd ~/IT-Configs/docker_swarm/inbox-zero
 
 # Edit docker-compose.tiger21.yml to use specific tag
-# Change: image: ghcr.io/tiger21-llc/inbox-zero:latest
-# To:     image: ghcr.io/tiger21-llc/inbox-zero:abc1234
+# Change: image: registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
+# To:     image: registry.digitalocean.com/t21-docker-registry/inbox-zero:abc1234
 
 docker stack deploy --compose-file docker-compose.tiger21.yml \
   --with-registry-auth inbox-zero-tiger21

@@ -146,7 +146,8 @@ ssh root@167.99.116.99 'docker service scale inbox-zero-tiger21_app=0 && sleep 5
    ```
 
 3. **Docker Registry Access**:
-   - GitHub Container Registry: `ghcr.io/tiger21-llc/inbox-zero`
+   - DigitalOcean Container Registry (production pull source): `registry.digitalocean.com/t21-docker-registry/inbox-zero`
+   - GitHub Container Registry (secondary push target): `ghcr.io/tiger21-llc/inbox-zero`
    - Authentication handled by deploy script
 
 ### Standard Deployment
@@ -167,12 +168,15 @@ pnpm tsc --noEmit
 If the automated script fails, you can deploy manually:
 
 ```bash
-# 1. Build and push image
+# 1. Build and push image (all four tags, matching deploy-tiger21.sh)
 docker buildx build \
   --platform linux/amd64 \
   --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
   -f docker/Dockerfile.tiger21.prod \
   -t ghcr.io/tiger21-llc/inbox-zero:latest \
+  -t ghcr.io/tiger21-llc/inbox-zero:<commit-sha> \
+  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
+  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:<commit-sha> \
   --push .
 
 # 2. Update stack on server
@@ -188,8 +192,8 @@ ssh root@167.99.116.99 'cd ~/IT-Configs/docker_swarm/inbox-zero && \
 # 1. Find previous working image
 ssh root@167.99.116.99 'docker service inspect inbox-zero-tiger21_app --format "{{.Spec.TaskTemplate.ContainerSpec.Image}}"'
 
-# 2. Update to specific image
-ssh root@167.99.116.99 'docker service update --image ghcr.io/tiger21-llc/inbox-zero:PREVIOUS_TAG inbox-zero-tiger21_app'
+# 2. Update to specific image (pull/re-tag from the DO registry - production's pull source)
+ssh root@167.99.116.99 'docker service update --image registry.digitalocean.com/t21-docker-registry/inbox-zero:PREVIOUS_TAG inbox-zero-tiger21_app'
 ```
 
 ## Configuration Management
@@ -517,7 +521,8 @@ docker run -it --rm postgres:15 psql "postgresql://inbox_zero_user:PASSWORD@db-p
 # Remove unused images (run on server)
 ssh root@167.99.116.99 'docker image prune -f'
 
-# Remove old inbox-zero images (keep last 5)
+# Remove old inbox-zero images (keep last 5, both registries)
+ssh root@167.99.116.99 'docker images registry.digitalocean.com/t21-docker-registry/inbox-zero --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}" | tail -n +2 | sort -k2 -r | tail -n +6 | awk "{print \$3}" | xargs -r docker rmi'
 ssh root@167.99.116.99 'docker images ghcr.io/tiger21-llc/inbox-zero --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}" | tail -n +2 | sort -k2 -r | tail -n +6 | awk "{print \$3}" | xargs -r docker rmi'
 ```
 
@@ -528,10 +533,10 @@ ssh root@167.99.116.99 'docker images ghcr.io/tiger21-llc/inbox-zero --format "t
 cd /Users/jamessalmon/WebstormProjects/inbox-zero/apps/web
 
 # Check migration status
-DATABASE_URL="..." npx prisma migrate status
+DATABASE_URL="..." npx --yes prisma@6.6.0 migrate status
 
 # Apply pending migrations
-DATABASE_URL="..." npx prisma migrate deploy
+DATABASE_URL="..." npx --yes prisma@6.6.0 migrate deploy
 
 # Generate fresh Prisma client (if schema changed)
 npx prisma generate

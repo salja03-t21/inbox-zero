@@ -177,10 +177,11 @@ cd ~/IT-Configs/docker_swarm/inbox-zero
 # Pull latest code
 git pull origin production
 
-# Build the image
+# Build the image (DO registry is the production pull source; ghcr is a secondary push target)
 docker build \
   -f docker/Dockerfile.tiger21.prod \
   --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
+  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
   -t ghcr.io/tiger21-llc/inbox-zero:latest \
   .
 
@@ -194,7 +195,7 @@ docker stack services inbox-zero-tiger21
 
 # Run migrations
 docker exec $(docker ps --filter label=com.docker.swarm.service.name=inbox-zero-tiger21_app --format '{{.ID}}' | head -n 1) \
-  sh -c 'cd /app/apps/web && npx prisma migrate deploy'
+  sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'
 ```
 
 ## Docker Swarm Management
@@ -244,9 +245,9 @@ docker service scale inbox-zero-tiger21_app=2
 ### Update Service
 
 ```bash
-# Update with new image
+# Update with new image (pull from the DO registry - production's pull source)
 docker service update \
-  --image ghcr.io/tiger21-llc/inbox-zero:latest \
+  --image registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
   inbox-zero-tiger21_app
 
 # Force update (recreate containers)

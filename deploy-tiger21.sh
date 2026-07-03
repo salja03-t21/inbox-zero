@@ -122,21 +122,16 @@ if ! docker info 2>/dev/null | grep -q "registry.digitalocean.com"; then
     echo "   Or use: docker login registry.digitalocean.com"
 fi
 
-docker push $REGISTRY/$IMAGE_NAME:latest
-docker push $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT
+docker push $REGISTRY/$IMAGE_NAME:latest || { echo "❌ Error: failed to push $REGISTRY/$IMAGE_NAME:latest — check auth (ghcr: docker login ghcr.io / DO: doctl registry login)"; exit 1; }
+docker push $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT || { echo "❌ Error: failed to push $REGISTRY/$IMAGE_NAME:$LATEST_COMMIT — check auth (ghcr: docker login ghcr.io / DO: doctl registry login)"; exit 1; }
 
 echo "📤 Pushing image to DigitalOcean Container Registry..."
 echo "   Image: $DO_REGISTRY/$IMAGE_NAME:latest"
 echo "   Tag: $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT"
 
-docker push $DO_REGISTRY/$IMAGE_NAME:latest
-docker push $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT
+docker push $DO_REGISTRY/$IMAGE_NAME:latest || { echo "❌ Error: failed to push $DO_REGISTRY/$IMAGE_NAME:latest — check auth (ghcr: docker login ghcr.io / DO: doctl registry login)"; exit 1; }
+docker push $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT || { echo "❌ Error: failed to push $DO_REGISTRY/$IMAGE_NAME:$LATEST_COMMIT — check auth (ghcr: docker login ghcr.io / DO: doctl registry login)"; exit 1; }
 
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to push image to registry"
-    echo "   Make sure you're authenticated to ghcr.io and registry.digitalocean.com"
-    exit 1
-fi
 echo "✓ Images pushed to registry"
 echo ""
 
