@@ -222,8 +222,8 @@ docker service scale inbox-zero-tiger21_app=2
 ### Update/Restart
 
 ```bash
-# Update to latest image
-docker service update --image ghcr.io/tiger21-llc/inbox-zero:latest inbox-zero-tiger21_app
+# Update to latest image (pull from the DO registry - production's pull source)
+docker service update --image registry.digitalocean.com/t21-docker-registry/inbox-zero:latest inbox-zero-tiger21_app
 
 # Force restart (recreate containers)
 docker service update --force inbox-zero-tiger21_app
@@ -241,7 +241,7 @@ docker service rollback inbox-zero-tiger21_app
 ```bash
 # Run migrations
 docker exec $(docker ps --filter label=com.docker.swarm.service.name=inbox-zero-tiger21_app --format '{{.ID}}' | head -n 1) \
-  sh -c 'cd /app/apps/web && npx prisma migrate deploy'
+  sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'
 
 # Backup database
 docker exec $(docker ps --filter label=com.docker.swarm.service.name=inbox-zero-tiger21_postgres --format '{{.ID}}' | head -n 1) \

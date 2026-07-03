@@ -41,7 +41,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-inboxzero}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-inboxzero}
     volumes:
       - /mnt/nfs/inbox-zero/postgres:/var/lib/postgresql/data
@@ -89,7 +89,7 @@ services:
     environment:
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY}
-      INNGEST_POSTGRES_URI: postgres://${POSTGRES_USER:-inboxzero}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-inboxzero}
+      INNGEST_POSTGRES_URI: postgres://${POSTGRES_USER:-inboxzero}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-inboxzero}
       INNGEST_REDIS_URI: redis://redis:6379
       INNGEST_POLL_INTERVAL: 60
       # Tell Inngest where to find the app's function definitions

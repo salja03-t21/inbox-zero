@@ -83,7 +83,7 @@ services:
 
       # Redis
       UPSTASH_REDIS_URL: http://serverless-redis-http:80
-      UPSTASH_REDIS_TOKEN: ${UPSTASH_REDIS_TOKEN:-tiger21-redis-token}
+      UPSTASH_REDIS_TOKEN: ${UPSTASH_REDIS_TOKEN:?UPSTASH_REDIS_TOKEN is required}
       REDIS_URL: redis://redis:6379
     env_file:
       - .env.tiger21
@@ -163,7 +163,7 @@ services:
           memory: 512M
     environment:
       SRH_MODE: env
-      SRH_TOKEN: ${UPSTASH_REDIS_TOKEN:-tiger21-redis-token}
+      SRH_TOKEN: ${UPSTASH_REDIS_TOKEN:?UPSTASH_REDIS_TOKEN is required}
       SRH_CONNECTION_STRING: redis://redis:6379
     networks:
       - inbox-zero-network

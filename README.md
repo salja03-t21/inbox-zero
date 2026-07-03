@@ -53,7 +53,7 @@ Inbox Zero is an AI email assistant that helps you:
 ### Prerequisites
 
 - Docker Swarm initialized on server
-- Access to `ghcr.io/tiger21-llc` container registry
+- Access to `registry.digitalocean.com/t21-docker-registry` (production pull source) and `ghcr.io/tiger21-llc` (secondary push target) container registries
 - DigitalOcean Managed PostgreSQL database
 - Microsoft Azure OAuth app configured
 - Cloudflare DNS pointing to server IP
@@ -68,12 +68,14 @@ cd ~/IT-Configs/docker_swarm/inbox-zero
 
 ### Manual Deployment Steps
 
-1. **Build and push Docker image**:
+1. **Build and push Docker image** (DO registry is the production pull source; ghcr is a secondary push target):
    ```bash
    docker build -f docker/Dockerfile.tiger21.prod \
      --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
+     -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
      -t ghcr.io/tiger21-llc/inbox-zero:latest .
    
+   docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
    docker push ghcr.io/tiger21-llc/inbox-zero:latest
    ```
 
@@ -85,7 +87,7 @@ cd ~/IT-Configs/docker_swarm/inbox-zero
 3. **Run database migrations** (first time only):
    ```bash
    docker exec -it $(docker ps -q -f name=inbox-zero-tiger21_app) sh -c \
-     'cd /app/apps/web && npx prisma migrate deploy'
+     'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'
    ```
 
 4. **Verify deployment**:
@@ -153,7 +155,7 @@ To update the application:
 
 1. Build new image with updated code
 2. Push to registry
-3. Update the service: `docker service update --image ghcr.io/tiger21-llc/inbox-zero:latest inbox-zero-tiger21_app`
+3. Update the service: `docker service update --image registry.digitalocean.com/t21-docker-registry/inbox-zero:latest inbox-zero-tiger21_app`
 
 ## Development
 
