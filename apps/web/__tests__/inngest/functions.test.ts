@@ -192,7 +192,7 @@ describe("Inngest Functions", () => {
       const result = bulkProcessWorkerSchema.safeParse(validPayload);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual(validPayload);
+        expect(result.data).toEqual({ ...validPayload, forceReprocess: false });
       }
     });
 
