@@ -137,66 +137,46 @@ openssl rand -base64 32
 
 ## Deployment Process
 
-### Automated Deployment (Recommended)
+Deploys are automated GitOps. This repo builds the image; the production stack's
+compose lives in the `tiger21-infrastructure` repo and deploys when a PR merges.
+There is no local build and no SSH deploy.
 
-From your local machine:
+### How to ship a change
 
-```bash
-# Ensure you're on the production branch
-git checkout production
+1. **Merge to `main`** in this repo. `.github/workflows/tiger21-build-release.yml`
+   builds an immutable, sha-tagged **amd64** image
+   (`docker/Dockerfile.tiger21.prod`, `--build-arg
+   NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com`) and pushes it to
+   `registry.digitalocean.com/t21-docker-registry/inbox-zero`.
+2. The same workflow **auto-opens a digest-bump PR** against
+   `TIGER21-LLC/tiger21-infrastructure`, pinning the new
+   `sha-<commit>@sha256:<digest>` in `stacks/inbox-zero-tiger21/compose.yml`.
+3. **Merge that infra PR — this is the deploy.** `tiger21-infrastructure`'s
+   `stacks-deploy.yml` runs `gitops-deploy inbox-zero-tiger21` on node 01, which
+   pulls the pinned image, injects runtime secrets from Doppler
+   (`swarm-apps/inboxzero`) on-box, deploys the stack, and runs migrations.
 
-# Commit your changes
-git add .
-git commit -m "Your commit message"
+The canonical compose is
+`tiger21-infrastructure/stacks/inbox-zero-tiger21/compose.yml`. The
+`docker-compose.tiger21.yml` in this repo is **local reference only** and does
+not reach production. Full detail: `tiger21-infrastructure`
+`docs/00-overview/deployment-architecture.md` and
+`stacks/inbox-zero-tiger21/README.md`.
 
-# Run the deployment script
-./deploy-tiger21.sh
-```
+### Pipeline credentials
 
-The script will:
-1. ✅ Verify you're on the correct repository and branch
-2. ✅ Push code to GitHub
-3. ✅ Pull code on the server
-4. ✅ Verify `.env.tiger21` exists
-5. ✅ Build the Docker image on the server
-6. ✅ Deploy to Docker Swarm
-7. ✅ Run database migrations
-8. ✅ Verify services are running
+The build/release workflow needs a **dedicated** Doppler CI config (kept
+separate from `swarm-apps/inboxzero` so CI tokens never leak into the running
+app) holding `DO_REGISTRY_TOKEN` and `TIGER21_INFRA_GITHUB_TOKEN`, reached via
+one GitHub Actions secret `DOPPLER_TOKEN`.
 
-### Manual Deployment
+### Legacy / emergency reference
 
-If you need to deploy manually:
-
-```bash
-# SSH to server
-ssh root@167.99.116.99
-
-# Navigate to deployment directory
-cd ~/IT-Configs/docker_swarm/inbox-zero
-
-# Pull latest code
-git pull origin production
-
-# Build the image (DO registry is the production pull source; ghcr is a secondary push target)
-docker build \
-  -f docker/Dockerfile.tiger21.prod \
-  --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
-  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
-  -t ghcr.io/tiger21-llc/inbox-zero:latest \
-  .
-
-# Deploy the stack
-docker stack deploy \
-  --compose-file docker-compose.tiger21.yml \
-  inbox-zero-tiger21
-
-# Wait for services to start (30-60 seconds)
-docker stack services inbox-zero-tiger21
-
-# Run migrations
-docker exec $(docker ps --filter label=com.docker.swarm.service.name=inbox-zero-tiger21_app --format '{{.ID}}' | head -n 1) \
-  sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'
-```
+The old `deploy-tiger21.sh` (build locally, push, SSH `docker stack deploy`) is
+**retired** and now just prints the new flow and exits non-zero. If the pipeline
+is unavailable and a manual deploy is unavoidable, deploy the canonical compose
+from `tiger21-infrastructure` on node 01 with `--with-registry-auth`, mirroring
+`gitops-deploy` — but prefer merging the infra PR.
 
 ## Docker Swarm Management
 
@@ -423,10 +403,10 @@ pnpm update
 pnpm build
 pnpm test
 
-# Commit and deploy
+# Commit and open a PR to main. On merge, CI builds the image and opens a
+# digest-bump PR on tiger21-infrastructure — merging that PR is the deploy.
 git add .
 git commit -m "chore: update dependencies"
-./deploy-tiger21.sh
 ```
 
 ## Removing the Stack

@@ -1,3 +1,18 @@
+# =============================================================================
+# NOT THE DEPLOY SOURCE — LOCAL REFERENCE ONLY
+# =============================================================================
+# This file is NO LONGER the source of truth for the production deploy. The
+# canonical compose for the inbox-zero-tiger21 stack lives in the
+# tiger21-infrastructure repo at stacks/inbox-zero-tiger21/compose.yml, and is
+# deployed via that repo's Family-1 GitOps pipeline (a merge to its main that
+# touches stacks/** runs gitops-deploy on node 01).
+#
+# Changes made HERE do NOT reach production. This copy is kept only for local
+# reference and to document the stack shape. To change production, open/merge a
+# PR against tiger21-infrastructure (image bumps are auto-PR'd by this repo's
+# .github/workflows/tiger21-build-release.yml on merge to main).
+# =============================================================================
+#
 # TIGER 21 Docker Swarm Stack Configuration
 # Domain: iz.tiger21.com
 # Server: 167.99.116.99 (DigitalOcean)

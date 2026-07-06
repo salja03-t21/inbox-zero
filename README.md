@@ -50,56 +50,32 @@ Inbox Zero is an AI email assistant that helps you:
 
 ## Deployment
 
-### Prerequisites
+Deploys are automated GitOps. This repo only **builds** the image; the production stack's compose lives in the separate `tiger21-infrastructure` repo. There is no local build and no SSH deploy.
 
-- Docker Swarm initialized on server
-- Access to `registry.digitalocean.com/t21-docker-registry` (production pull source) and `ghcr.io/tiger21-llc` (secondary push target) container registries
-- DigitalOcean Managed PostgreSQL database
-- Microsoft Azure OAuth app configured
-- Cloudflare DNS pointing to server IP
+### How a deploy works
 
-### Quick Deploy
+1. Merge to `main` in this repo.
+2. `.github/workflows/tiger21-build-release.yml` builds an immutable, sha-tagged amd64 image (`docker/Dockerfile.tiger21.prod`, with the `NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com` build-arg) and pushes it to `registry.digitalocean.com/t21-docker-registry/inbox-zero`.
+3. The same workflow opens a **digest-bump PR** against `TIGER21-LLC/tiger21-infrastructure`, editing `stacks/inbox-zero-tiger21/compose.yml` to pin the new `sha-<commit>@sha256:<digest>`.
+4. **Merging that PR is the deploy** — `tiger21-infrastructure`'s `stacks-deploy.yml` runs `gitops-deploy inbox-zero-tiger21` on node 01.
 
-```bash
-# On the deployment server (167.99.116.99)
-cd ~/IT-Configs/docker_swarm/inbox-zero
-./deploy-tiger21.sh
-```
+The canonical compose is `tiger21-infrastructure/stacks/inbox-zero-tiger21/compose.yml`. The `docker-compose.tiger21.yml` in this repo is kept for local reference only and does not reach production.
 
-### Manual Deployment Steps
+### Secrets
 
-1. **Build and push Docker image** (DO registry is the production pull source; ghcr is a secondary push target):
-   ```bash
-   docker build -f docker/Dockerfile.tiger21.prod \
-     --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
-     -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
-     -t ghcr.io/tiger21-llc/inbox-zero:latest .
-   
-   docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
-   docker push ghcr.io/tiger21-llc/inbox-zero:latest
-   ```
+- **Runtime** (container env): Doppler project/config `swarm-apps/inboxzero`, staged on-box at deploy (P-ENVFILE-STAGING).
+- **Pipeline** (build/PR credentials): a **dedicated** Doppler CI config holding `DO_REGISTRY_TOKEN` and `TIGER21_INFRA_GITHUB_TOKEN`, reached via one GitHub Actions secret `DOPPLER_TOKEN`. These are kept out of `swarm-apps/inboxzero` so CI credentials never leak into the running app.
 
-2. **Deploy to Docker Swarm**:
-   ```bash
-   docker stack deploy --compose-file docker-compose.tiger21.yml inbox-zero-tiger21
-   ```
+### Rollback
 
-3. **Run database migrations** (first time only):
-   ```bash
-   docker exec -it $(docker ps -q -f name=inbox-zero-tiger21_app) sh -c \
-     'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'
-   ```
+- Fast: `docker --context tiger21-swarm service rollback inbox-zero-tiger21_app`.
+- Tracked: `git revert` the digest-bump PR in `tiger21-infrastructure` and merge it.
 
-4. **Verify deployment**:
-   ```bash
-   docker stack ps inbox-zero-tiger21
-   docker service logs inbox-zero-tiger21_app
-   curl https://iz.tiger21.com/api/health/simple
-   ```
+See `tiger21-infrastructure` `docs/00-overview/deployment-architecture.md` and `stacks/inbox-zero-tiger21/README.md` for full detail.
 
 ### Environment Configuration
 
-Environment variables are managed in `.env.tiger21` on the server. Key configurations:
+Runtime environment variables are managed in Doppler (`swarm-apps/inboxzero`) and staged into the container at deploy. `.env.tiger21.example` documents the shape. Key configurations:
 
 ```bash
 # Application
@@ -151,11 +127,7 @@ DigitalOcean Managed PostgreSQL includes automatic daily backups with 7-day rete
 
 ### Updates
 
-To update the application:
-
-1. Build new image with updated code
-2. Push to registry
-3. Update the service: `docker service update --image registry.digitalocean.com/t21-docker-registry/inbox-zero:latest inbox-zero-tiger21_app`
+To ship a change: merge it to `main`. The build-and-release workflow publishes a new sha-tagged image and opens a digest-bump PR against `tiger21-infrastructure`; merging that PR rolls it out. See [Deployment](#deployment) above.
 
 ## Development
 

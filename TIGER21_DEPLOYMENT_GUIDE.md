@@ -25,8 +25,8 @@
 # Health check
 ./scripts/tiger21-health-monitor.sh --verbose
 
-# Deploy latest changes
-./deploy-tiger21.sh
+# Deploy latest changes: merge to main, then merge the auto-opened
+# digest-bump PR in tiger21-infrastructure (see Deployment Process below)
 
 # Check service status
 ssh root@167.99.116.99 'docker service ls | grep inbox-zero'
@@ -112,89 +112,60 @@ ssh root@167.99.116.99 'docker service scale inbox-zero-tiger21_app=0 && sleep 5
 
 ## Deployment Process
 
-### ⚠️ Critical Deployment Rules
+Deploys are automated GitOps. This repo **builds** the image; the production
+stack's compose lives in the `tiger21-infrastructure` repo and deploys when a PR
+merges. Nobody builds locally and nobody SSHes to deploy.
 
-1. **ALWAYS BUILD FOR AMD64 ARCHITECTURE**
-   - Production servers are Linux AMD64 (x86_64)
-   - Mac M1/M2/M3 builds are ARM64 and **WILL NOT RUN** on servers
-   - Always use: `docker buildx build --platform linux/amd64`
-   - If you see `exec format error` in logs, you built for the wrong architecture
+### How to ship a change
 
-2. **CLEANUP AFTER DEPLOYMENT**
-   - Script automatically prunes old images after successful deploy
-   - Manual cleanup: `docker image prune -f --filter 'until=24h'`
-   - Run cleanup script: `./scripts/tiger21-cleanup.sh`
+1. **Merge to `main`** in this repo. `.github/workflows/tiger21-build-release.yml`
+   builds an immutable, sha-tagged **amd64** image on a native amd64 CI runner
+   (`docker/Dockerfile.tiger21.prod`, `--build-arg
+   NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com` — the client-side base URL is
+   baked at build time, so this build-arg is load-bearing) and pushes it to
+   `registry.digitalocean.com/t21-docker-registry/inbox-zero:sha-<commit>`.
+2. The workflow **auto-opens a digest-bump PR** against
+   `TIGER21-LLC/tiger21-infrastructure`, pinning `sha-<commit>@sha256:<digest>`
+   in `stacks/inbox-zero-tiger21/compose.yml`.
+3. **Merge that infra PR — this is the deploy.** `stacks-deploy.yml` runs
+   `gitops-deploy inbox-zero-tiger21` on node 01: pulls the pinned image,
+   injects runtime secrets from Doppler (`swarm-apps/inboxzero`) on-box, deploys
+   the stack, and runs migrations.
 
-3. **NO SOURCE CODE ON SERVERS**
-   - Build locally, push to registry, deploy from registry
-   - Server only contains docker-compose.yml and .env files
+The building AMD64 concern is now handled by the CI runner (native amd64), so
+there is no local architecture-mismatch risk. Old-image cleanup is handled by
+the infra pipeline's post-deploy prune and daily cron.
 
-### Prerequisites
+### Secrets
 
-1. **Local Environment**:
+- **Runtime** (container env): Doppler `swarm-apps/inboxzero`, staged on-box at
+  deploy. No secret value ever reaches CI.
+- **Pipeline** (build/PR credentials): a **dedicated** Doppler CI config holding
+  `DO_REGISTRY_TOKEN` and `TIGER21_INFRA_GITHUB_TOKEN`, reached via one GitHub
+  Actions secret `DOPPLER_TOKEN`. Kept out of `swarm-apps/inboxzero` so CI
+  credentials never leak into the running app.
 
-   ```bash
-   cd /Users/jamessalmon/WebstormProjects/inbox-zero
-   git checkout production
-   git pull origin production
-   ```
-
-2. **Server Access**:
-
-   ```bash
-   ssh root@167.99.116.99
-   ```
-
-3. **Docker Registry Access**:
-   - DigitalOcean Container Registry (production pull source): `registry.digitalocean.com/t21-docker-registry/inbox-zero`
-   - GitHub Container Registry (secondary push target): `ghcr.io/tiger21-llc/inbox-zero`
-   - Authentication handled by deploy script
-
-### Standard Deployment
-
-```bash
-# 1. Ensure you're on the production branch
-git branch --show-current  # Should show 'production'
-
-# 2. Run type check (critical - Docker doesn't validate TypeScript)
-pnpm tsc --noEmit
-
-# 3. Deploy
-./deploy-tiger21.sh
-```
-
-### Manual Deployment Steps
-
-If the automated script fails, you can deploy manually:
-
-```bash
-# 1. Build and push image (all four tags, matching deploy-tiger21.sh)
-docker buildx build \
-  --platform linux/amd64 \
-  --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
-  -f docker/Dockerfile.tiger21.prod \
-  -t ghcr.io/tiger21-llc/inbox-zero:latest \
-  -t ghcr.io/tiger21-llc/inbox-zero:<commit-sha> \
-  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
-  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:<commit-sha> \
-  --push .
-
-# 2. Update stack on server
-ssh root@167.99.116.99 'cd ~/IT-Configs/docker_swarm/inbox-zero && \
-  docker compose --env-file .env.tiger21 -f docker-compose.tiger21.yml config | \
-  sed "/^name:/d" | sed -E "s/(cpus:) ([0-9.]+)/\1 \"\2\"/" | \
-  docker stack deploy --with-registry-auth --resolve-image always -c - inbox-zero-tiger21'
-```
+Full detail: `tiger21-infrastructure`
+`docs/00-overview/deployment-architecture.md` and
+`stacks/inbox-zero-tiger21/README.md`.
 
 ### Rollback Procedure
 
 ```bash
-# 1. Find previous working image
-ssh root@167.99.116.99 'docker service inspect inbox-zero-tiger21_app --format "{{.Spec.TaskTemplate.ContainerSpec.Image}}"'
+# Fast, no files: revert to the immediately-previous task spec on the Swarm
+docker --context tiger21-swarm service rollback inbox-zero-tiger21_app
 
-# 2. Update to specific image (pull/re-tag from the DO registry - production's pull source)
-ssh root@167.99.116.99 'docker service update --image registry.digitalocean.com/t21-docker-registry/inbox-zero:PREVIOUS_TAG inbox-zero-tiger21_app'
+# Tracked: git-revert the digest-bump PR in tiger21-infrastructure and merge it.
+# Merging the revert redeploys the previously-pinned digest.
 ```
+
+### Legacy / emergency reference
+
+`deploy-tiger21.sh` (build locally, push, SSH `docker stack deploy`) is
+**retired** and now just prints the new flow and exits non-zero. If the pipeline
+is unavailable and a manual deploy is unavoidable, deploy the canonical compose
+from `tiger21-infrastructure` on node 01 with `--with-registry-auth`, mirroring
+`gitops-deploy` — but prefer merging the infra PR.
 
 ## Configuration Management
 

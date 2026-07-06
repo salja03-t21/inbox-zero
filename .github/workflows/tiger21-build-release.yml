@@ -1,0 +1,221 @@
+# =============================================================================
+# TIGER 21 — Build & Release
+# =============================================================================
+# This repo's job in the TIGER 21 deploy model is the BUILD side only. It never
+# SSHes to a server and never deploys. On every merge to main it:
+#   1. builds an immutable, sha-tagged, amd64 image,
+#   2. pushes it to the DigitalOcean registry, and
+#   3. opens a digest-bump PR against TIGER21-LLC/tiger21-infrastructure.
+#
+# The actual DEPLOY happens when that infra PR is merged: the inbox-zero-tiger21
+# stack is a Family-1 GitOps stack whose compose lives in tiger21-infrastructure
+# at stacks/inbox-zero-tiger21/compose.yml with a digest-pinned image. Merging a
+# PR that touches stacks/** runs that repo's stacks-deploy.yml, which SSHes to
+# node 01 and runs `gitops-deploy inbox-zero-tiger21`. See tiger21-infrastructure
+# docs/deploy/family-1-gitops.md and stacks/inbox-zero-tiger21/README.md.
+#
+# -----------------------------------------------------------------------------
+# REQUIRED PROVISIONING (one-time, done outside this repo)
+# -----------------------------------------------------------------------------
+# (a) A DEDICATED Doppler CI config — NOT swarm-apps/inboxzero. The inboxzero
+#     runtime config is staged wholesale into the production container's env at
+#     deploy time (P-ENVFILE-STAGING), so any CI credential placed there would
+#     leak into the running app. The CI config holds exactly two secrets:
+#       - DO_REGISTRY_TOKEN         : a DigitalOcean API token with registry
+#                                     read/write (used as both docker login
+#                                     username AND password).
+#       - TIGER21_INFRA_GITHUB_TOKEN: a GitHub fine-grained PAT scoped to
+#                                     TIGER21-LLC/tiger21-infrastructure with
+#                                     contents:write + pull-requests:write.
+# (b) One GitHub Actions secret on this repo:
+#       - DOPPLER_TOKEN : a Doppler SERVICE token scoped to the dedicated CI
+#                         config above.
+#     Per org convention, no other secrets go in GitHub repo settings — every
+#     other pipeline credential is fetched from Doppler at run time.
+# =============================================================================
+
+name: "TIGER 21 — Build & Release"
+
+on:
+  # No path filter: any main merge produces a candidate image. The
+  # skip-if-exists check below dedupes so a no-op merge is cheap.
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tiger21-build-release
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    # Repo-agnostic gate: runs on the current fork now and the org repo later.
+    if: github.repository == 'salja03-t21/inbox-zero' || github.repository == 'TIGER21-LLC/inbox-zero'
+    # Native amd64 — the org's WarpBuild runners are not available on the fork.
+    # If/when this runs in the TIGER21-LLC org, change to warp-ubuntu-latest-x64-2x.
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout the source to build.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Fetch pipeline credentials from the dedicated Doppler CI config.
+      #    inject-env-vars exports DO_REGISTRY_TOKEN and TIGER21_INFRA_GITHUB_TOKEN
+      #    into the job env, and the action masks every value in the logs.
+      - name: Fetch CI secrets from Doppler
+        uses: dopplerhq/secrets-fetch-action@v1.3.0
+        id: doppler
+        with:
+          doppler-token: ${{ secrets.DOPPLER_TOKEN }}
+          inject-env-vars: true
+
+      # 3. Log in to the DO registry. Token is both username and password (DO
+      #    convention). Value comes from masked env — never echoed.
+      - name: Log in to DigitalOcean registry
+        run: |
+          docker login registry.digitalocean.com \
+            -u "$DO_REGISTRY_TOKEN" \
+            -p "$DO_REGISTRY_TOKEN"
+
+      # 4. Compute the immutable tag and image name from the triggering commit.
+      - name: Compute tag and image
+        id: meta
+        run: |
+          TAG="sha-${GITHUB_SHA::9}"
+          IMAGE="registry.digitalocean.com/t21-docker-registry/inbox-zero"
+          # Subject of the triggering commit, for the bump commit/PR message.
+          SUBJECT="$(git log -1 --pretty=%s "$GITHUB_SHA")"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "subject=$SUBJECT" >> "$GITHUB_OUTPUT"
+
+      # 5. Skip build+push if this sha's image already exists in the registry.
+      #    Later steps still run so a bump PR can be (re-)opened for an
+      #    already-built sha via workflow_dispatch.
+      - name: Check if image already exists
+        id: check
+        run: |
+          IMAGE="${{ steps.meta.outputs.image }}"
+          TAG="${{ steps.meta.outputs.tag }}"
+          if docker manifest inspect "$IMAGE:$TAG" > /dev/null 2>&1; then
+            echo "Image $IMAGE:$TAG already exists — skipping build+push."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Image $IMAGE:$TAG not found — will build+push."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 6. Build + push (only when the sha image does not already exist).
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.exists != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        if: steps.check.outputs.exists != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.tiger21.prod
+          platforms: linux/amd64
+          push: true
+          # LOAD-BEARING: the client-side base URL is baked at build time. The
+          # old org workflow omitted this build-arg — that was a latent bug.
+          build-args: |
+            NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 7. Resolve the pushed digest. imagetools inspect works for both a
+      #    freshly-built tag and a pre-existing one (workflow_dispatch re-run).
+      - name: Resolve pushed digest
+        id: digest
+        run: |
+          IMAGE="${{ steps.meta.outputs.image }}"
+          TAG="${{ steps.meta.outputs.tag }}"
+          DIGEST="$(docker buildx imagetools inspect "$IMAGE:$TAG" \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          if [ -z "$DIGEST" ]; then
+            echo "Failed to resolve digest for $IMAGE:$TAG" >&2
+            exit 1
+          fi
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      # 8. Open (or update) the digest-bump PR against tiger21-infrastructure.
+      #    Merging that PR is the deploy.
+      - name: Open digest-bump PR
+        env:
+          # gh + git auth for the infra repo comes from the fine-grained PAT.
+          GH_TOKEN: ${{ env.TIGER21_INFRA_GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          IMAGE: ${{ steps.meta.outputs.image }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          SUBJECT: ${{ steps.meta.outputs.subject }}
+        run: |
+          set -euo pipefail
+
+          INFRA_REPO="TIGER21-LLC/tiger21-infrastructure"
+          COMPOSE="stacks/inbox-zero-tiger21/compose.yml"
+          BRANCH="bump/inbox-zero-${TAG}"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          # Shallow clone — we only touch one line and open a PR.
+          git clone --depth 1 \
+            "https://x-access-token:${TIGER21_INFRA_GITHUB_TOKEN}@github.com/${INFRA_REPO}.git" \
+            infra
+          cd infra
+          git config user.name "tiger21-ci"
+          git config user.email "ci@tiger21.com"
+          git checkout -b "$BRANCH"
+
+          # Targeted replacement: match ONLY the app service's image line, so the
+          # redis / serverless-redis-http / inngest image lines are untouched.
+          # Fail loudly on zero or more than one match.
+          MATCHES="$(grep -c '^    image: registry.digitalocean.com/t21-docker-registry/inbox-zero' "$COMPOSE" || true)"
+          if [ "$MATCHES" -ne 1 ]; then
+            echo "Expected exactly 1 app image line in $COMPOSE, found $MATCHES" >&2
+            exit 1
+          fi
+          sed -i -E \
+            "s|^    image: registry\.digitalocean\.com/t21-docker-registry/inbox-zero.*|    image: ${IMAGE}:${TAG}@${DIGEST}|" \
+            "$COMPOSE"
+
+          # Confirm the intended line is now present.
+          grep -qF "    image: ${IMAGE}:${TAG}@${DIGEST}" "$COMPOSE"
+
+          git add "$COMPOSE"
+          git commit -m "bump(inbox-zero): ${TAG} — ${SUBJECT}"
+          # Force-push so a re-run for the same sha updates an existing branch
+          # (idempotent) rather than failing.
+          git push -f origin "$BRANCH"
+
+          BODY="$(cat <<EOF
+          Automated image digest bump for the inbox-zero-tiger21 stack.
+
+          - Source repo: \`${GITHUB_REPOSITORY}\`
+          - Source commit: \`${GITHUB_SHA}\` — ${SUBJECT}
+          - Actions run: ${RUN_URL}
+          - Image tag: \`${TAG}\`
+          - Image digest: \`${DIGEST}\`
+
+          Merging this PR deploys iz.tiger21.com via stacks-deploy.yml.
+          EOF
+          )"
+
+          # Idempotent: update the existing PR (already force-pushed above) or
+          # create a new one.
+          if [ -n "$(gh pr list --repo "$INFRA_REPO" --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            echo "PR from $BRANCH already open — branch force-pushed, PR updated."
+          else
+            gh pr create \
+              --repo "$INFRA_REPO" \
+              --base main \
+              --head "$BRANCH" \
+              --title "bump(inbox-zero): ${TAG} — ${SUBJECT}" \
+              --body "$BODY"
+          fi

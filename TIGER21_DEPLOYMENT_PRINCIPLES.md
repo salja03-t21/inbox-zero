@@ -35,11 +35,10 @@ This is a fundamental security and operational principle for Docker Swarm deploy
 ### What SHOULD be on the server
 
 ```
-~/IT-Configs/docker_swarm/inbox-zero/
-├── docker-compose.tiger21.yml    # Service definitions
-├── .env.tiger21                  # Secrets (NEVER in git)
-├── deploy-tiger21.sh             # Optional deployment helper
-└── .env.tiger21.example          # Template (in git, no secrets)
+~/IT-Configs/docker_swarm/inbox-zero/   # LEGACY tree — superseded by the
+├── docker-compose.tiger21.yml          # tiger21-infrastructure checkout on
+├── .env.tiger21                        # node 01; kept as rollback history
+└── .env.tiger21.example                # only. New deploys use gitops-deploy.
 ```
 
 ### What should NEVER be on the server
@@ -55,80 +54,27 @@ This is a fundamental security and operational principle for Docker Swarm deploy
 
 ## The Deployment Workflow
 
-### Step 1: Build Locally (Development Machine)
+The clean-server principle is now enforced by an automated GitOps pipeline. Nobody builds locally and nobody SSHes to deploy. This repo builds the image in CI; the stack's compose lives in the `tiger21-infrastructure` repo and deploys itself when a PR merges.
 
-```bash
-# On your local development machine
-cd /path/to/inbox-zero
-git checkout production
-pnpm tsc --noEmit  # Type check before building
+### Step 1: Merge to `main` (this repo)
 
-docker build \
-  -f docker/Dockerfile.tiger21.prod \
-  --build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com \
-  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest \
-  -t registry.digitalocean.com/t21-docker-registry/inbox-zero:$(git rev-parse --short HEAD) \
-  -t ghcr.io/tiger21-llc/inbox-zero:latest \
-  -t ghcr.io/tiger21-llc/inbox-zero:$(git rev-parse --short HEAD) \
-  .
-```
+A merge to `main` triggers `.github/workflows/tiger21-build-release.yml`. It builds an immutable, sha-tagged **amd64** image (`docker/Dockerfile.tiger21.prod`, `--build-arg NEXT_PUBLIC_BASE_URL=https://iz.tiger21.com`) on a native amd64 CI runner and pushes it to `registry.digitalocean.com/t21-docker-registry/inbox-zero`. No local build, no architecture mismatch, no floating tag.
 
-### Step 2: Push to Registry
+### Step 2: Digest-bump PR (auto-opened)
 
-DigitalOcean Container Registry is the production pull source; GitHub Container Registry is a secondary push target.
+The same workflow opens a PR against `TIGER21-LLC/tiger21-infrastructure` that pins the new `sha-<commit>@sha256:<digest>` in `stacks/inbox-zero-tiger21/compose.yml`.
 
-```bash
-# Authenticate to DigitalOcean Container Registry (one time)
-doctl registry login
+### Step 3: Merge the infra PR = deploy
 
-# Authenticate to GitHub Container Registry (one time)
-echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+Merging that PR runs `tiger21-infrastructure`'s `stacks-deploy.yml`, which SSHes to node 01 and runs `gitops-deploy inbox-zero-tiger21`. The server pulls the pinned image and deploys it. Secrets are injected on-box from Doppler (`swarm-apps/inboxzero`); no secret value ever reaches CI.
 
-# Push the images
-docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
-docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:abc1234
-docker push ghcr.io/tiger21-llc/inbox-zero:latest
-docker push ghcr.io/tiger21-llc/inbox-zero:abc1234
-```
+### Step 4: Migrations
 
-### Step 3: Deploy to Swarm
+Prisma migrations run inside the deployed image via the infra pipeline. See `tiger21-infrastructure` `stacks/inbox-zero-tiger21/README.md` for the exact mechanism.
 
-```bash
-# Upload only the docker-compose file
-scp docker-compose.tiger21.yml root@167.99.116.99:~/IT-Configs/docker_swarm/inbox-zero/
+## Automated Deployment Script (retired)
 
-# Deploy the stack (server pulls image from registry)
-ssh root@167.99.116.99 "cd ~/IT-Configs/docker_swarm/inbox-zero && \
-  docker stack deploy --compose-file docker-compose.tiger21.yml \
-  --with-registry-auth inbox-zero-tiger21"
-```
-
-### Step 4: Run Migrations
-
-```bash
-# Execute migrations in a running container
-ssh root@167.99.116.99
-docker exec $(docker ps -qf name=inbox-zero-tiger21_app | head -1) \
-  sh -c 'cd /app/apps/web && npx --yes prisma@6.6.0 migrate deploy'
-```
-
-## Automated Deployment Script
-
-Use the `deploy-tiger21.sh` script which follows this pattern:
-
-```bash
-./deploy-tiger21.sh
-```
-
-This script:
-1. ✅ Verifies you're on the correct branch
-2. ✅ Runs type checking locally
-3. ✅ Builds Docker image locally
-4. ✅ Pushes to container registry
-5. ✅ Uploads only `docker-compose.tiger21.yml` to server
-6. ✅ Deploys to swarm (server pulls pre-built image)
-7. ✅ Runs migrations
-8. ✅ Verifies deployment
+`deploy-tiger21.sh` is **retired** — it no longer builds, pushes, or deploys, and simply prints the new flow and exits non-zero. The old "build locally, push, SSH deploy" script pattern has been fully replaced by the CI pipeline above.
 
 ## What the Server Does
 
@@ -196,14 +142,13 @@ ssh root@167.99.116.99 "cd ~/src/inbox-zero && docker build ..."
 ssh root@167.99.116.99 "cd ~/src/inbox-zero && pnpm install && pnpm build"
 ```
 
-### ✅ DO: Build locally, push to registry, deploy
-```bash
-# CORRECT - This is the way! (DO registry is the production pull source; ghcr is a secondary push target)
-docker build -t registry.digitalocean.com/t21-docker-registry/inbox-zero:latest -t ghcr.io/tiger21-llc/inbox-zero:latest .
-docker push registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
-docker push ghcr.io/tiger21-llc/inbox-zero:latest
-ssh root@167.99.116.99 "cd ~/IT-Configs/docker_swarm/inbox-zero && \
-  docker stack deploy --compose-file docker-compose.tiger21.yml inbox-zero-tiger21"
+### ✅ DO: Merge to `main` and let CI build + GitOps deploy
+```text
+# CORRECT - This is the way!
+# 1. Merge to main -> tiger21-build-release.yml builds + pushes a sha-tagged
+#    image to the DO registry.
+# 2. It auto-opens a digest-bump PR on tiger21-infrastructure.
+# 3. Merge that PR -> stacks-deploy.yml runs gitops-deploy on node 01.
 ```
 
 ## Exceptions
@@ -214,23 +159,17 @@ For development/staging environments, you might use different patterns, but prod
 
 ## Emergency Rollback
 
-If something goes wrong, rollback is trivial because images are tagged:
+Rollback is a git operation on the infra repo (or a one-line Swarm command):
 
 ```bash
-# List available tags (production pulls from the DO registry)
-doctl registry repository list-tags t21-docker-registry/inbox-zero
+# Fast, no files: revert to the immediately-previous task spec on the Swarm
+docker --context tiger21-swarm service rollback inbox-zero-tiger21_app
 
-# Deploy a specific version
-ssh root@167.99.116.99
-cd ~/IT-Configs/docker_swarm/inbox-zero
-
-# Edit docker-compose.tiger21.yml to use specific tag
-# Change: image: registry.digitalocean.com/t21-docker-registry/inbox-zero:latest
-# To:     image: registry.digitalocean.com/t21-docker-registry/inbox-zero:abc1234
-
-docker stack deploy --compose-file docker-compose.tiger21.yml \
-  --with-registry-auth inbox-zero-tiger21
+# Tracked: git-revert the digest-bump PR in tiger21-infrastructure and merge it.
+# Merging the revert redeploys the previously-pinned digest via stacks-deploy.yml.
 ```
+
+Every deployed image is an immutable `sha-<commit>@sha256:<digest>` pin in `tiger21-infrastructure/stacks/inbox-zero-tiger21/compose.yml`, so any prior version is recoverable by reverting to that commit's pin.
 
 ## Server Audit Checklist
 
@@ -246,12 +185,12 @@ ls -la ~/code/                    # Should not exist
 find ~ -name "node_modules" -type d  # Should find nothing
 find ~ -name ".git" -type d       # Should find nothing (except maybe in tools)
 
-# Only this should exist
+# Only this should exist (legacy tree, retained as rollback history;
+# the deploy source is the tiger21-infrastructure checkout on node 01)
 ls -la ~/IT-Configs/docker_swarm/inbox-zero/
 # Should show:
 # - docker-compose.tiger21.yml
 # - .env.tiger21
-# - deploy-tiger21.sh (optional)
 ```
 
 ## Summary

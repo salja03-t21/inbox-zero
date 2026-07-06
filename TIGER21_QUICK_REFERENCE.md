@@ -14,9 +14,11 @@
 
 ### Deploy Latest Changes
 
-```bash
-git checkout production && git pull && ./deploy-tiger21.sh
-```
+Deploys are automated GitOps. Merge to `main`: CI (`tiger21-build-release.yml`)
+builds a sha-tagged image, pushes it to the DO registry, and auto-opens a
+digest-bump PR against `tiger21-infrastructure`. **Merging that PR is the
+deploy.** No local build, no SSH. Rollback: revert the infra PR, or
+`docker --context tiger21-swarm service rollback inbox-zero-tiger21_app`.
 
 ### Emergency Restart
 
@@ -87,7 +89,7 @@ ssh root@167.99.116.99 'docker service logs inbox-zero-tiger21_app | grep -i tim
 
 - `docker-compose.tiger21.yml` - Service configuration
 - `.env.tiger21.example` - Environment template
-- `deploy-tiger21.sh` - Deployment script
+- `deploy-tiger21.sh` - RETIRED deploy script (prints the new GitOps flow and exits)
 - `scripts/tiger21-health-monitor.sh` - Health monitoring
 - `scripts/tiger21-cleanup.sh` - Cleanup script
 
@@ -168,14 +170,12 @@ After deploying:
 - `TIGER21_SSO_TESTING_GUIDE.md` - SSO testing procedures
 - `TIGER21_STATUS.md` - Current deployment status
 
-## 🚀 Legacy Commands (Still Valid)
+## 🚀 Legacy / Emergency Commands
 
-### Deploy
-
-```bash
-# From local machine
-./deploy-tiger21.sh
-```
+> **Deploy is now GitOps** (see [Deploy Latest Changes](#deploy-latest-changes)).
+> `./deploy-tiger21.sh` is **retired** — it no longer builds or deploys. The
+> swarm-level commands below remain valid for read-only inspection and
+> emergency intervention only.
 
 ### Check Status
 
@@ -300,10 +300,9 @@ docker stack deploy --compose-file docker-compose.tiger21.yml inbox-zero-tiger21
 # Option 1: Service rollback
 docker service rollback inbox-zero-tiger21_app
 
-# Option 2: Git rollback and redeploy
-git log --oneline -10  # Find previous commit
-git checkout <commit-hash>
-./deploy-tiger21.sh
+# Option 2: Git rollback via GitOps — revert the digest-bump PR in
+# tiger21-infrastructure (or open a PR re-pinning the previous digest);
+# merging it redeploys the old image.
 ```
 
 ## 🔒 Security Checklist
@@ -406,7 +405,6 @@ alias t21-ssh='ssh root@167.99.116.99'
 alias t21-status='ssh root@167.99.116.99 "docker stack services inbox-zero-tiger21"'
 alias t21-logs='ssh root@167.99.116.99 "docker service logs inbox-zero-tiger21_app -f"'
 alias t21-ps='ssh root@167.99.116.99 "docker stack ps inbox-zero-tiger21"'
-alias t21-deploy='./deploy-tiger21.sh'
 ```
 
 ---
