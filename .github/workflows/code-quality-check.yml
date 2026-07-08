@@ -27,11 +27,11 @@ jobs:
           fetch-depth: 0
 
       # pnpm must be installed before setup-node: `cache: pnpm` needs the
-      # pnpm binary on PATH, or the job dies during setup.
+      # pnpm binary on PATH, or the job dies during setup. No version input -
+      # action-setup reads package.json's packageManager field, and errors on
+      # any mismatch if both are set.
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
