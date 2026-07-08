@@ -169,9 +169,13 @@ services:
       - inbox-zero-network
 
   inngest:
-    # Pin to v1.15.2 for compatibility with SDK v3.47.0
-    # Using :latest caused "mismatched param and argument count" warnings
-    image: inngest/inngest:v1.15.2
+    # Staged upgrade hop 1/2 (v1.15.2 -> v1.17.9 -> v1.34.0). DB migrations run
+    # automatically on startup and are forward-only: upstream's v1.18.0 rolled up
+    # the goose migration baselines, so an upgrade from v1.15.2 MUST pass through
+    # v1.17.x before going further. Deploy this hop, verify, then apply hop 2.
+    # Downgrading requires restoring the inngest tables from backup - never just
+    # roll this tag back.
+    image: inngest/inngest:v1.17.9
     deploy:
       replicas: 1
       restart_policy:
