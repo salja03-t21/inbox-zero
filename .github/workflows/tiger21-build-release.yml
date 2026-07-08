@@ -16,6 +16,8 @@
 #
 # -----------------------------------------------------------------------------
 # REQUIRED PROVISIONING (one-time, done outside this repo)
+# Step-by-step walkthrough with exact menu paths, naming, and CLI commands:
+# TIGER21_CI_PROVISIONING.md (repo root).
 # -----------------------------------------------------------------------------
 # (a) A DEDICATED Doppler CI config — NOT swarm-apps/inboxzero. The inboxzero
 #     runtime config is staged wholesale into the production container's env at
